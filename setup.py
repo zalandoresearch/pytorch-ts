@@ -22,6 +22,8 @@ setup(
         'tqdm',
         'ujson',
         'pydantic',
+        'gin-config',
+        'absl-py',
     ],
 
     test_suite='tests',
