@@ -19,7 +19,7 @@ class TransformedDataset(Dataset):
     """
 
     def __init__(
-        self, base_dataset: Dataset, transformations: List[Transformation]
+            self, base_dataset: Dataset, transformations: List[Transformation]
     ) -> None:
         self.base_dataset = base_dataset
         self.transformations = Chain(transformations)

@@ -1,7 +1,7 @@
+from abc import ABC, abstractmethod
+
 import numpy as np
 import pandas as pd
-
-from abc import ABC, abstractmethod
 
 
 class TimeFeature(ABC):
@@ -95,4 +95,3 @@ class WeekOfYear(TimeFeature):
             return index.weekofyear / 51.0 - 0.5
         else:
             return index.weekofyear.map(float)
-

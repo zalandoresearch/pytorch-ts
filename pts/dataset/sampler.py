@@ -1,3 +1,5 @@
+from typing import Union, List
+
 import numpy as np
 
 from abc import ABC, abstractmethod
@@ -6,7 +8,7 @@ from .stat import ScaleHistogram
 
 class InstanceSampler(ABC):
     @abstractmethod
-    def __call__(self, ts: np.ndarray, a: int, b: int) -> np.ndarray:
+    def __call__(self, ts: np.ndarray, a: int, b: int) -> Union[np.ndarray, List[int]]:
         pass
 
 
@@ -90,7 +92,7 @@ class BucketInstanceSampler(InstanceSampler):
         self.scale_histogram = scale_histogram
         self.lookup = np.arange(2 ** 13)
 
-    def __call__(self, ts: np.ndarray, a: int, b: int) -> None:
+    def __call__(self, ts: np.ndarray, a: int, b: int) -> np.ndarray:
         while ts.shape[-1] >= len(self.lookup):
             self.lookup = np.arange(2 * len(self.lookup))
         p = 1.0 / self.scale_histogram.count(ts)
