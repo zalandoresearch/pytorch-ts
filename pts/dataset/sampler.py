@@ -1,10 +1,10 @@
+from abc import ABC, abstractmethod
 from typing import Union, List
 
 import numpy as np
 
-from abc import ABC, abstractmethod
-
 from .stat import ScaleHistogram
+
 
 class InstanceSampler(ABC):
     @abstractmethod
@@ -30,7 +30,7 @@ class UniformSplitSampler(InstanceSampler):
         while ts.shape[-1] >= len(self.lookup):
             self.lookup = np.arange(2 * len(self.lookup))
         mask = np.random.uniform(low=0.0, high=1.0, size=b - a + 1) < self.p
-        return self.lookup[a : a + len(mask)][mask]
+        return self.lookup[a: a + len(mask)][mask]
 
 
 class TestSplitSampler(InstanceSampler):
@@ -69,7 +69,7 @@ class ExpectedNumInstanceSampler(InstanceSampler):
         p = self.num_instances / self.avg_length
 
         mask = np.random.uniform(low=0.0, high=1.0, size=b - a + 1) < p
-        indices = self.lookup[a : a + len(mask)][mask]
+        indices = self.lookup[a: a + len(mask)][mask]
         return indices
 
 
@@ -97,5 +97,5 @@ class BucketInstanceSampler(InstanceSampler):
             self.lookup = np.arange(2 * len(self.lookup))
         p = 1.0 / self.scale_histogram.count(ts)
         mask = np.random.uniform(low=0.0, high=1.0, size=b - a + 1) < p
-        indices = self.lookup[a : a + len(mask)][mask]
+        indices = self.lookup[a: a + len(mask)][mask]
         return indices

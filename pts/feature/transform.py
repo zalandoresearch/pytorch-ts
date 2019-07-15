@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 
 from pts.dataset import DataEntry, InstanceSampler
+from pts import assert_pts
 from .time_feature import TimeFeature
 
 MAX_IDLE_TRANSFORMS = 100
@@ -237,7 +238,7 @@ class AsNumpyArray(SimpleTransformation):
             # ugly: required as list conversion will fail in the case of a
             # float
             value = np.asarray(value, dtype=self.dtype)
-        assert_data_error(
+        assert_pts(
             value.ndim >= self.expected_ndim,
             'Input for field "{self.field}" does not have the required'
             "dimension (field: {self.field}, ndim observed: {value.ndim}, "
