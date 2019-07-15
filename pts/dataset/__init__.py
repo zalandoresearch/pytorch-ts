@@ -6,3 +6,4 @@ from pts.dataset.sampler import (
     ExpectedNumInstanceSampler,
     BucketInstanceSampler,
 )
+from pts.dataset.sampler import InstanceSampler

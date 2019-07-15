@@ -2,6 +2,7 @@ import numpy as np
 
 from abc import ABC, abstractmethod
 
+from .stat import ScaleHistogram
 
 class InstanceSampler(ABC):
     @abstractmethod
