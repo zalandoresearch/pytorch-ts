@@ -219,7 +219,7 @@ class AsNumpyArray(SimpleTransformation):
     """
 
     def __init__(
-        self, field: str, expected_ndim: int, dtype: DType = np.float32
+        self, field: str, expected_ndim: int, dtype: np.dtype = np.float32
     ) -> None:
         self.field = field
         self.expected_ndim = expected_ndim
@@ -501,7 +501,7 @@ class AddConstFeature(MapTransformation):
         target_field: str,
         pred_length: int,
         const: float = 1.0,
-        dtype: DType = np.float32,
+        dtype: np.dtype = np.float32,
     ) -> None:
         self.pred_length = pred_length
         self.const = const
