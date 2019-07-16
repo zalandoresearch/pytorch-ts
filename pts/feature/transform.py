@@ -64,7 +64,7 @@ class Chain(Transformation):
         return reduce(lambda x, y: y.estimate(x), self.trans, data_it)
 
 
-class Identity(Transformation):
+class IdentityTransformation(Transformation):
     def __call__(
             self, data_it: Iterator[DataEntry], is_train: bool
     ) -> Iterator[DataEntry]:

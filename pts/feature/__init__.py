@@ -8,4 +8,29 @@ from pts.feature.time_feature import (
     WeekOfYear,
 )
 
-from pts.feature.transform import Transformation, Chain
+from pts.feature.transform import (
+    Transformation,
+    Chain,
+    IdentityTransformation,
+    MapTransformation,
+    SimpleTransformation,
+    AdhocTransform,
+    FlatMapTransformation,
+    FilterTransformation,
+    RemoveFields,
+    SetField,
+    AsNumpyArray,
+    ExpandDimArray,
+    VstackFeatures,
+    ConcatFeatures,
+    SwapAxes,
+    ListFeatures,
+    AddObservedValuesIndicator,
+    RenameFields,
+    AddConstFeature,
+    AddTimeFeatures,
+    AddAgeFeature,
+    InstanceSplitter,
+    CanonicalInstanceSplitter,
+    SelectFields,
+)
