@@ -34,3 +34,5 @@ from pts.feature.transform import (
     CanonicalInstanceSplitter,
     SelectFields,
 )
+
+from pts.feature.lag import time_features_from_frequency_str, get_lags_for_frequency, get_granularity

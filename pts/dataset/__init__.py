@@ -6,4 +6,4 @@ from pts.dataset.sampler import (
     ExpectedNumInstanceSampler,
     BucketInstanceSampler,
 )
-from pts.dataset.sampler import InstanceSampler
+from pts.dataset.sampler import InstanceSampler, UniformSplitSampler, TestSplitSampler, ExpectedNumInstanceSampler, BucketInstanceSampler
