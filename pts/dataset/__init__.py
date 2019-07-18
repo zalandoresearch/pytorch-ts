@@ -7,3 +7,4 @@ from pts.dataset.sampler import (
     BucketInstanceSampler,
 )
 from pts.dataset.sampler import InstanceSampler, UniformSplitSampler, TestSplitSampler, ExpectedNumInstanceSampler, BucketInstanceSampler
+from pts.dataset.loader import DataLoader, TrainDataLoader, InferenceDataLoader
