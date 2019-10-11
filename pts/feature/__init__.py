@@ -6,6 +6,7 @@ from pts.feature.time_feature import (
     DayOfYear,
     MonthOfYear,
     WeekOfYear,
+    time_features_from_frequency_str,
 )
 
 from pts.feature.transform import (
@@ -35,4 +36,4 @@ from pts.feature.transform import (
     SelectFields,
 )
 
-from pts.feature.lag import time_features_from_frequency_str, get_lags_for_frequency
+from pts.feature.lag import get_lags_for_frequency

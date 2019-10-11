@@ -5,9 +5,10 @@ from .process import ProcessDataEntry
 
 
 class ListDataset(Dataset):
-    def __init__(
-            self, data_iter: Iterable[DataEntry], freq: str, one_dim_target: bool = True
-    ) -> None:
+    def __init__(self,
+                 data_iter: Iterable[DataEntry],
+                 freq: str,
+                 one_dim_target: bool = True) -> None:
         process = ProcessDataEntry(freq, one_dim_target)
         self.list_data = [process(data) for data in data_iter]
 

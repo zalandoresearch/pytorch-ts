@@ -3,7 +3,7 @@ from typing import Callable, List, cast
 
 import numpy as np
 import pandas as pd
-from pandas.tseries.frequencies import to_offset
+from pandas.tseries.offsets import Tick
 
 from .common import DataEntry
 
@@ -17,7 +17,8 @@ class ProcessStartField:
         try:
             value = ProcessStartField.process(data[self.name], self.freq)
         except (TypeError, ValueError) as e:
-            raise Exception(f'Error "{e}" occurred when reading field "{self.name}"')
+            raise Exception(
+                f'Error "{e}" occurred when reading field "{self.name}"')
 
         data[self.name] = value
 
@@ -27,21 +28,26 @@ class ProcessStartField:
     @lru_cache(maxsize=10000)
     def process(string: str, freq: str) -> pd.Timestamp:
         timestamp = pd.Timestamp(string, freq=freq)
-        # 'W-SUN' is the standardized freqstr for W
-        if timestamp.freq.name in ("M", "W-SUN"):
-            offset = to_offset(freq)
-            timestamp = timestamp.replace(
-                hour=0, minute=0, second=0, microsecond=0, nanosecond=0
-            )
-            return pd.Timestamp(offset.rollback(timestamp), freq=offset.freqstr)
-        if timestamp.freq == "B":
-            # does not floor on business day as it is not allowed
-            return timestamp
-        return pd.Timestamp(timestamp.floor(timestamp.freq), freq=timestamp.freq)
+
+        # operate on time information (days, hours, minute, second)
+        if isinstance(timestamp.freq, Tick):
+            return pd.Timestamp(timestamp.floor(timestamp.freq),
+                                timestamp.freq)
+
+        # since we are only interested in the data piece, we normalize the
+        # time information
+        timestamp = timestamp.replace(hour=0,
+                                      minute=0,
+                                      second=0,
+                                      microsecond=0,
+                                      nanosecond=0)
+
+        return timestamp.freq.rollforward(timestamp)
 
 
 class ProcessTimeSeriesField:
-    def __init__(self, name, is_required: bool, is_static: bool, is_cat: bool) -> None:
+    def __init__(self, name, is_required: bool, is_static: bool,
+                 is_cat: bool) -> None:
         self.name = name
         self.is_required = is_required
         self.req_ndim = 1 if is_static else 2
@@ -65,7 +71,8 @@ class ProcessTimeSeriesField:
         elif not self.is_required:
             return data
         else:
-            raise Exception(f"JSON object is missing a required field `{self.name}`")
+            raise Exception(
+                f"JSON object is missing a required field `{self.name}`")
 
 
 class ProcessDataEntry:
@@ -74,24 +81,28 @@ class ProcessDataEntry:
             List[Callable[[DataEntry], DataEntry]],
             [
                 ProcessStartField("start", freq=freq),
-                ProcessTimeSeriesField(
-                    "target", is_required=True, is_cat=False, is_static=one_dim_target
-                ),
-                ProcessTimeSeriesField(
-                    "feat_dynamic_cat", is_required=False, is_cat=True, is_static=False
-                ),
+                ProcessTimeSeriesField("target",
+                                       is_required=True,
+                                       is_cat=False,
+                                       is_static=one_dim_target),
+                ProcessTimeSeriesField("feat_dynamic_cat",
+                                       is_required=False,
+                                       is_cat=True,
+                                       is_static=False),
                 ProcessTimeSeriesField(
                     "feat_dynamic_real",
                     is_required=False,
                     is_cat=False,
                     is_static=False,
                 ),
-                ProcessTimeSeriesField(
-                    "feat_static_cat", is_required=False, is_cat=True, is_static=True
-                ),
-                ProcessTimeSeriesField(
-                    "feat_static_real", is_required=False, is_cat=False, is_static=True
-                ),
+                ProcessTimeSeriesField("feat_static_cat",
+                                       is_required=False,
+                                       is_cat=True,
+                                       is_static=True),
+                ProcessTimeSeriesField("feat_static_real",
+                                       is_required=False,
+                                       is_cat=False,
+                                       is_static=True),
             ],
         )
 
