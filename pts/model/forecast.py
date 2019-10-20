@@ -1,0 +1,2 @@
+class Forecast():
+    pass
