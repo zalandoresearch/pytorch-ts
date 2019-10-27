@@ -1,4 +1,5 @@
 from pts.feature.time_feature import (
+    TimeFeature,
     MinuteOfHour,
     HourOfDay,
     DayOfWeek,

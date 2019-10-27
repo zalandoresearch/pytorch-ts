@@ -12,6 +12,7 @@ import torch.nn as nn
 from .predictor import Predictor
 from .utils import get_module_forward_input_names
 
+
 class Estimator(ABC):
     prediction_length: int
     freq: str
@@ -47,11 +48,9 @@ class TrainOutput(NamedTuple):
 
 
 class PTSEstimator(Estimator):
-    def __init__(self, trainer: Trainer,
-                 dtype: np.dtype = np.float32) -> None:
+    def __init__(self, trainer: Trainer, dtype: np.dtype = np.float32) -> None:
         self.trainer = trainer
         self.dtype = dtype
-        
 
     @abstractmethod
     def create_transformation(self) -> Transformation:

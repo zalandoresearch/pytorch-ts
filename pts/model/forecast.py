@@ -113,14 +113,15 @@ class SampleForecast(Forecast):
             info: Optional[Dict] = None,
     ):
         assert isinstance(
-            samples, (np.ndarray, torch.Tensor
-                      )), "samples should be either a numpy array or an torch tensor"
+            samples,
+            (np.ndarray, torch.Tensor
+             )), "samples should be either a numpy array or an torch tensor"
         assert (
             len(np.shape(samples)) == 2 or len(np.shape(samples)) == 3
         ), "samples should be a 2-dimensional or 3-dimensional array. Dimensions found: {}".format(
             len(np.shape(samples)))
-        self.samples = (samples if (isinstance(samples, np.ndarray)) else
-                        samples.numpy())
+        self.samples = (samples if
+                        (isinstance(samples, np.ndarray)) else samples.numpy())
         self._sorted_samples_value = None
         self._mean = None
         self._dim = None

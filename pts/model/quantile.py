@@ -1,6 +1,7 @@
 from typing import NamedTuple, Union
 import re
 
+
 class Quantile(NamedTuple):
     value: float
     name: str
