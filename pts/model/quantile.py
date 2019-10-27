@@ -1,0 +1,84 @@
+from typing import NamedTuple, Union
+import re
+
+class Quantile(NamedTuple):
+    value: float
+    name: str
+
+    @property
+    def loss_name(self):
+        return f"QuantileLoss[{self.name}]"
+
+    @property
+    def weighted_loss_name(self):
+        return f"wQuantileLoss[{self.name}]"
+
+    @property
+    def coverage_name(self):
+        return f"Coverage[{self.name}]"
+
+    @classmethod
+    def checked(cls, value: float, name: str) -> "Quantile":
+        if not 0 <= value <= 1:
+            raise Exception(
+                f"quantile value should be in [0, 1] but found {value}")
+
+        return Quantile(value, name)
+
+    @classmethod
+    def from_float(cls, quantile: float) -> "Quantile":
+        assert isinstance(quantile, float)
+        return cls.checked(value=quantile, name=str(quantile))
+
+    @classmethod
+    def from_str(cls, quantile: str) -> "Quantile":
+        assert isinstance(quantile, str)
+        try:
+            return cls.checked(value=float(quantile), name=quantile)
+        except ValueError:
+            m = re.match(r"^p(\d{2})$", quantile)
+
+            if m is None:
+                raise Exception(
+                    "Quantile string should be of the form "
+                    f'"p10", "p50", ... or "0.1", "0.5", ... but found {quantile}'
+                )
+            else:
+                quantile: float = int(m.group(1)) / 100
+                return cls(value=quantile, name=str(quantile))
+
+    @classmethod
+    def parse(cls, quantile: Union["Quantile", float, str]) -> "Quantile":
+        """Produces equivalent float and string representation of a given
+        quantile level.
+
+        >>> Quantile.parse(0.1)
+        Quantile(value=0.1, name='0.1')
+
+        >>> Quantile.parse('0.2')
+        Quantile(value=0.2, name='0.2')
+
+        >>> Quantile.parse('0.20')
+        Quantile(value=0.2, name='0.20')
+
+        >>> Quantile.parse('p99')
+        Quantile(value=0.99, name='0.99')
+
+        Parameters
+        ----------
+        quantile
+            Quantile, can be a float a str representing a float e.g. '0.1' or a
+            quantile string of the form 'p0.1'.
+
+        Returns
+        -------
+        Quantile
+            A tuple containing both a float and a string representation of the
+            input quantile level.
+        """
+        if isinstance(quantile, Quantile):
+            return quantile
+        elif isinstance(quantile, float):
+            return cls.from_float(quantile)
+        else:
+            return cls.from_str(quantile)

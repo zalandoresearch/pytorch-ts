@@ -15,13 +15,13 @@ DataBatch = Dict[str, Any]
 
 class BatchBuffer:
     def __init__(
-        self, batch_size: int, device: torch.device, float_type: np.dtype = np.float32
+        self, batch_size: int, device: torch.device, dtype: np.dtype = np.float32
     ) -> None:
         self._buffers: Dict[Any, List[Any]] = defaultdict(list)
         self.batch_size = batch_size
         self._size = 0
         self.device = device
-        self.float_type = float_type
+        self.dtype = dtype
 
     def add(self, d: Dict[str, List[np.ndarray]]):
         if self._buffers:
@@ -46,7 +46,7 @@ class BatchBuffer:
         if isinstance(xs[0], np.ndarray):
             data = np.asarray(xs)
             if data.dtype.kind == "f":
-                data = data.astype(self.float_type)
+                data = data.astype(self.dtype)
             return torch.from_numpy(data).to(device=self.device, non_blocking=True)
         elif isinstance(xs[0], torch.Tensor):
             return torch.stack(*xs)
@@ -75,7 +75,7 @@ class DataLoader(Iterable[DataEntry]):
         The size of the batches to emit.
     device
         device to use to store data on.
-    float_type
+    dtype
         Floating point type to use.
     """
 
@@ -85,13 +85,13 @@ class DataLoader(Iterable[DataEntry]):
         transform: Transformation,
         batch_size: int,
         device: torch.device,
-        float_type: np.dtype = np.float32,
+        dtype: np.dtype = np.float32,
     ) -> None:
         self.dataset = dataset
         self.transform = transform
         self.batch_size = batch_size
         self.device = device
-        self.float_type = float_type
+        self.dtype = dtype
 
 
 class TrainDataLoader(DataLoader):
@@ -114,7 +114,7 @@ class TrainDataLoader(DataLoader):
         device to use to store data on.
     num_batches_per_epoch
         Number of batches to return in one complete iteration over this object.
-    float_type
+    dtype
         Floating point type to use.
     """
 
@@ -125,18 +125,18 @@ class TrainDataLoader(DataLoader):
         batch_size: int,
         device: torch.device,
         num_batches_per_epoch: int,
-        float_type: np.dtype = np.float32,
+        dtype: np.dtype = np.float32,
         shuffle_for_training: bool = True,
         num_batches_for_shuffling: int = 10,
     ) -> None:
-        super().__init__(dataset, transform, batch_size, device, float_type)
+        super().__init__(dataset, transform, batch_size, device, dtype)
         self.num_batches_per_epoch = num_batches_per_epoch
         self.shuffle_for_training = shuffle_for_training
         self._num_buffered_batches = (
             num_batches_for_shuffling if shuffle_for_training else 1
         )
         self._cur_iter: Optional[Iterator] = None
-        self._buffer = BatchBuffer(self.batch_size, device, float_type)
+        self._buffer = BatchBuffer(self.batch_size, device, dtype)
 
     def _emit_batches_while_buffer_larger_than(self, thresh) -> Iterator[DataBatch]:
         if self.shuffle_for_training:
@@ -196,12 +196,12 @@ class InferenceDataLoader(DataLoader):
         The size of the batches to emit.
     device
         device to use to store data on.
-    float_type
+    dtype
         Floating point type to use.
     """
 
     def __iter__(self) -> Iterator[DataBatch]:
-        buffer = BatchBuffer(self.batch_size, self.device, self.float_type)
+        buffer = BatchBuffer(self.batch_size, self.device, self.dtype)
         for data_entry in self.transform(iter(self.dataset), is_train=False):
             buffer.add(data_entry)
             if len(buffer) >= self.batch_size:

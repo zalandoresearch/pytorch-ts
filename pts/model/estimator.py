@@ -10,7 +10,7 @@ import torch
 import torch.nn as nn
 
 from .predictor import Predictor
-
+from .utils import get_module_forward_input_names
 
 class Estimator(ABC):
     prediction_length: int
@@ -48,9 +48,9 @@ class TrainOutput(NamedTuple):
 
 class PTSEstimator(Estimator):
     def __init__(self, trainer: Trainer,
-                 float_type: np.dtype = np.float32) -> None:
+                 dtype: np.dtype = np.float32) -> None:
         self.trainer = trainer
-        self.float_type = float_type
+        self.dtype = dtype
         
 
     @abstractmethod
@@ -103,7 +103,7 @@ class PTSEstimator(Estimator):
             batch_size=self.trainer.batch_size,
             num_batches_per_epoch=self.trainer.num_batches_per_epoch,
             device=self.trainer.device,
-            float_type=self.float_type,
+            dtype=self.dtype,
         )
 
         # ensure that the training network is created on the same device
@@ -111,18 +111,15 @@ class PTSEstimator(Estimator):
 
         self.trainer(
             net=trained_net,
-            input_names=get_hybrid_forward_input_names(trained_net),
+            input_names=get_module_forward_input_names(trained_net),
             train_iter=training_data_loader,
         )
 
-        with self.trainer.ctx:
-            # ensure that the prediction network is created within the same MXNet
-            # context as the one that was used during training
-            return TrainOutput(
-                transformation=transformation,
-                trained_net=trained_net,
-                predictor=self.create_predictor(transformation, trained_net),
-            )
+        return TrainOutput(
+            transformation=transformation,
+            trained_net=trained_net,
+            predictor=self.create_predictor(transformation, trained_net),
+        )
 
     def train(self, training_data: Dataset) -> Predictor:
         return self.train_model(training_data).predictor

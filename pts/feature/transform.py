@@ -408,6 +408,7 @@ class AddObservedValuesIndicator(SimpleTransformation):
         If set to true (default) missing values will be replaced. Otherwise
         they will not be replaced. In any case the indicator is included in the
         result.
+    dtype
     """
     def __init__(
             self,
@@ -415,11 +416,13 @@ class AddObservedValuesIndicator(SimpleTransformation):
             output_field: str,
             dummy_value: int = 0,
             convert_nans: bool = True,
+            dtype: np.dtype = np.float32,
     ) -> None:
         self.dummy_value = dummy_value
         self.target_field = target_field
         self.output_field = output_field
         self.convert_nans = convert_nans
+        self.dtype = dtype
 
     def transform(self, data: DataEntry) -> DataEntry:
         value = data[self.target_field]
@@ -430,8 +433,8 @@ class AddObservedValuesIndicator(SimpleTransformation):
             value[nan_indices] = self.dummy_value
 
         data[self.target_field] = value
-        # Invert bool array so that missing values are zeros and store as float
-        data[self.output_field] = np.invert(nan_entries).astype(np.float32)
+        # Invert bool array so that missing values are zeros and store as dtype
+        data[self.output_field] = np.invert(nan_entries).astype(self.dtype)
         return data
 
 
@@ -588,6 +591,7 @@ class AddAgeFeature(MapTransformation):
         Prediction length
     log_scale
         If set to true the age feature grows logarithmically otherwise linearly over time.
+    dtype
     """
     def __init__(
             self,
@@ -595,12 +599,14 @@ class AddAgeFeature(MapTransformation):
             output_field: str,
             pred_length: int,
             log_scale: bool = True,
+            dtype: np.dtype = np.float32,
     ) -> None:
         self.pred_length = pred_length
         self.target_field = target_field
         self.feature_name = output_field
         self.log_scale = log_scale
         self._age_feature = np.zeros(0)
+        self.dtype = dtype
 
     def map_transform(self, data: DataEntry, is_train: bool) -> DataEntry:
         length = target_transformation_length(data[self.target_field],
@@ -608,9 +614,9 @@ class AddAgeFeature(MapTransformation):
                                               is_train=is_train)
 
         if self.log_scale:
-            age = np.log10(2.0 + np.arange(length, dtype=np.float32))
+            age = np.log10(2.0 + np.arange(length, dtype=self.dtype))
         else:
-            age = np.arange(length, dtype=np.float32)
+            age = np.arange(length, dtype=self.dtype)
 
         data[self.feature_name] = age.reshape((1, length))
 
