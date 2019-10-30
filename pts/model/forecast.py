@@ -15,7 +15,7 @@ class OutputType(str, Enum):
     quantiles = "quantiles"
 
 
-class Config():
+class Config:
     output_types: Set[OutputType] = {"quantiles", "mean"}
     quantiles: List[str] = ["0.1", "0.5", "0.9"]
 
@@ -102,25 +102,25 @@ class SampleForecast(Forecast):
         additional information that the forecaster may provide e.g. estimated
         parameters, number of iterations ran etc.
     """
+
     @validated()
     def __init__(
-            self,
-            samples: Union[torch.Tensor, np.ndarray],
-            start_date,
-            freq,
-            item_id: Optional[str] = None,
-            info: Optional[Dict] = None,
+        self,
+        samples: Union[torch.Tensor, np.ndarray],
+        start_date,
+        freq,
+        item_id: Optional[str] = None,
+        info: Optional[Dict] = None,
     ):
         assert isinstance(
-            samples,
-            (np.ndarray, torch.Tensor
-             )), "samples should be either a numpy array or an torch tensor"
+            samples, (np.ndarray, torch.Tensor)
+        ), "samples should be either a numpy array or an torch tensor"
         assert (
             len(np.shape(samples)) == 2 or len(np.shape(samples)) == 3
         ), "samples should be a 2-dimensional or 3-dimensional array. Dimensions found: {}".format(
-            len(np.shape(samples)))
-        self.samples = (samples if
-                        (isinstance(samples, np.ndarray)) else samples.numpy())
+            len(np.shape(samples))
+        )
+        self.samples = samples if (isinstance(samples, np.ndarray)) else samples.numpy()
         self._sorted_samples_value = None
         self._mean = None
         self._dim = None
@@ -128,8 +128,8 @@ class SampleForecast(Forecast):
         self.info = info
 
         assert isinstance(
-            start_date,
-            pd.Timestamp), "start_date should be a pandas Timestamp object"
+            start_date, pd.Timestamp
+        ), "start_date should be a pandas Timestamp object"
         self.start_date = start_date
 
         assert isinstance(freq, str), "freq should be a string"
@@ -184,14 +184,17 @@ class SampleForecast(Forecast):
             target_dim = self.samples.shape[2]
             assert dim < target_dim, (
                 f"must set 0 <= dim < target_dim, but got dim={dim},"
-                f" target_dim={target_dim}")
+                f" target_dim={target_dim}"
+            )
             samples = self.samples[:, :, dim]
 
-        return SampleForecast(samples=samples,
-                              start_date=self.start_date,
-                              freq=self.freq,
-                              item_id=self.item_id,
-                              info=self.info)
+        return SampleForecast(
+            samples=samples,
+            start_date=self.start_date,
+            freq=self.freq,
+            item_id=self.item_id,
+            info=self.info,
+        )
 
     def dim(self) -> int:
         if self._dim is not None:
@@ -215,13 +218,15 @@ class SampleForecast(Forecast):
         return result
 
     def __repr__(self):
-        return ", ".join([
-            f"SampleForecast({self.samples!r})",
-            f"{self.start_date!r}",
-            f"{self.freq!r}",
-            f"item_id={self.item_id!r}",
-            f"info={self.info!r})",
-        ])
+        return ", ".join(
+            [
+                f"SampleForecast({self.samples!r})",
+                f"{self.start_date!r}",
+                f"{self.freq!r}",
+                f"item_id={self.item_id!r}",
+                f"info={self.info!r})",
+            ]
+        )
 
 
 class QuantileForecast(Forecast):
@@ -244,14 +249,15 @@ class QuantileForecast(Forecast):
         additional information that the forecaster may provide e.g. estimated
         parameters, number of iterations ran etc.
     """
+
     def __init__(
-            self,
-            forecast_arrays: np.ndarray,
-            start_date: pd.Timestamp,
-            freq: str,
-            forecast_keys: List[str],
-            item_id: Optional[str] = None,
-            info: Optional[Dict] = None,
+        self,
+        forecast_arrays: np.ndarray,
+        start_date: pd.Timestamp,
+        freq: str,
+        forecast_keys: List[str],
+        item_id: Optional[str] = None,
+        info: Optional[Dict] = None,
     ):
         self.forecast_array = forecast_arrays
         self.start_date = pd.Timestamp(start_date, freq=freq)
@@ -269,11 +275,11 @@ class QuantileForecast(Forecast):
         shape = self.forecast_array.shape
         assert shape[0] == len(self.forecast_keys), (
             f"The forecast_array (shape={shape} should have the same "
-            f"length as the forecast_keys (len={len(self.forecast_keys)}).")
+            f"length as the forecast_keys (len={len(self.forecast_keys)})."
+        )
         self.prediction_length = shape[-1]
         self._forecast_dict = {
-            k: self.forecast_array[i]
-            for i, k in enumerate(self.forecast_keys)
+            k: self.forecast_array[i] for i, k in enumerate(self.forecast_keys)
         }
 
         self._nan_out = np.array([np.nan] * self.prediction_length)
@@ -294,22 +300,26 @@ class QuantileForecast(Forecast):
         if self._dim is not None:
             return self._dim
         else:
-            if (len(self.forecast_array.shape) == 2
-                ):  # 1D target. shape: (num_samples, prediction_length)
+            if (
+                len(self.forecast_array.shape) == 2
+            ):  # 1D target. shape: (num_samples, prediction_length)
                 return 1
             else:
                 return self.forecast_array.shape[
-                    1]  # 2D target. shape: (num_samples, target_dim, prediction_length)
+                    1
+                ]  # 2D target. shape: (num_samples, target_dim, prediction_length)
 
     def __repr__(self):
-        return ", ".join([
-            f"QuantileForecast({self.forecast_array!r})",
-            f"start_date={self.start_date!r}",
-            f"freq={self.freq!r}",
-            f"forecast_keys={self.forecast_keys!r}",
-            f"item_id={self.item_id!r}",
-            f"info={self.info!r})",
-        ])
+        return ", ".join(
+            [
+                f"QuantileForecast({self.forecast_array!r})",
+                f"start_date={self.start_date!r}",
+                f"freq={self.freq!r}",
+                f"forecast_keys={self.forecast_keys!r}",
+                f"item_id={self.item_id!r}",
+                f"info={self.info!r})",
+            ]
+        )
 
 
 # class DistributionForecast(Forecast):

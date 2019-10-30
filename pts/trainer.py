@@ -9,20 +9,23 @@ from .dataset import TrainDataLoader
 
 
 class Trainer:
-    def __init__(self,
-                 epochs: int = 100,
-                 batch_size: int = 32,
-                 num_batches_per_epoch: int = 50,
-                 learning_rate: float = 1e-3,
-                 device: Optional[torch.device] = None) -> None:
+    def __init__(
+        self,
+        epochs: int = 100,
+        batch_size: int = 32,
+        num_batches_per_epoch: int = 50,
+        learning_rate: float = 1e-3,
+        device: Optional[torch.device] = None,
+    ) -> None:
         self.epochs = epochs
         self.batch_size = batch_size
         self.num_batches_per_epoch = num_batches_per_epoch
         self.learning_rate = learning_rate
         self.device = device
 
-    def __call__(self, net: nn.Module, input_names: List[str],
-                 train_iter: TrainDataLoader) -> None:
+    def __call__(
+        self, net: nn.Module, input_names: List[str], train_iter: TrainDataLoader
+    ) -> None:
 
         net.to(self.device)
 
@@ -45,6 +48,6 @@ class Trainer:
 
                     loss.backward()
                     optimizer.step()
-            
+
             # mark epoch end time and log time cost of current epoch
             toc = time.time()

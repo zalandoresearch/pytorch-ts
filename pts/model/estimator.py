@@ -33,6 +33,7 @@ class DummyEstimator(Estimator):
     **kwargs
         Keyword arguments to pass to the predictor constructor.
     """
+
     def __init__(self, predictor_cls: type, **kwargs) -> None:
         self.predictor = predictor_cls(**kwargs)
 
@@ -78,8 +79,9 @@ class PTSEstimator(Estimator):
         pass
 
     @abstractmethod
-    def create_predictor(self, transformation: Transformation,
-                         trained_network: nn.Module) -> Predictor:
+    def create_predictor(
+        self, transformation: Transformation, trained_network: nn.Module
+    ) -> Predictor:
         """
         Create and return a predictor object.
 

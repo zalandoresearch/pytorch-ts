@@ -25,15 +25,17 @@ def shift_timestamp(ts: pd.Timestamp, offset: int) -> pd.Timestamp:
         raise Exception(ex)
 
 
-def target_transformation_length(target: np.array, pred_length: int,
-                                 is_train: bool) -> int:
+def target_transformation_length(
+    target: np.array, pred_length: int, is_train: bool
+) -> int:
     return target.shape[-1] + (0 if is_train else pred_length)
 
 
 class Transformation(ABC):
     @abstractmethod
-    def __call__(self, data_it: Iterator[DataEntry],
-                 is_train: bool) -> Iterator[DataEntry]:
+    def __call__(
+        self, data_it: Iterator[DataEntry], is_train: bool
+    ) -> Iterator[DataEntry]:
         pass
 
     def estimate(self, data_it: Iterator[DataEntry]) -> Iterator[DataEntry]:
@@ -44,11 +46,13 @@ class Chain(Transformation):
     """
     Chain multiple transformations together.
     """
+
     def __init__(self, trans: List[Transformation]) -> None:
         self.trans = trans
 
-    def __call__(self, data_it: Iterator[DataEntry],
-                 is_train: bool) -> Iterator[DataEntry]:
+    def __call__(
+        self, data_it: Iterator[DataEntry], is_train: bool
+    ) -> Iterator[DataEntry]:
         tmp = data_it
         for t in self.trans:
             tmp = t(tmp, is_train)
@@ -59,8 +63,9 @@ class Chain(Transformation):
 
 
 class IdentityTransformation(Transformation):
-    def __call__(self, data_it: Iterator[DataEntry],
-                 is_train: bool) -> Iterator[DataEntry]:
+    def __call__(
+        self, data_it: Iterator[DataEntry], is_train: bool
+    ) -> Iterator[DataEntry]:
         return data_it
 
 
@@ -68,8 +73,8 @@ class MapTransformation(Transformation):
     """
     Base class for Transformations that returns exactly one result per input in the stream.
     """
-    def __call__(self, data_it: Iterator[DataEntry],
-                 is_train: bool) -> Iterator:
+
+    def __call__(self, data_it: Iterator[DataEntry], is_train: bool) -> Iterator:
         for data_entry in data_it:
             try:
                 yield self.map_transform(data_entry.copy(), is_train)
@@ -85,6 +90,7 @@ class SimpleTransformation(MapTransformation):
     """
     Element wise transformations that are the same in train and test mode
     """
+
     def map_transform(self, data: DataEntry, is_train: bool) -> DataEntry:
         return self.transform(data)
 
@@ -100,6 +106,7 @@ class AdhocTransform(SimpleTransformation):
     It is OK to use this for experiments and outside of a model pipeline that
     needs to be serialized.
     """
+
     def __init__(self, func: Callable[[DataEntry], DataEntry]) -> None:
         self.func = func
 
@@ -112,14 +119,13 @@ class FlatMapTransformation(Transformation):
     Transformations that yield zero or more results per input, but do not combine
     elements from the input stream.
     """
-    def __call__(self, data_it: Iterator[DataEntry],
-                 is_train: bool) -> Iterator:
+
+    def __call__(self, data_it: Iterator[DataEntry], is_train: bool) -> Iterator:
         num_idle_transforms = 0
         for data_entry in data_it:
             num_idle_transforms += 1
             try:
-                for result in self.flatmap_transform(data_entry.copy(),
-                                                     is_train):
+                for result in self.flatmap_transform(data_entry.copy(), is_train):
                     num_idle_transforms = 0
                     yield result
             except Exception as e:
@@ -130,11 +136,11 @@ class FlatMapTransformation(Transformation):
                     f"This means the transformation looped over "
                     f"MAX_IDLE_TRANSFORMS={MAX_IDLE_TRANSFORMS} "
                     f"inputs without returning any output.\n"
-                    f"This occurred in the following transformation:\n{self}")
+                    f"This occurred in the following transformation:\n{self}"
+                )
 
     @abstractmethod
-    def flatmap_transform(self, data: DataEntry,
-                          is_train: bool) -> Iterator[DataEntry]:
+    def flatmap_transform(self, data: DataEntry, is_train: bool) -> Iterator[DataEntry]:
         pass
 
 
@@ -142,8 +148,7 @@ class FilterTransformation(FlatMapTransformation):
     def __init__(self, condition: Callable[[DataEntry], bool]) -> None:
         self.condition = condition
 
-    def flatmap_transform(self, data: DataEntry,
-                          is_train: bool) -> Iterator[DataEntry]:
+    def flatmap_transform(self, data: DataEntry, is_train: bool) -> Iterator[DataEntry]:
         if self.condition(data):
             yield data
 
@@ -169,6 +174,7 @@ class SetField(SimpleTransformation):
     value
         Value to be set
     """
+
     def __init__(self, output_field: str, value: Any) -> None:
         self.output_field = output_field
         self.value = value
@@ -188,6 +194,7 @@ class SetFieldIfNotPresent(SimpleTransformation):
     value
         Value to be set
     """
+
     def __init__(self, field: str, value: Any) -> None:
         self.output_field = field
         self.value = value
@@ -209,10 +216,10 @@ class AsNumpyArray(SimpleTransformation):
     dtype
         numpy dtype to use.
     """
-    def __init__(self,
-                 field: str,
-                 expected_ndim: int,
-                 dtype: np.dtype = np.float32) -> None:
+
+    def __init__(
+        self, field: str, expected_ndim: int, dtype: np.dtype = np.float32
+    ) -> None:
         self.field = field
         self.expected_ndim = expected_ndim
         self.dtype = dtype
@@ -252,6 +259,7 @@ class ExpandDimArray(SimpleTransformation):
     axis
         Axis to expand (see np.expand_dims for details)
     """
+
     def __init__(self, field: str, axis: Optional[int] = None) -> None:
         self.field = field
         self.axis = axis
@@ -275,21 +283,20 @@ class VstackFeatures(SimpleTransformation):
     drop_inputs
         If set to true the input fields will be dropped.
     """
-    def __init__(self,
-                 output_field: str,
-                 input_fields: List[str],
-                 drop_inputs: bool = True) -> None:
+
+    def __init__(
+        self, output_field: str, input_fields: List[str], drop_inputs: bool = True
+    ) -> None:
         self.output_field = output_field
         self.input_fields = input_fields
-        self.cols_to_drop = ([] if not drop_inputs else [
-            fname for fname in self.input_fields if fname != output_field
-        ])
+        self.cols_to_drop = (
+            []
+            if not drop_inputs
+            else [fname for fname in self.input_fields if fname != output_field]
+        )
 
     def transform(self, data: DataEntry) -> DataEntry:
-        r = [
-            data[fname] for fname in self.input_fields
-            if data[fname] is not None
-        ]
+        r = [data[fname] for fname in self.input_fields if data[fname] is not None]
         output = np.vstack(r)
         data[self.output_field] = output
         for fname in self.cols_to_drop:
@@ -310,21 +317,20 @@ class ConcatFeatures(SimpleTransformation):
     drop_inputs
         If set to true the input fields will be dropped.
     """
-    def __init__(self,
-                 output_field: str,
-                 input_fields: List[str],
-                 drop_inputs: bool = True) -> None:
+
+    def __init__(
+        self, output_field: str, input_fields: List[str], drop_inputs: bool = True
+    ) -> None:
         self.output_field = output_field
         self.input_fields = input_fields
-        self.cols_to_drop = ([] if not drop_inputs else [
-            fname for fname in self.input_fields if fname != output_field
-        ])
+        self.cols_to_drop = (
+            []
+            if not drop_inputs
+            else [fname for fname in self.input_fields if fname != output_field]
+        )
 
     def transform(self, data: DataEntry) -> DataEntry:
-        r = [
-            data[fname] for fname in self.input_fields
-            if data[fname] is not None
-        ]
+        r = [data[fname] for fname in self.input_fields if data[fname] is not None]
         output = np.concatenate(r)
         data[self.output_field] = output
         for fname in self.cols_to_drop:
@@ -342,6 +348,7 @@ class SwapAxes(SimpleTransformation):
     axes
         Axes to use
     """
+
     def __init__(self, input_fields: List[str], axes: Tuple[int, int]) -> None:
         self.input_fields = input_fields
         self.axis1, self.axis2 = axes
@@ -359,7 +366,8 @@ class SwapAxes(SimpleTransformation):
         else:
             raise ValueError(
                 f"Unexpected field type {type(v).__name__}, expected "
-                f"np.ndarray or list[np.ndarray]")
+                f"np.ndarray or list[np.ndarray]"
+            )
 
 
 class ListFeatures(SimpleTransformation):
@@ -374,15 +382,17 @@ class ListFeatures(SimpleTransformation):
     drop_inputs
         If true the input fields will be removed from the result.
     """
-    def __init__(self,
-                 output_field: str,
-                 input_fields: List[str],
-                 drop_inputs: bool = True) -> None:
+
+    def __init__(
+        self, output_field: str, input_fields: List[str], drop_inputs: bool = True
+    ) -> None:
         self.output_field = output_field
         self.input_fields = input_fields
-        self.cols_to_drop = ([] if not drop_inputs else [
-            fname for fname in self.input_fields if fname != output_field
-        ])
+        self.cols_to_drop = (
+            []
+            if not drop_inputs
+            else [fname for fname in self.input_fields if fname != output_field]
+        )
 
     def transform(self, data: DataEntry) -> DataEntry:
         data[self.output_field] = [data[fname] for fname in self.input_fields]
@@ -411,13 +421,14 @@ class AddObservedValuesIndicator(SimpleTransformation):
         result.
     dtype
     """
+
     def __init__(
-            self,
-            target_field: str,
-            output_field: str,
-            dummy_value: int = 0,
-            convert_nans: bool = True,
-            dtype: np.dtype = np.float32,
+        self,
+        target_field: str,
+        output_field: str,
+        dummy_value: int = 0,
+        convert_nans: bool = True,
+        dtype: np.dtype = np.float32,
     ) -> None:
         self.dummy_value = dummy_value
         self.target_field = target_field
@@ -447,6 +458,7 @@ class RenameFields(SimpleTransformation):
     mapping
         Name mapping `input_name -> output_name`
     """
+
     def __init__(self, mapping: Dict[str, str]) -> None:
         self.mapping = mapping
         values_count = Counter(mapping.values())
@@ -484,13 +496,14 @@ class AddConstFeature(MapTransformation):
     dtype
         Numpy dtype to use for resulting array.
     """
+
     def __init__(
-            self,
-            output_field: str,
-            target_field: str,
-            pred_length: int,
-            const: float = 1.0,
-            dtype: np.dtype = np.float32,
+        self,
+        output_field: str,
+        target_field: str,
+        pred_length: int,
+        const: float = 1.0,
+        dtype: np.dtype = np.float32,
     ) -> None:
         self.pred_length = pred_length
         self.const = const
@@ -499,11 +512,12 @@ class AddConstFeature(MapTransformation):
         self.target_field = target_field
 
     def map_transform(self, data: DataEntry, is_train: bool) -> DataEntry:
-        length = target_transformation_length(data[self.target_field],
-                                              self.pred_length,
-                                              is_train=is_train)
-        data[self.output_field] = self.const * np.ones(shape=(1, length),
-                                                       dtype=self.dtype)
+        length = target_transformation_length(
+            data[self.target_field], self.pred_length, is_train=is_train
+        )
+        data[self.output_field] = self.const * np.ones(
+            shape=(1, length), dtype=self.dtype
+        )
         return data
 
 
@@ -525,13 +539,14 @@ class AddTimeFeatures(MapTransformation):
     pred_length
         Prediction length
     """
+
     def __init__(
-            self,
-            start_field: str,
-            target_field: str,
-            output_field: str,
-            time_features: List[TimeFeature],
-            pred_length: int,
+        self,
+        start_field: str,
+        target_field: str,
+        output_field: str,
+        time_features: List[TimeFeature],
+        pred_length: int,
     ) -> None:
         self.date_features = time_features
         self.pred_length = pred_length
@@ -551,26 +566,26 @@ class AddTimeFeatures(MapTransformation):
         if self._min_time_point is None:
             self._min_time_point = start
             self._max_time_point = end
-        self._min_time_point = min(shift_timestamp(start, -50),
-                                   self._min_time_point)
-        self._max_time_point = max(shift_timestamp(end, 50),
-                                   self._max_time_point)
-        self.full_date_range = pd.date_range(self._min_time_point,
-                                             self._max_time_point,
-                                             freq=start.freq)
+        self._min_time_point = min(shift_timestamp(start, -50), self._min_time_point)
+        self._max_time_point = max(shift_timestamp(end, 50), self._max_time_point)
+        self.full_date_range = pd.date_range(
+            self._min_time_point, self._max_time_point, freq=start.freq
+        )
         self._full_range_date_features = np.vstack(
-            [feat(self.full_date_range) for feat in self.date_features])
-        self._date_index = pd.Series(index=self.full_date_range,
-                                     data=np.arange(len(self.full_date_range)))
+            [feat(self.full_date_range) for feat in self.date_features]
+        )
+        self._date_index = pd.Series(
+            index=self.full_date_range, data=np.arange(len(self.full_date_range))
+        )
 
     def map_transform(self, data: DataEntry, is_train: bool) -> DataEntry:
         start = data[self.start_field]
-        length = target_transformation_length(data[self.target_field],
-                                              self.pred_length,
-                                              is_train=is_train)
+        length = target_transformation_length(
+            data[self.target_field], self.pred_length, is_train=is_train
+        )
         self._update_cache(start, length)
         i0 = self._date_index[start]
-        features = self._full_range_date_features[..., i0:i0 + length]
+        features = self._full_range_date_features[..., i0 : i0 + length]
         data[self.output_field] = features
         return data
 
@@ -594,13 +609,14 @@ class AddAgeFeature(MapTransformation):
         If set to true the age feature grows logarithmically otherwise linearly over time.
     dtype
     """
+
     def __init__(
-            self,
-            target_field: str,
-            output_field: str,
-            pred_length: int,
-            log_scale: bool = True,
-            dtype: np.dtype = np.float32,
+        self,
+        target_field: str,
+        output_field: str,
+        pred_length: int,
+        log_scale: bool = True,
+        dtype: np.dtype = np.float32,
     ) -> None:
         self.pred_length = pred_length
         self.target_field = target_field
@@ -610,9 +626,9 @@ class AddAgeFeature(MapTransformation):
         self.dtype = dtype
 
     def map_transform(self, data: DataEntry, is_train: bool) -> DataEntry:
-        length = target_transformation_length(data[self.target_field],
-                                              self.pred_length,
-                                              is_train=is_train)
+        length = target_transformation_length(
+            data[self.target_field], self.pred_length, is_train=is_train
+        )
 
         if self.log_scale:
             age = np.log10(2.0 + np.arange(length, dtype=self.dtype))
@@ -669,18 +685,19 @@ class InstanceSplitter(FlatMapTransformation):
         cold-start. In such case, is_pad_out contains an indicator whether
         data is padded or not.
     """
+
     def __init__(
-            self,
-            target_field: str,
-            is_pad_field: str,
-            start_field: str,
-            forecast_start_field: str,
-            train_sampler: InstanceSampler,
-            past_length: int,
-            future_length: int,
-            batch_first: bool = True,
-            time_series_fields: Optional[List[str]] = None,
-            pick_incomplete: bool = True,
+        self,
+        target_field: str,
+        is_pad_field: str,
+        start_field: str,
+        forecast_start_field: str,
+        train_sampler: InstanceSampler,
+        past_length: int,
+        future_length: int,
+        batch_first: bool = True,
+        time_series_fields: Optional[List[str]] = None,
+        pick_incomplete: bool = True,
     ) -> None:
 
         assert future_length > 0
@@ -702,8 +719,7 @@ class InstanceSplitter(FlatMapTransformation):
     def _future(self, col_name):
         return f"future_{col_name}"
 
-    def flatmap_transform(self, data: DataEntry,
-                          is_train: bool) -> Iterator[DataEntry]:
+    def flatmap_transform(self, data: DataEntry, is_train: bool) -> Iterator[DataEntry]:
         pl = self.future_length
         slice_cols = self.ts_fields + [self.target_field]
         target = data[self.target_field]
@@ -720,11 +736,12 @@ class InstanceSplitter(FlatMapTransformation):
             else:
                 if self.pick_incomplete:
                     sampling_indices = self.train_sampler(
-                        target, 0, len_target - self.future_length)
+                        target, 0, len_target - self.future_length
+                    )
                 else:
                     sampling_indices = self.train_sampler(
-                        target, self.past_length,
-                        len_target - self.future_length)
+                        target, self.past_length, len_target - self.future_length
+                    )
         else:
             sampling_indices = [len_target]
         for i in sampling_indices:
@@ -735,17 +752,18 @@ class InstanceSplitter(FlatMapTransformation):
             for ts_field in slice_cols:
                 if i > self.past_length:
                     # truncate to past_length
-                    past_piece = d[ts_field][..., i - self.past_length:i]
+                    past_piece = d[ts_field][..., i - self.past_length : i]
                 elif i < self.past_length:
-                    pad_block = np.zeros(d[ts_field].shape[:-1] +
-                                         (pad_length, ),
-                                         dtype=d[ts_field].dtype)
+                    pad_block = np.zeros(
+                        d[ts_field].shape[:-1] + (pad_length,), dtype=d[ts_field].dtype
+                    )
                     past_piece = np.concatenate(
-                        [pad_block, d[ts_field][..., :i]], axis=-1)
+                        [pad_block, d[ts_field][..., :i]], axis=-1
+                    )
                 else:
                     past_piece = d[ts_field][..., :i]
                 d[self._past(ts_field)] = past_piece
-                d[self._future(ts_field)] = d[ts_field][..., i:i + pl]
+                d[self._future(ts_field)] = d[ts_field][..., i : i + pl]
                 del d[ts_field]
             pad_indicator = np.zeros(self.past_length)
             if pad_length > 0:
@@ -753,14 +771,11 @@ class InstanceSplitter(FlatMapTransformation):
 
             if self.batch_first:
                 for ts_field in slice_cols:
-                    d[self._past(ts_field)] = d[self._past(
-                        ts_field)].transpose()
-                    d[self._future(ts_field)] = d[self._future(
-                        ts_field)].transpose()
+                    d[self._past(ts_field)] = d[self._past(ts_field)].transpose()
+                    d[self._future(ts_field)] = d[self._future(ts_field)].transpose()
 
             d[self._past(self.is_pad_field)] = pad_indicator
-            d[self.forecast_start_field] = shift_timestamp(
-                d[self.start_field], i)
+            d[self.forecast_start_field] = shift_timestamp(d[self.start_field], i)
             yield d
 
 
@@ -813,20 +828,21 @@ class CanonicalInstanceSplitter(FlatMapTransformation):
         length of the prediction range, must be set if
         use_prediction_features is True
     """
+
     def __init__(
-            self,
-            target_field: str,
-            is_pad_field: str,
-            start_field: str,
-            forecast_start_field: str,
-            instance_sampler: InstanceSampler,
-            instance_length: int,
-            batch_first: bool = True,
-            time_series_fields: List[str] = [],
-            allow_target_padding: bool = False,
-            pad_value: float = 0.0,
-            use_prediction_features: bool = False,
-            prediction_length: Optional[int] = None,
+        self,
+        target_field: str,
+        is_pad_field: str,
+        start_field: str,
+        forecast_start_field: str,
+        instance_sampler: InstanceSampler,
+        instance_length: int,
+        batch_first: bool = True,
+        time_series_fields: List[str] = [],
+        allow_target_padding: bool = False,
+        pad_value: float = 0.0,
+        use_prediction_features: bool = False,
+        prediction_length: Optional[int] = None,
     ) -> None:
         self.instance_sampler = instance_sampler
         self.instance_length = instance_length
@@ -852,8 +868,7 @@ class CanonicalInstanceSplitter(FlatMapTransformation):
     def _future(self, col_name):
         return f"future_{col_name}"
 
-    def flatmap_transform(self, data: DataEntry,
-                          is_train: bool) -> Iterator[DataEntry]:
+    def flatmap_transform(self, data: DataEntry, is_train: bool) -> Iterator[DataEntry]:
         ts_fields = self.dynamic_feature_fields + [self.target_field]
         ts_target = data[self.target_field]
 
@@ -863,10 +878,14 @@ class CanonicalInstanceSplitter(FlatMapTransformation):
             if len_target < self.instance_length:
                 sampling_indices = (
                     # Returning [] for all time series will cause this to be in loop forever!
-                    [len_target] if self.allow_target_padding else [])
+                    [len_target]
+                    if self.allow_target_padding
+                    else []
+                )
             else:
                 sampling_indices = self.instance_sampler(
-                    ts_target, self.instance_length, len_target)
+                    ts_target, self.instance_length, len_target
+                )
         else:
             sampling_indices = [len_target]
 
@@ -876,8 +895,9 @@ class CanonicalInstanceSplitter(FlatMapTransformation):
             pad_length = max(self.instance_length - i, 0)
 
             # update start field
-            d[self.start_field] = shift_timestamp(data[self.start_field],
-                                                  i - self.instance_length)
+            d[self.start_field] = shift_timestamp(
+                data[self.start_field], i - self.instance_length
+            )
 
             # set is_pad field
             is_pad = np.zeros(self.instance_length)
@@ -890,26 +910,28 @@ class CanonicalInstanceSplitter(FlatMapTransformation):
                 full_ts = data[ts_field]
                 if pad_length > 0:
                     pad_pre = self.pad_value * np.ones(
-                        shape=full_ts.shape[:-1] + (pad_length, ))
-                    past_ts = np.concatenate([pad_pre, full_ts[..., :i]],
-                                             axis=-1)
+                        shape=full_ts.shape[:-1] + (pad_length,)
+                    )
+                    past_ts = np.concatenate([pad_pre, full_ts[..., :i]], axis=-1)
                 else:
-                    past_ts = full_ts[..., (i - self.instance_length):i]
+                    past_ts = full_ts[..., (i - self.instance_length) : i]
 
                 past_ts = past_ts.transpose() if self.batch_first else past_ts
                 d[self._past(ts_field)] = past_ts
 
                 if self.use_prediction_features and not is_train:
                     if not ts_field == self.target_field:
-                        future_ts = full_ts[..., i:i + self.prediction_length]
-                        future_ts = (future_ts.transpose()
-                                     if self.batch_first else future_ts)
+                        future_ts = full_ts[..., i : i + self.prediction_length]
+                        future_ts = (
+                            future_ts.transpose() if self.batch_first else future_ts
+                        )
                         d[self._future(ts_field)] = future_ts
 
                 del d[ts_field]
 
             d[self.forecast_start_field] = shift_timestamp(
-                d[self.start_field], self.instance_length)
+                d[self.start_field], self.instance_length
+            )
 
             yield d
 
@@ -922,6 +944,7 @@ class SelectFields(MapTransformation):
     input_fields
         List of fields to keep.
     """
+
     def __init__(self, input_fields: List[str]) -> None:
         self.input_fields = input_fields
 

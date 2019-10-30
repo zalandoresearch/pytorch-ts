@@ -18,8 +18,10 @@ class TransformedDataset(Dataset):
     transformations
         List of transformations to apply
     """
-    def __init__(self, base_dataset: Dataset,
-                 transformations: List[Transformation]) -> None:
+
+    def __init__(
+        self, base_dataset: Dataset, transformations: List[Transformation]
+    ) -> None:
         self.base_dataset = base_dataset
         self.transformations = Chain(transformations)
 

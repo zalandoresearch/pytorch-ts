@@ -1,8 +1,7 @@
-from typing import Callable, Dict, Optional, Tuple
 from abc import ABC, abstractmethod
+from typing import Callable, Dict, Optional, Tuple
 
 import numpy as np
-
 import torch
 import torch.nn as nn
 
@@ -30,5 +29,6 @@ class ArgProj(nn.Module):
 
         return self.domain_map(*params_unbounded)
 
+
 class Output(ABC):
-    
+    pass
