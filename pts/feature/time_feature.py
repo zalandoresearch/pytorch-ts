@@ -6,6 +6,7 @@ import pandas as pd
 
 from .utils import get_granularity
 
+
 class TimeFeature(ABC):
     def __init__(self, normalized: bool = True):
         self.normalized = normalized

@@ -1,9 +1,8 @@
 from abc import ABC, abstractmethod
-from typing import Optional, Dict, Enum, Set, List
+from typing import Dict, Enum, List, Optional, Set
 
 import numpy as np
 import pandas as pd
-
 import torch
 from torch.distributions.distribution import Distributions
 

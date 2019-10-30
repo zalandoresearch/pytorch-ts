@@ -1,6 +1,6 @@
 from typing import Iterable
 
-from .common import Dataset, DataEntry, SourceContext
+from .common import DataEntry, Dataset, SourceContext
 from .process import ProcessDataEntry
 
 

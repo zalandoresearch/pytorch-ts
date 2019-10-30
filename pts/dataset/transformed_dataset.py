@@ -1,7 +1,8 @@
-from typing import List, Iterator
+from typing import Iterator, List
 
-from .common import Dataset, DataEntry
-from pts.feature import Transformation, Chain
+from pts.feature import Chain, Transformation
+
+from .common import DataEntry, Dataset
 
 
 class TransformedDataset(Dataset):

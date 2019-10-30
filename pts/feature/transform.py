@@ -1,13 +1,14 @@
 from abc import ABC, abstractmethod
 from collections import Counter
 from functools import lru_cache, reduce
-from typing import Iterator, List, Callable, Any, Optional, Dict, Tuple
+from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
 
-from pts.dataset import DataEntry, InstanceSampler
 from pts import assert_pts
+from pts.dataset import DataEntry, InstanceSampler
+
 from .time_feature import TimeFeature
 
 MAX_IDLE_TRANSFORMS = 100

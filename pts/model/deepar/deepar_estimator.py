@@ -2,9 +2,11 @@ from typing import List, Optional
 
 import numpy as np
 
-from pts.model import PTSEstimator
-from pts.feature import TimeFeature, get_lags_for_frequency, time_features_from_frequency_str
 from pts import Trainer
+from pts.feature import (TimeFeature, get_lags_for_frequency,
+                         time_features_from_frequency_str)
+from pts.model import PTSEstimator
+
 
 class DeepAREstimator(PTSEstimator):
     def __init__(self,

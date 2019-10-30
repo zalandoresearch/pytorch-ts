@@ -1,13 +1,12 @@
 from abc import ABC, abstractmethod
 
 import numpy as np
-
-from pts.dataset.common import Dataset
-from pts.dataset import TrainDataLoader
-from pts.feature import Transformation
-
 import torch
 import torch.nn as nn
+
+from pts.dataset import TrainDataLoader
+from pts.dataset.common import Dataset
+from pts.feature import Transformation
 
 from .predictor import Predictor
 from .utils import get_module_forward_input_names

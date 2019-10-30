@@ -1,5 +1,6 @@
-from typing import Tuple
 import re
+from typing import Tuple
+
 
 def get_granularity(freq_str: str) -> Tuple[int, str]:
     """

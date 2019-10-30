@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
-
-from typing import Any, Dict, Sized, Iterable, NamedTuple
+from typing import Any, Dict, Iterable, NamedTuple, Sized
 
 DataEntry = Dict[str, Any]
 

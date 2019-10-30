@@ -1,5 +1,5 @@
-from typing import NamedTuple, Union
 import re
+from typing import NamedTuple, Union
 
 
 class Quantile(NamedTuple):
