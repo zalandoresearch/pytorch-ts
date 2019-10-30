@@ -9,6 +9,7 @@ from pts.feature import (
     time_features_from_frequency_str,
 )
 from pts.model import PTSEstimator
+from pts.modules import DistributionOutput, StudentTOutput
 
 
 class DeepAREstimator(PTSEstimator):

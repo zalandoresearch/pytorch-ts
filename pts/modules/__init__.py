@@ -1,2 +1,2 @@
-from pts.modules.distribution_output import ArgProj
-from pts.modules.lambda_layer import LambdaLayer
+from .distribution_output import ArgProj, Output, DistributionOutput, StudentTOutput
+from .lambda_layer import LambdaLayer

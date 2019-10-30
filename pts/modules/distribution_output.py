@@ -4,7 +4,8 @@ from typing import Callable, Dict, Optional, Tuple
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.distributions import Distribution, TransformedDistribution, AffineTransform
+import torch.nn.functional as F
+from torch.distributions import *
 
 from .lambda_layer import LambdaLayer
 
@@ -73,3 +74,14 @@ class DistributionOutput(Output):
         else:
             distr = self.distr_cls(*distr_args)
             return TransformedDistribution(distr, [AffineTransform(loc=0, scale=scale)])
+
+
+class StudentTOutput(DistributionOutput):
+    args_dim: Dict[str, int] = {"df": 1, "loc": 1, "scale": 1}
+    distr_cls: type = StudentT
+
+    @classmethod
+    def domain_map(cls, df, loc, scale):
+        scale = nn.Softplus(scale)
+        df = 2.0 + nn.Softplus(df)
+        return df.squeeze(-1), loc.squeeze(-1), scale.squeeze(-1)
