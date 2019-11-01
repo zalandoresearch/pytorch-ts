@@ -82,6 +82,6 @@ class StudentTOutput(DistributionOutput):
 
     @classmethod
     def domain_map(cls, df, loc, scale):
-        scale = nn.Softplus(scale)
-        df = 2.0 + nn.Softplus(df)
+        scale = F.softplus(scale)
+        df = 2.0 + F.softplus(df)
         return df.squeeze(-1), loc.squeeze(-1), scale.squeeze(-1)
