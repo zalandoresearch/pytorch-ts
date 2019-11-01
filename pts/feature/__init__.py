@@ -1,5 +1,5 @@
-from pts.feature.lag import get_lags_for_frequency
-from pts.feature.time_feature import (
+from .lag import get_lags_for_frequency
+from .time_feature import (
     DayOfMonth,
     DayOfWeek,
     DayOfYear,
@@ -10,7 +10,7 @@ from pts.feature.time_feature import (
     WeekOfYear,
     time_features_from_frequency_str,
 )
-from pts.feature.transform import (
+from .transform import (
     AddAgeFeature,
     AddConstFeature,
     AddObservedValuesIndicator,

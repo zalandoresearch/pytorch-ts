@@ -6,8 +6,9 @@ from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 
-from pts import assert_pts
-from pts.dataset import DataEntry, InstanceSampler
+from pts.exception import assert_pts
+from pts.dataset import DataEntry
+from pts.dataset.sampler import InstanceSampler
 
 from .time_feature import TimeFeature
 

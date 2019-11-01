@@ -1,4 +1,4 @@
-from pts.model.estimator import Estimator, PTSEstimator
-from pts.model.forecast import Forecast
-from pts.model.predictor import Predictor
-from pts.model.quantile import Quantile
+from .estimator import Estimator, PTSEstimator
+from .forecast import Forecast
+from .predictor import Predictor
+from .quantile import Quantile
