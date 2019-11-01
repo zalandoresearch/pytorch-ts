@@ -7,10 +7,16 @@ from pts.feature import (
     TimeFeature,
     get_lags_for_frequency,
     time_features_from_frequency_str,
-    Transformation, Chain, 
-    RemoveFields, SetField, AsNumpyArray, 
-    AddObservedValuesIndicator, AddTimeFeatures,
-    AddAgeFeature, VstackFeatures, InstanceSplitter,
+    Transformation,
+    Chain,
+    RemoveFields,
+    SetField,
+    AsNumpyArray,
+    AddObservedValuesIndicator,
+    AddTimeFeatures,
+    AddAgeFeature,
+    VstackFeatures,
+    InstanceSplitter,
 )
 from pts.dataset import FieldName, ExpectedNumInstanceSampler
 from pts.model import PTSEstimator
@@ -18,35 +24,35 @@ from pts.modules import DistributionOutput, StudentTOutput
 
 from .deepar_network import DeepARTrainingNetwork
 
+
 class DeepAREstimator(PTSEstimator):
     def __init__(
-        self,
-        freq: str,
-        prediction_length: int,
-        trainer: Trainer = Trainer(),
-        context_length: Optional[int] = None,
-        num_layers: int = 2,
-        num_cells: int = 40,
-        cell_type: str = "LSTM",
-        dropout_rate: float = 0.1,
-        use_feat_dynamic_real: bool = False,
-        use_feat_static_cat: bool = False,
-        use_feat_static_real: bool = False,
-        cardinality: Optional[List[int]] = None,
-        embedding_dimension: Optional[List[int]] = None,
-        distr_output: DistributionOutput = StudentTOutput(),
-        scaling: bool = True,
-        lags_seq: Optional[List[int]] = None,
-        time_features: Optional[List[TimeFeature]] = None,
-        num_parallel_samples: int = 100,
-        dtype: np.dtype = np.float32,
+            self,
+            freq: str,
+            prediction_length: int,
+            trainer: Trainer = Trainer(),
+            context_length: Optional[int] = None,
+            num_layers: int = 2,
+            num_cells: int = 40,
+            cell_type: str = "LSTM",
+            dropout_rate: float = 0.1,
+            use_feat_dynamic_real: bool = False,
+            use_feat_static_cat: bool = False,
+            use_feat_static_real: bool = False,
+            cardinality: Optional[List[int]] = None,
+            embedding_dimension: Optional[List[int]] = None,
+            distr_output: DistributionOutput = StudentTOutput(),
+            scaling: bool = True,
+            lags_seq: Optional[List[int]] = None,
+            time_features: Optional[List[TimeFeature]] = None,
+            num_parallel_samples: int = 100,
+            dtype: np.dtype = np.float32,
     ) -> None:
         super().__init__(trainer=trainer)
 
         self.freq = freq
-        self.context_length = (
-            context_length if context_length is not None else prediction_length
-        )
+        self.context_length = (context_length if context_length is not None
+                               else prediction_length)
         self.prediction_length = prediction_length
         self.distr_output = distr_output
         self.distr_output.dtype = dtype
@@ -57,21 +63,17 @@ class DeepAREstimator(PTSEstimator):
         self.use_feat_dynamic_real = use_feat_dynamic_real
         self.use_feat_static_cat = use_feat_static_cat
         self.use_feat_static_real = use_feat_static_real
-        self.cardinality = cardinality if cardinality and use_feat_static_cat else [1]
+        self.cardinality = cardinality if cardinality and use_feat_static_cat else [
+            1
+        ]
         self.embedding_dimension = (
-            embedding_dimension
-            if embedding_dimension is not None
-            else [min(50, (cat + 1) // 2) for cat in self.cardinality]
-        )
+            embedding_dimension if embedding_dimension is not None else
+            [min(50, (cat + 1) // 2) for cat in self.cardinality])
         self.scaling = scaling
-        self.lags_seq = (
-            lags_seq if lags_seq is not None else get_lags_for_frequency(freq_str=freq)
-        )
-        self.time_features = (
-            time_features
-            if time_features is not None
-            else time_features_from_frequency_str(self.freq)
-        )
+        self.lags_seq = (lags_seq if lags_seq is not None else
+                         get_lags_for_frequency(freq_str=freq))
+        self.time_features = (time_features if time_features is not None else
+                              time_features_from_frequency_str(self.freq))
 
         self.history_length = self.context_length + max(self.lags_seq)
 
@@ -85,22 +87,12 @@ class DeepAREstimator(PTSEstimator):
             remove_field_names.append(FieldName.FEAT_DYNAMIC_REAL)
 
         return Chain(
-            [RemoveFields(field_names=remove_field_names)]
-            + (
-                [SetField(output_field=FieldName.FEAT_STATIC_CAT, value=[0.0])]
-                if not self.use_feat_static_cat
-                else []
-            )
-            + (
-                [
-                    SetField(
-                        output_field=FieldName.FEAT_STATIC_REAL, value=[0.0]
-                    )
-                ]
-                if not self.use_feat_static_real
-                else []
-            )
-            + [
+            [RemoveFields(field_names=remove_field_names)] +
+            ([SetField(output_field=FieldName.FEAT_STATIC_CAT, value=[0.0]
+                       )] if not self.use_feat_static_cat else []) +
+            ([SetField(output_field=FieldName.FEAT_STATIC_REAL, value=[0.0]
+                       )] if not self.use_feat_static_real else []) +
+            [
                 AsNumpyArray(
                     field=FieldName.FEAT_STATIC_CAT,
                     expected_ndim=1,
@@ -138,12 +130,9 @@ class DeepAREstimator(PTSEstimator):
                 ),
                 VstackFeatures(
                     output_field=FieldName.FEAT_TIME,
-                    input_fields=[FieldName.FEAT_TIME, FieldName.FEAT_AGE]
-                    + (
-                        [FieldName.FEAT_DYNAMIC_REAL]
-                        if self.use_feat_dynamic_real
-                        else []
-                    ),
+                    input_fields=[FieldName.FEAT_TIME, FieldName.FEAT_AGE] +
+                    ([FieldName.FEAT_DYNAMIC_REAL] if self.
+                     use_feat_dynamic_real else []),
                 ),
                 InstanceSplitter(
                     target_field=FieldName.TARGET,
@@ -158,8 +147,7 @@ class DeepAREstimator(PTSEstimator):
                         FieldName.OBSERVED_VALUES,
                     ],
                 ),
-            ]
-        )
+            ])
 
     def create_training_network(self) -> DeepARTrainingNetwork:
         return DeepARTrainingNetwork(
@@ -177,4 +165,3 @@ class DeepAREstimator(PTSEstimator):
             scaling=self.scaling,
             dtype=self.dtype,
         )
-    
