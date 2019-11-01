@@ -90,9 +90,9 @@ def test_studentT_likelihood(df: float, loc: float, scale: float):
         num_epochs=10,
         learning_rate=1e-2)
 
-    assert (np.abs(df_hat - df) <
-            TOL * df), f"df did not match: df = {df}, df_hat = {df_hat}"
-    assert (np.abs(loc_hat - loc) <
-            TOL * loc), f"loc did not match: loc = {loc}, loc_hat = {loc_hat}"
+    assert (np.abs(df_hat - df) < TOL * df
+            ), f"df did not match: df = {df}, df_hat = {df_hat}"
+    assert (np.abs(loc_hat - loc) < TOL * loc
+            ), f"loc did not match: loc = {loc}, loc_hat = {loc_hat}"
     assert (np.abs(scale_hat - scale) < TOL * scale
             ), f"scale did not match: scale = {scale}, scale_hat = {scale_hat}"
