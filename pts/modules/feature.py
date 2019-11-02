@@ -71,11 +71,11 @@ class FeatureAssembler(nn.Module):
     def process_static_cat(self, feature: torch.Tensor) -> torch.Tensor:
         if self.embeddings['embed_static'] is not None:
             feature = self.embeddings['embed_static'](feature)
-        return feature.unsqueeze(1).expand(-1, self.T, -1)
+        return feature.unsqueeze(1).expand(-1, self.T, -1).float()
 
     def process_dynamic_cat(self, feature: torch.Tensor) -> torch.Tensor:
         if self.embeddings['embed_dynamic'] is None:
-            return feature
+            return feature.float()
         else:
             return self.embeddings['embed_dynamic'](feature)
 

@@ -4,6 +4,7 @@ from itertools import chain, combinations
 
 import torch
 import torch.nn as nn
+from torch.distributions import Uniform
 
 from pts.modules import FeatureEmbedder, FeatureAssembler
 
@@ -139,4 +140,131 @@ def test_feature_assembler(config):
                 act_params_len = len([p for p in assemble_feature.parameters()])
                 assert exp_params_len == act_params_len
 
+            def test_forward_pass():
+                N, T = config["N"], config["T"]
+
+                inp_features = []
+                out_features = []
+
+                if "static_cat" not in enabled_features:
+                    inp_features.append(torch.zeros((N, 1)))
+                    out_features.append(torch.zeros((N, T, 1)))
+                elif embed_static:  # and 'static_cat' in enabled_features
+                    C = config["static_cat"]["C"]
+                    inp_features.append(
+                        torch.cat(
+                            [
+                                torch.randint(
+                                    0,
+                                    config["embed_static"]["cardinalities"][c],
+                                    (N, 1),
+                                )
+                                for c in range(C)
+                            ],
+                            dim=1,
+                        )
+                    )
+                    out_features.append(
+                        torch.ones(
+                            (
+                                N,
+                                T,
+                                sum(config["embed_static"]["embedding_dims"]),
+                            )
+                        )
+                    )
+                else:  # not embed_static and 'static_cat' in enabled_features
+                    C = config["static_cat"]["C"]
+                    inp_features.append(
+                        torch.cat(
+                            [
+                                torch.randint(
+                                    0,
+                                    config["embed_static"]["cardinalities"][c],
+                                    (N, 1),
+                                )
+                                for c in range(C)
+                            ],
+                            dim=1,
+                        )
+                    )
+                    out_features.append(
+                        inp_features[-1].unsqueeze(1).expand(-1, T, -1).float()
+                    )
+
+                if "static_real" not in enabled_features:
+                    inp_features.append(torch.zeros((N, 1)))
+                    out_features.append(torch.zeros((N, T, 1)))
+                else:
+                    C = config["static_real"]["C"]
+                    static_real = torch.empty((N,C)).uniform_(0,100)
+                    inp_features.append(static_real)
+                    out_features.append(
+                        static_real.unsqueeze(-2).expand(-1, T, -1)
+                    )
+
+                if "dynamic_cat" not in enabled_features:
+                    inp_features.append(torch.zeros((N, T, 1)))
+                    out_features.append(torch.zeros((N, T, 1)))
+                elif embed_dynamic:  # and 'static_cat' in enabled_features
+                    C = config["dynamic_cat"]["C"]
+                    inp_features.append(
+                        torch.cat(
+                            [
+                                torch.randint(
+                                    0,
+                                    config["embed_dynamic"]["cardinalities"][
+                                        c
+                                    ],
+                                    (N, T, 1),
+                                )
+                                for c in range(C)
+                            ],
+                            dim=2,
+                        )
+                    )
+                    out_features.append(
+                        torch.ones(
+                            (
+                                N,
+                                T,
+                                sum(config["embed_dynamic"]["embedding_dims"]),
+                            )
+                        )
+                    )
+                else:  # not embed_dynamic and 'dynamic_cat' in enabled_features
+                    C = config["dynamic_cat"]["C"]
+                    inp_features.append(
+                        torch.cat(
+                            [
+                                torch.randint(
+                                    0,
+                                    config["embed_dynamic"]["cardinalities"][
+                                        c
+                                    ],
+                                    (N, T, 1),
+                                )
+                                for c in range(C)
+                            ],
+                            dim=2,
+                        )
+                    )
+                    out_features.append(inp_features[-1].float())
+
+                if "dynamic_real" not in enabled_features:
+                    inp_features.append(torch.zeros((N, T, 1)))
+                    out_features.append(torch.zeros((N, T, 1)))
+                else:
+                    C = config["dynamic_real"]["C"]
+                    dynamic_real = torch.empty((N, T, C)).uniform_(0,100)
+                    inp_features.append(dynamic_real)
+                    out_features.append(dynamic_real)
+
+                act_output = assemble_feature(*inp_features)
+                exp_output = torch.cat(out_features, dim=2)
+
+                assert exp_output.shape == act_output.shape
+                assert torch.sum(exp_output - act_output) < 1e-20
+
             test_parameters_length()
+            test_forward_pass()
