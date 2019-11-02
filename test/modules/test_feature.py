@@ -59,8 +59,84 @@ def test_feature_embedder(config):
         exp_output = torch.ones(out_shape)
         
         assert act_output.shape == exp_output.shape
-        import pdb; pdb.set_trace()
         assert torch.abs(torch.sum(act_output - exp_output)) < 1e-20
 
     test_parameters_length()
     test_forward_pass()
+
+@pytest.mark.parametrize(
+    "config",
+    (
+        lambda N, T: [
+            dict(
+                N=N,
+                T=T,
+                static_cat=dict(C=2),
+                static_real=dict(C=5),
+                dynamic_cat=dict(C=3),
+                dynamic_real=dict(C=4),
+                embed_static=dict(
+                    cardinalities=[2, 4],
+                    embedding_dims=[3, 6],
+                ),
+                embed_dynamic=dict(
+                    cardinalities=[30, 30, 30],
+                    embedding_dims=[10, 20, 30],
+                ),
+            )
+        ]
+    )(10, 25),
+)
+def test_feature_assembler(config):
+    # iterate over the power-set of all possible feature types, excluding the empty set
+    feature_types = {
+        "static_cat",
+        "static_real",
+        "dynamic_cat",
+        "dynamic_real",
+    }
+    feature_combs = chain.from_iterable(
+        combinations(feature_types, r)
+        for r in range(1, len(feature_types) + 1)
+    )
+
+    # iterate over the power-set of all possible feature types, including the empty set
+    embedder_types = {"embed_static", "embed_dynamic"}
+    embedder_combs = chain.from_iterable(
+        combinations(embedder_types, r)
+        for r in range(0, len(embedder_types) + 1)
+    )
+    
+    for enabled_embedders in embedder_combs:
+        embed_static = (
+            FeatureEmbedder(**config["embed_static"])
+            if "embed_static" in enabled_embedders
+            else None
+        )
+        embed_dynamic = (
+            FeatureEmbedder(**config["embed_dynamic"])
+            if "embed_dynamic" in enabled_embedders
+            else None
+        )
+
+        for enabled_features in feature_combs:
+            assemble_feature = FeatureAssembler(
+                T=config["T"],
+                embed_static=embed_static,
+                embed_dynamic=embed_dynamic,
+            )
+            # assemble_feature.collect_params().initialize(mx.initializer.One())
+
+
+            def test_parameters_length():
+                exp_params_len = sum(
+                    [
+                        len(config[k]["embedding_dims"])
+                        for k in ["embed_static", "embed_dynamic"]
+                        if k in enabled_embedders
+                    ]
+                )
+                act_params_len = len([p for p in assemble_feature.parameters()])
+                assert exp_params_len == act_params_len
+
+            test_parameters_length()

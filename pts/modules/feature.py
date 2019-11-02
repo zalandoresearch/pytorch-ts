@@ -40,26 +40,17 @@ class FeatureEmbedder(nn.Module):
 
 
 class FeatureAssembler(nn.Module):
-    def __init__(T: int,
-                 use_static_cat: bool = False,
-                 use_static_real: bool = False,
-                 use_dynamic_cat: bool = False,
-                 use_dynamic_real: bool = False,
+    def __init__(self,
+                 T: int,
                  embed_static: Optional[FeatureEmbedder] = None,
-                 embed_dynamic: Optional[FeatureEmbedder] = None,
-                 dtype: torch.dtype = torch.float32) -> None:
+                 embed_dynamic: Optional[FeatureEmbedder] = None) -> None:
         super().__init__()
 
         self.T = T
-        self.use_static_cat = use_static_cat
-        self.use_static_real = use_static_real
-        self.use_dynamic_cat = use_dynamic_cat
-        self.use_dynamic_real = use_dynamic_real
-
-        self.embed_static: Callable[[torch.Tensor], torch.
-                                    Tensor] = embed_static or (lambda x: x)
-        self.embed_dynamic: Callable[[torch.Tensor], torch.
-                                     Tensor] = embed_dynamic or (lambda x: x)
+        self.embeddings = nn.ModuleDict({
+            'embed_static': embed_static,
+            'embed_dynamic': embed_dynamic
+        })
 
     def forward(
             self,
@@ -78,11 +69,15 @@ class FeatureAssembler(nn.Module):
         return torch.cat(processed_features, dim=-1)
 
     def process_static_cat(self, feature: torch.Tensor) -> torch.Tensor:
-        feature = self.embed_static(feature.to(self.dtype))
+        if self.embeddings['embed_static'] is not None:
+            feature = self.embeddings['embed_static'](feature)
         return feature.unsqueeze(1).expand(-1, self.T, -1)
 
     def process_dynamic_cat(self, feature: torch.Tensor) -> torch.Tensor:
-        return self.embed_dynamic(feature.to(self.dtype))
+        if self.embeddings['embed_dynamic'] is None:
+            return feature
+        else:
+            return self.embeddings['embed_dynamic'](feature)
 
     def process_static_real(self, feature: torch.Tensor) -> torch.Tensor:
         return feature.unsqueeze(1).expand(-1, self.T, -1)
