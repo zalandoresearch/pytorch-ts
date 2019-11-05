@@ -4,8 +4,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from pts.dataset import TrainDataLoader
-from pts.dataset.common import Dataset
+from pts.dataset import Dataset, TrainDataLoader
 from pts.feature import Transformation
 
 from .predictor import Predictor

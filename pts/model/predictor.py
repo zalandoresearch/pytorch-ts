@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Iterator
 
-from pts.dataset.common import Dataset
+from pts.dataset import Dataset
 
 from .forecast import Forecast
 from .predictor import Predictor

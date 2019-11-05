@@ -7,8 +7,7 @@ import numpy as np
 import pandas as pd
 
 from pts.exception import assert_pts
-from pts.dataset import DataEntry
-from pts.dataset.sampler import InstanceSampler
+from pts.dataset import DataEntry, InstanceSampler
 
 from .time_feature import TimeFeature
 

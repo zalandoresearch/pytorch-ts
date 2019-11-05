@@ -7,7 +7,7 @@ import numpy as np
 # Third-party imports
 import torch
 
-from pts.feature.transform import Transformation
+from pts.feature import Transformation
 
 # First-party imports
 from .common import DataEntry, Dataset
