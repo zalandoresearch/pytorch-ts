@@ -1,7 +1,7 @@
 import pytest
 import pandas as pd
 
-from pts.dataset import ProcessStartField
+from pts.dataset import ProcessStartField, ProcessDataEntry
 
 @pytest.mark.parametrize(
     "freq, expected",

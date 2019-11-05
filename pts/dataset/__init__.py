@@ -7,5 +7,5 @@ from .sampler import (
     TestSplitSampler,
     UniformSplitSampler,
 )
-from .process import ProcessStartField
+from .process import ProcessStartField, ProcessDataEntry
 from .utils import to_pandas
