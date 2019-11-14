@@ -360,7 +360,7 @@ def test_multi_dim_transformation(is_train):
                 past_length=train_length,
                 future_length=pred_length,
                 time_series_fields=["dynamic_feat", "observed_values"],
-                output_NTC=False,
+                batch_first=False,
             ),
         ]
     )
@@ -499,3 +499,23 @@ def assert_shape(array: np.array, reference_shape: Tuple[int, int]):
         array.shape == reference_shape
     ), f"Shape should be {reference_shape} but found {array.shape}."
 
+def assert_padded_array(
+    sampled_array: np.array, reference_array: np.array, padding_array: np.array
+):
+    num_padded = int(np.sum(padding_array))
+    sampled_no_padding = sampled_array[:, num_padded:]
+
+    reference_array = np.roll(reference_array, num_padded, axis=1)
+    reference_no_padding = reference_array[:, num_padded:]
+
+    # Convert nans to dummy value for assertion because
+    # np.nan == np.nan -> False.
+    reference_no_padding[np.isnan(reference_no_padding)] = 9999.0
+    sampled_no_padding[np.isnan(sampled_no_padding)] = 9999.0
+
+    reference_no_padding = np.array(reference_no_padding, dtype=np.float32)
+
+    assert (sampled_no_padding == reference_no_padding).all(), (
+        f"Sampled and reference arrays do not match. '"
+        f"Got {sampled_no_padding} but should be {reference_no_padding}."
+    )
