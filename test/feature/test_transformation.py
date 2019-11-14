@@ -5,8 +5,27 @@ import pytest
 import numpy as np
 import pandas as pd
 
-from pts.dataset import ProcessStartField, FieldName, ListDataset
-from pts.feature import AddTimeFeatures, DayOfWeek, DayOfMonth
+from pts.dataset import (
+    ProcessStartField,
+    FieldName,
+    ListDataset,
+    ExpectedNumInstanceSampler,
+    UniformSplitSampler,
+    ScaleHistogram,
+    BucketInstanceSampler,
+)
+from pts.feature import (
+    Chain,
+    AddTimeFeatures,
+    DayOfWeek,
+    DayOfMonth,
+    MonthOfYear,
+    AddAgeFeature,
+    VstackFeatures,
+    InstanceSplitter,
+    CanonicalInstanceSplitter,
+    AddObservedValuesIndicator,
+)
 
 
 FREQ = "1D"
@@ -22,64 +41,30 @@ TEST_VALUES = {
     "allow_target_padding": [True, False],
 }
 
+
 def test_align_timestamp():
     def aligned_with(date_str, freq):
         return str(ProcessStartField.process(date_str, freq=freq))
 
     for _ in range(2):
-        assert (
-            aligned_with("2012-03-05 09:13:12", "min") == "2012-03-05 09:13:00"
-        )
-        assert (
-            aligned_with("2012-03-05 09:13:12", "2min")
-            == "2012-03-05 09:12:00"
-        )
-        assert (
-            aligned_with("2012-03-05 09:13:12", "H") == "2012-03-05 09:00:00"
-        )
-        assert (
-            aligned_with("2012-03-05 09:13:12", "D") == "2012-03-05 00:00:00"
-        )
-        assert (
-            aligned_with("2012-03-05 09:13:12", "W") == "2012-03-11 00:00:00"
-        )
-        assert (
-            aligned_with("2012-03-05 09:13:12", "4W") == "2012-03-11 00:00:00"
-        )
-        assert (
-            aligned_with("2012-03-05 09:13:12", "M") == "2012-03-31 00:00:00"
-        )
-        assert (
-            aligned_with("2012-03-05 09:13:12", "3M") == "2012-03-31 00:00:00"
-        )
-        assert (
-            aligned_with("2012-03-05 09:13:12", "Y") == "2012-12-31 00:00:00"
-        )
-        assert (
-            aligned_with("2012-03-05 09:14:11", "min") == "2012-03-05 09:14:00"
-        )
-        assert (
-            aligned_with("2012-03-05 09:14:11", "2min")
-            == "2012-03-05 09:14:00"
-        )
-        assert (
-            aligned_with("2012-03-05 09:14:11", "H") == "2012-03-05 09:00:00"
-        )
-        assert (
-            aligned_with("2012-03-05 09:14:11", "D") == "2012-03-05 00:00:00"
-        )
-        assert (
-            aligned_with("2012-03-05 09:14:11", "W") == "2012-03-11 00:00:00"
-        )
-        assert (
-            aligned_with("2012-03-05 09:14:11", "4W") == "2012-03-11 00:00:00"
-        )
-        assert (
-            aligned_with("2012-03-05 09:14:11", "M") == "2012-03-31 00:00:00"
-        )
-        assert (
-            aligned_with("2012-03-05 09:14:11", "3M") == "2012-03-31 00:00:00"
-        )
+        assert aligned_with("2012-03-05 09:13:12", "min") == "2012-03-05 09:13:00"
+        assert aligned_with("2012-03-05 09:13:12", "2min") == "2012-03-05 09:12:00"
+        assert aligned_with("2012-03-05 09:13:12", "H") == "2012-03-05 09:00:00"
+        assert aligned_with("2012-03-05 09:13:12", "D") == "2012-03-05 00:00:00"
+        assert aligned_with("2012-03-05 09:13:12", "W") == "2012-03-11 00:00:00"
+        assert aligned_with("2012-03-05 09:13:12", "4W") == "2012-03-11 00:00:00"
+        assert aligned_with("2012-03-05 09:13:12", "M") == "2012-03-31 00:00:00"
+        assert aligned_with("2012-03-05 09:13:12", "3M") == "2012-03-31 00:00:00"
+        assert aligned_with("2012-03-05 09:13:12", "Y") == "2012-12-31 00:00:00"
+        assert aligned_with("2012-03-05 09:14:11", "min") == "2012-03-05 09:14:00"
+        assert aligned_with("2012-03-05 09:14:11", "2min") == "2012-03-05 09:14:00"
+        assert aligned_with("2012-03-05 09:14:11", "H") == "2012-03-05 09:00:00"
+        assert aligned_with("2012-03-05 09:14:11", "D") == "2012-03-05 00:00:00"
+        assert aligned_with("2012-03-05 09:14:11", "W") == "2012-03-11 00:00:00"
+        assert aligned_with("2012-03-05 09:14:11", "4W") == "2012-03-11 00:00:00"
+        assert aligned_with("2012-03-05 09:14:11", "M") == "2012-03-31 00:00:00"
+        assert aligned_with("2012-03-05 09:14:11", "3M") == "2012-03-31 00:00:00"
+
 
 @pytest.mark.parametrize("is_train", TEST_VALUES["is_train"])
 @pytest.mark.parametrize("target", TEST_VALUES["target"])
@@ -102,9 +87,7 @@ def test_AddTimeFeatures(start, target, is_train):
     mat = res["myout"]
     expected_length = len(target) + (0 if is_train else pred_length)
     assert mat.shape == (2, expected_length)
-    tmp_idx = pd.date_range(
-        start=start, freq=start.freq, periods=expected_length
-    )
+    tmp_idx = pd.date_range(start=start, freq=start.freq, periods=expected_length)
     assert np.alltrue(mat[0] == DayOfWeek()(tmp_idx))
     assert np.alltrue(mat[1] == DayOfMonth()(tmp_idx))
 
@@ -149,9 +132,7 @@ def test_AddAgeFeatures(start, target, is_train):
     assert out["age"].shape[-1] == expected_length
     assert np.allclose(
         out["age"],
-        np.log10(2.0 + np.arange(expected_length)).reshape(
-            (1, expected_length)
-        ),
+        np.log10(2.0 + np.arange(expected_length)).reshape((1, expected_length)),
     )
 
 
@@ -216,9 +197,7 @@ def test_InstanceSplitter(start, target, is_train):
 @pytest.mark.parametrize(
     "use_prediction_features", TEST_VALUES["use_prediction_features"]
 )
-@pytest.mark.parametrize(
-    "allow_target_padding", TEST_VALUES["allow_target_padding"]
-)
+@pytest.mark.parametrize("allow_target_padding", TEST_VALUES["allow_target_padding"])
 def test_CanonicalInstanceSplitter(
     start, target, is_train, use_prediction_features, allow_target_padding
 ):
@@ -251,9 +230,7 @@ def test_CanonicalInstanceSplitter(
 
     min_num_instances = 1 if allow_target_padding else 0
     if is_train:
-        assert len(out) == max(
-            min_num_instances, len(target) - train_length + 1
-        )
+        assert len(out) == max(min_num_instances, len(target) - train_length + 1)
     else:
         assert len(out) == 1
 
@@ -285,9 +262,9 @@ def test_Transformation():
                 target_field=FieldName.TARGET,
                 output_field="time_feat",
                 time_features=[
-                    time_feature.DayOfWeek(),
-                    time_feature.DayOfMonth(),
-                    time_feature.MonthOfYear(),
+                    DayOfWeek(),
+                    DayOfMonth(),
+                    MonthOfYear(),
                 ],
                 pred_length=pred_length,
             ),
@@ -310,9 +287,7 @@ def test_Transformation():
                 is_pad_field=FieldName.IS_PAD,
                 start_field=FieldName.START,
                 forecast_start_field=FieldName.FORECAST_START,
-                train_sampler=ExpectedNumInstanceSampler(
-                    num_instances=4
-                ),
+                train_sampler=ExpectedNumInstanceSampler(num_instances=4),
                 past_length=train_length,
                 future_length=pred_length,
                 time_series_fields=["dynamic_feat", "observed_values"],
@@ -354,9 +329,9 @@ def test_multi_dim_transformation(is_train):
                 target_field=FieldName.TARGET,
                 output_field="time_feat",
                 time_features=[
-                    time_feature.DayOfWeek(),
-                    time_feature.DayOfMonth(),
-                    time_feature.MonthOfYear(),
+                    DayOfWeek(),
+                    DayOfMonth(),
+                    MonthOfYear(),
                 ],
                 pred_length=pred_length,
             ),
@@ -381,9 +356,7 @@ def test_multi_dim_transformation(is_train):
                 is_pad_field=FieldName.IS_PAD,
                 start_field=FieldName.START,
                 forecast_start_field=FieldName.FORECAST_START,
-                train_sampler=ExpectedNumInstanceSampler(
-                    num_instances=4
-                ),
+                train_sampler=ExpectedNumInstanceSampler(num_instances=4),
                 past_length=train_length,
                 future_length=pred_length,
                 time_series_fields=["dynamic_feat", "observed_values"],
@@ -407,9 +380,7 @@ def test_multi_dim_transformation(is_train):
                 u["past_is_pad"],
             )
             assert_padded_array(
-                u["past_target"],
-                np.array([first_dim, second_dim]),
-                u["past_is_pad"],
+                u["past_target"], np.array([first_dim, second_dim]), u["past_is_pad"],
             )
     else:
         for u in t(iter(ds), is_train=False):
@@ -424,9 +395,7 @@ def test_multi_dim_transformation(is_train):
                 u["past_is_pad"],
             )
             assert_padded_array(
-                u["past_target"],
-                np.array([first_dim, second_dim]),
-                u["past_is_pad"],
+                u["past_target"], np.array([first_dim, second_dim]), u["past_is_pad"],
             )
 
 
@@ -443,9 +412,7 @@ def test_ExpectedNumInstanceSampler():
                 is_pad_field=FieldName.IS_PAD,
                 start_field=FieldName.START,
                 forecast_start_field=FieldName.FORECAST_START,
-                train_sampler=ExpectedNumInstanceSampler(
-                    num_instances=4
-                ),
+                train_sampler=ExpectedNumInstanceSampler(num_instances=4),
                 past_length=train_length,
                 future_length=pred_length,
                 pick_incomplete=True,
@@ -485,9 +452,7 @@ def test_BucketInstanceSampler():
                 is_pad_field=FieldName.IS_PAD,
                 start_field=FieldName.START,
                 forecast_start_field=FieldName.FORECAST_START,
-                train_sampler=BucketInstanceSampler(
-                    dataset_stats.scale_histogram
-                ),
+                train_sampler=BucketInstanceSampler(dataset_stats.scale_histogram),
                 past_length=train_length,
                 future_length=pred_length,
                 pick_incomplete=True,
@@ -511,9 +476,7 @@ def test_BucketInstanceSampler():
     found_values = scale_hist.bin_counts
 
     for i in range(1, N):
-        assert abs(
-            expected_values[i] - found_values[i] < expected_values[i] * 0.3
-        )
+        assert abs(expected_values[i] - found_values[i] < expected_values[i] * 0.3)
 
 
 def make_dataset(N, train_length):
@@ -524,9 +487,7 @@ def make_dataset(N, train_length):
         targets[i, :] = targets[i, :] * i
 
     ds = ListDataset(
-        data_iter=[
-            {"start": "2012-01-01", "target": targets[i, :]} for i in range(n)
-        ],
+        data_iter=[{"start": "2012-01-01", "target": targets[i, :]} for i in range(n)],
         freq="1D",
     )
 
