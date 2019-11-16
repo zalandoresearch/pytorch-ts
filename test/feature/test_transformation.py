@@ -13,6 +13,7 @@ from pts.dataset import (
     UniformSplitSampler,
     ScaleHistogram,
     BucketInstanceSampler,
+    calculate_dataset_statistics,
 )
 from pts.feature import (
     Chain,
