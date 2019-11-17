@@ -23,3 +23,10 @@ training_data = ListDataset(
     freq = "5min"
 )
 ```
+
+## Development
+
+```
+python setup.py install
+pytest test
+```
