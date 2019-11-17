@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from pts.modules import DistributionOutput
+from pts.modules import DistributionOutput, MeanScaler, NOPScaler, FeatureEmbedder
 
 
 class DeepARNetwork(nn.Module):
@@ -38,17 +38,39 @@ class DeepARNetwork(nn.Module):
         self.lags_seq = lags_seq
 
         self.distr_output = distr_output
-        self.rnn = {"LSTM": torch.nn.LSTM, "GRU": torch.nn.GRU}[
+        rnn = {"LSTM": nn.LSTM, "GRU": nn.GRU}[
             self.cell_type
         ]
+        self.rnn = rnn(
+            input_size=1,
+            hidden_size=num_cells,
+            num_layers=num_layers,
+            dropout=dropout_rate,
+            batch_first=True
+        )
 
         # TODO
         # self.target_shape = distr_output.event_shape
 
         self.proj_distr_args = distr_output.get_args_proj()
 
+        self.embedder = FeatureEmbedder(
+            cardinalities=cardinality,
+            embedding_dims=embedding_dimension
+        )
 
+        if scaling:
+            self.scaler = MeanScaler(keepdim=True)
+        else:
+            self.scaler = NOPScaler(keepdim=True)
 
+    @staticmethod
+    def get_lagged_subsequences(
+        sequence: torch.Tensor,
+        sequence_length: int,
+        indices: List[int],
+        subsequences_length: int = 1,
+    ) -> torch.Tensor
 
 class DeepARTrainingNetwork(DeepARNetwork):
     pass
