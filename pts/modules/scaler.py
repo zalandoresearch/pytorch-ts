@@ -64,7 +64,7 @@ class MeanScaler(Scaler):
 
     def __init__(self, minimum_scale: float = 1e-10, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.minimum_scale = minimum_scale
+        self.register_buffer('minimum_scale', torch.tensor(minimum_scale))
 
     def compute_scale(
         self, data: torch.Tensor, observed_indicator: torch.Tensor
@@ -75,11 +75,11 @@ class MeanScaler(Scaler):
 
         # first compute a global scale per-dimension
         total_observed = num_observed.sum(dim=0)
-        denominator = torch.max(total_observed, torch.tensor(1.0))
+        denominator = torch.max(total_observed, torch.ones_like(total_observed))
         default_scale = sum_observed.sum(dim=0) / denominator
 
         # then compute a per-item, per-dimension scale
-        denominator = torch.max(num_observed, torch.tensor(1.0))
+        denominator = torch.max(num_observed, torch.ones_like(num_observed))
         scale = sum_observed / denominator
 
         # use per-batch scale when no element is observed
@@ -90,7 +90,7 @@ class MeanScaler(Scaler):
             default_scale * torch.ones_like(num_observed),
         )
 
-        return torch.max(scale, torch.tensor(self.minimum_scale))
+        return torch.max(scale, self.minimum_scale)
 
 
 class NOPScaler(Scaler):
