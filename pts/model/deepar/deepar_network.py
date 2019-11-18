@@ -42,26 +42,20 @@ class DeepARNetwork(nn.Module):
         self.lags_seq = lags_seq
 
         self.distr_output = distr_output
-        rnn = {"LSTM": nn.LSTM, "GRU": nn.GRU}[
-            self.cell_type
-        ]
-        self.rnn = rnn(
-            input_size=1,
-            hidden_size=num_cells,
-            num_layers=num_layers,
-            dropout=dropout_rate,
-            batch_first=True
-        )
+        rnn = {"LSTM": nn.LSTM, "GRU": nn.GRU}[self.cell_type]
+        self.rnn = rnn(input_size=1,
+                       hidden_size=num_cells,
+                       num_layers=num_layers,
+                       dropout=dropout_rate,
+                       batch_first=True)
 
         # TODO
         # self.target_shape = distr_output.event_shape
 
         self.proj_distr_args = distr_output.get_args_proj()
 
-        self.embedder = FeatureEmbedder(
-            cardinalities=cardinality,
-            embedding_dims=embedding_dimension
-        )
+        self.embedder = FeatureEmbedder(cardinalities=cardinality,
+                                        embedding_dims=embedding_dimension)
 
         if scaling:
             self.scaler = MeanScaler(keepdim=True)
@@ -70,10 +64,10 @@ class DeepARNetwork(nn.Module):
 
     @staticmethod
     def get_lagged_subsequences(
-        sequence: torch.Tensor,
-        sequence_length: int,
-        indices: List[int],
-        subsequences_length: int = 1,
+            sequence: torch.Tensor,
+            sequence_length: int,
+            indices: List[int],
+            subsequences_length: int = 1,
     ) -> torch.Tensor:
         """
         Returns lagged subsequences of a given sequence.
@@ -97,17 +91,14 @@ class DeepARNetwork(nn.Module):
         """
         assert max(indices) + subsequences_length <= sequence_length, (
             f"lags cannot go further than history length, found lag {max(indices)} "
-            f"while history length is only {sequence_length}"
-        )
+            f"while history length is only {sequence_length}")
         assert all(lag_index >= 0 for lag_index in indices)
 
         lagged_values = []
         for lag_index in indices:
             begin_index = -lag_index - subsequences_length
             end_index = -lag_index if lag_index > 0 else None
-            lagged_values.append(
-                sequence[:,begin_index:end_index,...]
-            )
+            lagged_values.append(sequence[:, begin_index:end_index, ...])
         return torch.stack(lagged_values, dim=-1)
 
 
