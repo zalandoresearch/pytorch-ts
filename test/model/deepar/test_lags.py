@@ -18,7 +18,7 @@ import itertools
 import torch
 
 # First-party imports
-from pts.model.deepar._network import DeepARTrainingNetwork
+from pts.model.deepar import DeepARTrainingNetwork
 
 
 def test_lagged_subsequences():

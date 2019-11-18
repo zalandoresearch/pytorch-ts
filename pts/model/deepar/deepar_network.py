@@ -1,5 +1,9 @@
+from typing import List
+
 import torch
 import torch.nn as nn
+
+import numpy as np
 
 from pts.modules import DistributionOutput, MeanScaler, NOPScaler, FeatureEmbedder
 
@@ -70,7 +74,23 @@ class DeepARNetwork(nn.Module):
         sequence_length: int,
         indices: List[int],
         subsequences_length: int = 1,
-    ) -> torch.Tensor
+    ) -> torch.Tensor:
+
+        assert max(indices) + subsequences_length <= sequence_length, (
+            f"lags cannot go further than history length, found lag {max(indices)} "
+            f"while history length is only {sequence_length}"
+        )
+        assert all(lag_index >= 0 for lag_index in indices)
+
+        lagged_values = []
+        for lag_index in indices:
+            begin_index = -lag_index - subsequences_length
+            end_index = -lag_index if lag_index > 0 else None
+            lagged_values.append(
+                sequence[:,begin_index:end_index,...]
+            )
+        return torch.stack(lagged_values, dim=-1)
+
 
 class DeepARTrainingNetwork(DeepARNetwork):
     pass
