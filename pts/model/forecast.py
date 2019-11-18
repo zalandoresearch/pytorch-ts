@@ -1,10 +1,11 @@
 from abc import ABC, abstractmethod
-from typing import Dict, Enum, List, Optional, Set
+from enum import Enum
+from typing import Dict, List, Optional, Set, Union
 
 import numpy as np
 import pandas as pd
 import torch
-from torch.distributions.distribution import Distributions
+from torch.distributions import Distribution
 
 from .quantile import Quantile
 
@@ -103,7 +104,6 @@ class SampleForecast(Forecast):
         parameters, number of iterations ran etc.
     """
 
-    @validated()
     def __init__(
         self,
         samples: Union[torch.Tensor, np.ndarray],

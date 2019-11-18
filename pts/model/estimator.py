@@ -1,13 +1,15 @@
 from abc import ABC, abstractmethod
+from typing import NamedTuple
 
 import numpy as np
 import torch
 import torch.nn as nn
 
-from pts.dataset import Dataset, TrainDataLoader
-from pts.feature import Transformation
+from ..dataset import Dataset, TrainDataLoader
+from ..feature import Transformation
 
 from .predictor import Predictor
+from ..trainer import Trainer
 from .utils import get_module_forward_input_names
 
 

@@ -6,9 +6,9 @@ from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 
-from pts.exception import assert_pts
-from pts.dataset import DataEntry, InstanceSampler
-
+from ..exception import assert_pts
+from ..dataset.sampler import InstanceSampler
+from ..dataset import DataEntry
 from .time_feature import TimeFeature
 
 MAX_IDLE_TRANSFORMS = 100

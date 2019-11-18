@@ -1,5 +1,6 @@
-from .common import DataEntry, FieldName
+from .common import DataEntry, FieldName, Dataset
 from .list_dataset import ListDataset
+from .loader import TrainDataLoader
 from .sampler import (
     InstanceSampler,
     BucketInstanceSampler,

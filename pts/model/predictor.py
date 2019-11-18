@@ -4,7 +4,6 @@ from typing import Iterator
 from pts.dataset import Dataset
 
 from .forecast import Forecast
-from .predictor import Predictor
 
 
 class Predictor(ABC):
