@@ -1,7 +1,8 @@
-from typing import List
+from typing import List, Optional, Tuple
 
 import torch
 import torch.nn as nn
+from torch.distributions import Distribution
 
 import numpy as np
 
@@ -189,4 +190,76 @@ class DeepARNetwork(nn.Module):
         return outputs, state, scale, static_feat
 
 class DeepARTrainingNetwork(DeepARNetwork):
-    pass
+    def distribution(
+        self,
+        feat_static_cat: torch.Tensor,
+        feat_static_real: torch.Tensor,
+        past_time_feat: torch.Tensor,
+        past_target: torch.Tensor,
+        past_observed_values: torch.Tensor,
+        future_time_feat: torch.Tensor,
+        future_target: torch.Tensor,
+        future_observed_values: torch.Tensor
+    ) -> Distribution:
+        rnn_outputs, _, scale, _ = self.unroll_encoder(
+            feat_static_cat=feat_static_cat,
+            feat_static_real=feat_static_real,
+            past_time_feat=past_time_feat,
+            past_target=past_target,
+            past_observed_values=past_observed_values,
+            future_time_feat=future_time_feat,
+            future_target=future_target,
+        )
+
+        distr_args = self.proj_distr_args(rnn_outputs)
+
+        return self.distr_output.distribution(distr_args, scale=scale)
+
+    def forward(self,
+        feat_static_cat: torch.Tensor,
+        feat_static_real: torch.Tensor,
+        past_time_feat: torch.Tensor,
+        past_target: torch.Tensor,
+        past_observed_values: torch.Tensor,
+        future_time_feat: torch.Tensor,
+        future_target: torch.Tensor,
+        future_observed_values: torch.Tensor
+    ) -> torch.Tensor:
+        distr = self.distribution(
+            feat_static_cat=feat_static_cat,
+            feat_static_real=feat_static_real,
+            past_time_feat=past_time_feat,
+            past_target=past_target,
+            past_observed_values=past_observed_values,
+            future_time_feat=future_time_feat,
+            future_target=future_target,
+            future_observed_values=future_observed_values,
+        )
+
+        # put together target sequence
+        # (batch_size, seq_len, *target_shape)
+        target = torch.cat((
+            past_target[:,self.history_length - self.context_length:,...],
+            future_target
+        ), dim=1)
+
+        # (batch_size, seq_len)
+        loss = -distr.log_prob(target)
+
+        # (batch_size, seq_len, *target_shape)
+        observed_values = torch.cat((
+            past_observed_values[:,self.history_length - self.context_length:,...],
+            future_observed_values
+        ), dim=1)
+
+        # mask the loss at one time step iff one or more observations is missing in the target dimensions
+        # (batch_size, seq_len)
+        loss_weights = (
+            observed_values
+            if (len(self.target_shape) == 0)
+            else observed_values.min(dim=-1, keepdim=False)
+        )
+
+        weighted_loss = self.weighted_average(loss, loss_weights)
+
+        return weighted_loss, loss
