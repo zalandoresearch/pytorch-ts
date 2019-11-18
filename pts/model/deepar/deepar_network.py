@@ -101,6 +101,92 @@ class DeepARNetwork(nn.Module):
             lagged_values.append(sequence[:, begin_index:end_index, ...])
         return torch.stack(lagged_values, dim=-1)
 
+    @staticmethod
+    def weighted_average(tensor: torch.Tensor,
+                         weights: Optional[torch.Tensor] = None,
+                         dim=None):
+        if weights is not None:
+            weighted_tensor = tensor * weights
+            sum_weights = torch.max(torch.ones_like(weights.sum(dim=dim)),
+                                    weights.sum(dim=dim))
+            return weighted_tensor.sum(dim=dim) / sum_weights
+        else:
+            return tensor.mean(dim=dim)
+
+    def unroll_encoder(
+            self,
+            feat_static_cat: torch.Tensor,  # (batch_size, num_features)
+            feat_static_real: torch.Tensor,  # (batch_size, num_features)
+            past_time_feat: torch.Tensor,  # (batch_size, history_length, num_features)
+            past_target: torch.Tensor,  # (batch_size, history_length, *target_shape)
+            past_observed_values: torch.Tensor,  # (batch_size, history_length, *target_shape)
+            future_time_feat: Optional[
+                torch.Tensor]=None,  # (batch_size, prediction_length, num_features)
+            future_target: Optional[
+                torch.Tensor]=None,  # (batch_size, prediction_length, *target_shape)
+    ) -> Tuple[torch.Tensor, List, torch.Tensor, torch.Tensor]:
+        
+        if future_time_feat is None or future_target is None:
+            time_feat = past_time_feat[:,self.history_length - self.context_length:,...]
+            sequence = past_target
+            sequence_length = self.history_length
+            subsequences_length = self.context_length
+        else:
+            time_feat = torch.cat(
+                (
+                    past_time_feat[:,self.history_length - self.context_length:,...],
+                    future_time_feat,
+                ),
+                dim=1)
+            sequence = torch.cat((past_target, future_target), dim=1)
+            sequence_length = self.history_length + self.prediction_length
+            subsequences_length = self.context_length + self.prediction_length
+        
+        lags = self.get_lagged_subsequences(
+            sequence=sequence,
+            sequence_length=sequence_length,
+            indices=self.lags_seq,
+            subsequences_length=subsequences_length)
+
+        # scale is computed on the context length last units of the past target
+        # scale shape is (batch_size, 1, *target_shape)
+        _, scale = self.scaler(
+            past_target[:,self.context_length:,...],
+            past_observed_values[:,self.context_length:,...]
+        )
+
+        # (batch_size, num_features)
+        embedded_cat = self.embedder(feat_static_cat)
+
+        # in addition to embedding features, use the log scale as it can help
+        # prediction too
+        # (batch_size, num_features + prod(target_shape))
+        static_feat = torch.cat((
+            embedded_cat,
+            feat_static_real,
+            scale.log()
+            if len(self.target_shape) == 0
+            else scale.squeeze(1).log()
+        ), dim=1)
+
+        # (batch_size, subsequences_length, num_features + 1)
+        repeated_static_feat = static_feat.expand(-1, subsequences_length, -1)
+
+        # (batch_size, sub_seq_len, *target_shape, num_lags)
+        lags_scaled = lags / scale.unsqueeze(-1)
+
+        # from (batch_size, sub_seq_len, *target_shape, num_lags)
+        # to (batch_size, sub_seq_len, prod(target_shape) * num_lags)
+        input_lags = lags_scaled.reshape((-1, subsequences_length, len(self.lags_seq) * prod(self.target_shape)))
+
+        # unroll encoder
+        outputs, state = self.rnn(inputs)
+
+        # outputs: (batch_size, seq_len, num_cells)
+        # state: list of (batch_size, num_cells) tensors
+        # scale: (batch_size, 1, *target_shape)
+        # static_feat: (batch_size, num_features + prod(target_shape))
+        return outputs, state, scale, static_feat
 
 class DeepARTrainingNetwork(DeepARNetwork):
     pass
