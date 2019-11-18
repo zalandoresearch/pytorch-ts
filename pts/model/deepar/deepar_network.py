@@ -75,7 +75,26 @@ class DeepARNetwork(nn.Module):
         indices: List[int],
         subsequences_length: int = 1,
     ) -> torch.Tensor:
-
+        """
+        Returns lagged subsequences of a given sequence.
+        Parameters
+        ----------
+        sequence : Tensor
+            the sequence from which lagged subsequences should be extracted.
+            Shape: (N, T, C).
+        sequence_length : int
+            length of sequence in the T (time) dimension (axis = 1).
+        indices : List[int]
+            list of lag indices to be used.
+        subsequences_length : int
+            length of the subsequences to be extracted.
+        Returns
+        --------
+        lagged : Tensor
+            a tensor of shape (N, S, C, I), where S = subsequences_length and
+            I = len(indices), containing lagged subsequences. Specifically,
+            lagged[i, j, :, k] = sequence[i, -indices[k]-S+j, :].
+        """
         assert max(indices) + subsequences_length <= sequence_length, (
             f"lags cannot go further than history length, found lag {max(indices)} "
             f"while history length is only {sequence_length}"
