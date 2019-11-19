@@ -171,7 +171,7 @@ class DeepARNetwork(nn.Module):
         ), dim=1)
 
         # (batch_size, subsequences_length, num_features + 1)
-        repeated_static_feat = static_feat.expand(-1, subsequences_length, -1)
+        repeated_static_feat = static_feat.unsqueeze(1).expand(-1, subsequences_length, -1)
 
         # (batch_size, sub_seq_len, *target_shape, num_lags)
         lags_scaled = lags / scale.unsqueeze(-1)
