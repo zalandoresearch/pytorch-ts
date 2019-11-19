@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Iterable, NamedTuple, Sized
+from typing import Any, Dict, Iterable, NamedTuple, Sized, List, Optional
 
 DataEntry = Dict[str, Any]
 
@@ -42,3 +42,21 @@ class Dataset(Sized, Iterable[DataEntry], ABC):
     @abstractmethod
     def __len__(self):
         pass
+
+class CategoricalFeatureInfo():
+    name: str
+    cardinality: str
+
+class BasicFeatureInfo():
+    name: str
+
+class MetaData():
+    freq: str = None
+    target: Optional[BasicFeatureInfo] = None
+
+    feat_static_cat: List[CategoricalFeatureInfo] = []
+    feat_static_real: List[BasicFeatureInfo] = []
+    feat_dynamic_real: List[BasicFeatureInfo] = []
+    feat_dynamic_cat: List[CategoricalFeatureInfo] = []
+
+    prediction_length: Optional[int] = None
