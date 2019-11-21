@@ -53,7 +53,7 @@ class DeepARNetwork(nn.Module):
         # TODO
         # self.target_shape = distr_output.event_shape
 
-        self.proj_distr_args = distr_output.get_args_proj()
+        self.proj_distr_args = distr_output.get_args_proj(num_cells)
 
         self.embedder = FeatureEmbedder(cardinalities=cardinality,
                                         embedding_dims=embedding_dimension)

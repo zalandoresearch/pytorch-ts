@@ -27,8 +27,7 @@ def maximum_likelihood_estimate_sgd(distr_output: DistributionOutput,
                                     init_biases: List[np.ndarray] = None,
                                     num_epochs: int = 5,
                                     learning_rate: float = 1e-2):
-    distr_output.in_features = 1
-    arg_proj = distr_output.get_args_proj()
+    arg_proj = distr_output.get_args_proj(in_features=1)
 
     if init_biases is not None:
         for param, bias in zip(arg_proj.proj, init_biases):

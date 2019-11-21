@@ -5,7 +5,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.distributions import *
+from torch.distributions import Distribution, StudentT, TransformedDistribution, AffineTransform
 
 from .lambda_layer import LambdaLayer
 
@@ -47,9 +47,9 @@ class Output(ABC):
     def dtype(self, dtype: np.dtype):
         self._dtype = dtype
 
-    def get_args_proj(self, prefix: Optional[str] = None) -> ArgProj:
+    def get_args_proj(self, in_features: int, prefix: Optional[str] = None) -> ArgProj:
         return ArgProj(
-            in_features=self.in_features,
+            in_features=in_features,
             args_dim=self.args_dim,
             domain_map=LambdaLayer(self.domain_map),
             prefix=prefix,
@@ -85,3 +85,7 @@ class StudentTOutput(DistributionOutput):
         scale = F.softplus(scale)
         df = 2.0 + F.softplus(df)
         return df.squeeze(-1), loc.squeeze(-1), scale.squeeze(-1)
+
+    @property
+    def event_shape(self) -> Tuple:
+        return ()
