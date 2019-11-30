@@ -2,6 +2,8 @@ from typing import List, Optional
 
 import numpy as np
 
+import torch
+
 from pts import Trainer
 from pts.feature import (
     TimeFeature,
@@ -88,7 +90,7 @@ class DeepAREstimator(PTSEstimator):
 
         return Chain(
             [RemoveFields(field_names=remove_field_names)] +
-            ([SetField(output_field=FieldName.FEAT_STATIC_CAT, value=[0.0]
+            ([SetField(output_field=FieldName.FEAT_STATIC_CAT, value=[0]
                        )] if not self.use_feat_static_cat else []) +
             ([SetField(output_field=FieldName.FEAT_STATIC_REAL, value=[0.0]
                        )] if not self.use_feat_static_real else []) +
@@ -96,7 +98,7 @@ class DeepAREstimator(PTSEstimator):
                 AsNumpyArray(
                     field=FieldName.FEAT_STATIC_CAT,
                     expected_ndim=1,
-                    dtype=self.dtype,
+                    dtype=np.long,
                 ),
                 AsNumpyArray(
                     field=FieldName.FEAT_STATIC_REAL,
