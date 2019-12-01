@@ -151,7 +151,7 @@ class DeepAREstimator(PTSEstimator):
                 ),
             ])
 
-    def create_training_network(self) -> DeepARTrainingNetwork:
+    def create_training_network(self, device: torch.device) -> DeepARTrainingNetwork:
         return DeepARTrainingNetwork(
             num_layers=self.num_layers,
             num_cells=self.num_cells,
@@ -166,4 +166,4 @@ class DeepAREstimator(PTSEstimator):
             lags_seq=self.lags_seq,
             scaling=self.scaling,
             dtype=self.dtype,
-        )
+        ).to(device)
