@@ -165,5 +165,4 @@ class DeepAREstimator(PTSEstimator):
             embedding_dimension=self.embedding_dimension,
             lags_seq=self.lags_seq,
             scaling=self.scaling,
-            dtype=self.dtype,
-        ).to(device)
+            dtype=self.dtype).to(device)

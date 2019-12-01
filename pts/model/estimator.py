@@ -74,24 +74,24 @@ class PTSEstimator(Estimator):
 
         Returns
         -------
-        HybridBlock
+        nn.Module
             The network that computes the loss given input data.
         """
         pass
 
-    @abstractmethod
-    def create_predictor(
-        self, transformation: Transformation, trained_network: nn.Module
-    ) -> Predictor:
-        """
-        Create and return a predictor object.
+    # @abstractmethod
+    # def create_predictor(
+    #     self, transformation: Transformation, trained_network: nn.Module
+    # ) -> Predictor:
+    #     """
+    #     Create and return a predictor object.
 
-        Returns
-        -------
-        Predictor
-            A predictor wrapping a `HybridBlock` used for inference.
-        """
-        pass
+    #     Returns
+    #     -------
+    #     Predictor
+    #         A predictor wrapping a `nn.Module` used for inference.
+    #     """
+    #     pass
 
     def train_model(self, training_data: Dataset) -> TrainOutput:
         transformation = self.create_transformation()
@@ -119,7 +119,7 @@ class PTSEstimator(Estimator):
         return TrainOutput(
             transformation=transformation,
             trained_net=trained_net,
-            predictor=self.create_predictor(transformation, trained_net),
+            predictor=None#self.create_predictor(transformation, trained_net),
         )
 
     def train(self, training_data: Dataset) -> Predictor:
