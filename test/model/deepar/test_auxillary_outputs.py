@@ -62,7 +62,7 @@ def test_distribution():
             *[data_entry[k] for k in input_names]
         )
 
-        assert distr.sample(torch.Size([num_samples])).shape == (
+        assert distr.sample((num_samples,)).shape == (
             num_samples,
             batch_size,
             seq_len,
