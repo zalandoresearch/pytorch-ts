@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Iterable, NamedTuple, Sized, List, Optional
 
+from pydantic import BaseModel
+
 DataEntry = Dict[str, Any]
 
 
@@ -43,14 +45,14 @@ class Dataset(Sized, Iterable[DataEntry], ABC):
     def __len__(self):
         pass
 
-class CategoricalFeatureInfo():
+class CategoricalFeatureInfo(BaseModel):
     name: str
     cardinality: str
 
-class BasicFeatureInfo():
+class BasicFeatureInfo(BaseModel):
     name: str
 
-class MetaData():
+class MetaData(BaseModel):
     freq: str = None
     target: Optional[BasicFeatureInfo] = None
 

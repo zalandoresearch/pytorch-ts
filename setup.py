@@ -24,6 +24,7 @@ setup(
         'pydantic',
         'gin-config',
         'absl-py',
+        'pydantic',
     ],
 
     test_suite='tests',
