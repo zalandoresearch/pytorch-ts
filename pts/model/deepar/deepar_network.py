@@ -8,6 +8,11 @@ import numpy as np
 
 from pts.modules import DistributionOutput, MeanScaler, NOPScaler, FeatureEmbedder
 
+def prod(xs):
+    p = 1
+    for x in xs:
+        p *= x
+    return p
 
 class DeepARNetwork(nn.Module):
     def __init__(
@@ -44,14 +49,13 @@ class DeepARNetwork(nn.Module):
 
         self.distr_output = distr_output
         rnn = {"LSTM": nn.LSTM, "GRU": nn.GRU}[self.cell_type]
-        self.rnn = rnn(input_size=1,
+        self.rnn = rnn(input_size=48,
                        hidden_size=num_cells,
                        num_layers=num_layers,
                        dropout=dropout_rate,
                        batch_first=True)
 
-        # TODO
-        # self.target_shape = distr_output.event_shape
+        self.target_shape = distr_output.event_shape
 
         self.proj_distr_args = distr_output.get_args_proj(num_cells)
 
@@ -108,11 +112,21 @@ class DeepARNetwork(nn.Module):
                          dim=None):
         if weights is not None:
             weighted_tensor = tensor * weights
-            sum_weights = torch.max(torch.ones_like(weights.sum(dim=dim)),
-                                    weights.sum(dim=dim))
-            return weighted_tensor.sum(dim=dim) / sum_weights
+            if dim is not None:
+                sum_weights = torch.sum(weights, dim)
+                sum_weighted_tensor = torch.sum(weighted_tensor, dim)
+            else:
+                sum_weights = weights.sum()
+                sum_weighted_tensor = weighted_tensor.sum()
+
+            sum_weights = torch.max(torch.ones_like(sum_weights), sum_weights)
+            
+            return sum_weighted_tensor / sum_weights
         else:
-            return tensor.mean(dim=dim)
+            if dim is not None:
+                return torch.mean(tensor, dim=dim)
+            else:
+                return tensor.mean()
 
     def unroll_encoder(
             self,
@@ -179,6 +193,9 @@ class DeepARNetwork(nn.Module):
         # from (batch_size, sub_seq_len, *target_shape, num_lags)
         # to (batch_size, sub_seq_len, prod(target_shape) * num_lags)
         input_lags = lags_scaled.reshape((-1, subsequences_length, len(self.lags_seq) * prod(self.target_shape)))
+
+        # (batch_size, sub_seq_len, input_dim)
+        inputs = torch.cat((input_lags, time_feat, repeated_static_feat), dim=-1)
 
         # unroll encoder
         outputs, state = self.rnn(inputs)
