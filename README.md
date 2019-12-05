@@ -27,6 +27,6 @@ training_data = ListDataset(
 ## Development
 
 ```
-python setup.py install
+pip install -e .
 pytest test
 ```
