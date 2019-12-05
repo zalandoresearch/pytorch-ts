@@ -281,3 +281,179 @@ class DeepARTrainingNetwork(DeepARNetwork):
         weighted_loss = self.weighted_average(loss, loss_weights)
 
         return weighted_loss, loss
+
+class DeepARPredictionNetwork(DeepARNetwork):
+    def __init__(self, num_parallel_samples: int = 100, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.num_parallel_samples = num_parallel_samples
+
+        # for decoding the lags are shifted by one, at the first time-step
+        # of the decoder a lag of one corresponds to the last target value
+        self.shifted_lags = [l - 1 for l in self.lags_seq]
+
+    def sampling_decoder(
+        self,
+        static_feat: torch.Tensor,
+        past_target: torch.Tensor,
+        time_feat: torch.Tensor,
+        scale: torch.Tensor,
+        begin_states: List,
+    ) -> torch.Tensor:
+        """
+        Computes sample paths by unrolling the LSTM starting with a initial
+        input and state.
+
+        Parameters
+        ----------
+        static_feat : Tensor
+            static features. Shape: (batch_size, num_static_features).
+        past_target : Tensor
+            target history. Shape: (batch_size, history_length).
+        time_feat : Tensor
+            time features. Shape: (batch_size, prediction_length, num_time_features).
+        scale : Tensor
+            tensor containing the scale of each element in the batch. Shape: (batch_size, 1, 1).
+        begin_states : List
+            list of initial states for the LSTM layers.
+            the shape of each tensor of the list should be (batch_size, num_cells)
+        Returns
+        --------
+        Tensor
+            A tensor containing sampled paths.
+            Shape: (batch_size, num_sample_paths, prediction_length).
+        """
+
+        # blows-up the dimension of each tensor to batch_size * self.num_parallel_samples for increasing parallelism
+        repeated_past_target = past_target.repeat(
+            repeats=self.num_parallel_samples, axis=0
+        )
+        repeated_time_feat = time_feat.repeat(
+            repeats=self.num_parallel_samples, axis=0
+        )
+        repeated_static_feat = static_feat.repeat(
+            repeats=self.num_parallel_samples, axis=0
+        ).expand_dims(axis=1)
+        repeated_scale = scale.repeat(
+            repeats=self.num_parallel_samples, axis=0
+        )
+        repeated_states = [
+            s.repeat(repeats=self.num_parallel_samples, axis=0)
+            for s in begin_states
+        ]
+
+        future_samples = []
+
+        # for each future time-units we draw new samples for this time-unit and update the state
+        for k in range(self.prediction_length):
+            # (batch_size * num_samples, 1, *target_shape, num_lags)
+            lags = self.get_lagged_subsequences(
+                sequence=repeated_past_target,
+                sequence_length=self.history_length + k,
+                indices=self.shifted_lags,
+                subsequences_length=1,
+            )
+
+            # (batch_size * num_samples, 1, *target_shape, num_lags)
+            lags_scaled = F.broadcast_div(
+                lags, repeated_scale.expand_dims(axis=-1)
+            )
+
+            # from (batch_size * num_samples, 1, *target_shape, num_lags)
+            # to (batch_size * num_samples, 1, prod(target_shape) * num_lags)
+            input_lags = F.reshape(
+                data=lags_scaled,
+                shape=(-1, 1, prod(self.target_shape) * len(self.lags_seq)),
+            )
+
+            # (batch_size * num_samples, 1, prod(target_shape) * num_lags + num_time_features + num_static_features)
+            decoder_input = F.concat(
+                input_lags,
+                repeated_time_feat.slice_axis(axis=1, begin=k, end=k + 1),
+                repeated_static_feat,
+                dim=-1,
+            )
+
+            # output shape: (batch_size * num_samples, 1, num_cells)
+            # state shape: (batch_size * num_samples, num_cells)
+            rnn_outputs, repeated_states = self.rnn.unroll(
+                inputs=decoder_input,
+                length=1,
+                begin_state=repeated_states,
+                layout="NTC",
+                merge_outputs=True,
+            )
+
+            distr_args = self.proj_distr_args(rnn_outputs)
+
+            # compute likelihood of target given the predicted parameters
+            distr = self.distr_output.distribution(
+                distr_args, scale=repeated_scale
+            )
+
+            # (batch_size * num_samples, 1, *target_shape)
+            new_samples = distr.sample(dtype=self.dtype)
+
+            # (batch_size * num_samples, seq_len, *target_shape)
+            repeated_past_target = F.concat(
+                repeated_past_target, new_samples, dim=1
+            )
+            future_samples.append(new_samples)
+
+        # (batch_size * num_samples, prediction_length, *target_shape)
+        samples = F.concat(*future_samples, dim=1)
+
+        # (batch_size, num_samples, prediction_length, *target_shape)
+        return samples.reshape(
+            shape=(
+                (-1, self.num_parallel_samples)
+                + (self.prediction_length,)
+                + self.target_shape
+            )
+        )
+
+    # noinspection PyMethodOverriding,PyPep8Naming
+    def forward(
+        self,
+        feat_static_cat: torch.Tensor,  # (batch_size, num_features)
+        feat_static_real: torch.Tensor,  # (batch_size, num_features)
+        past_time_feat: torch.Tensor,  # (batch_size, history_length, num_features)
+        past_target: torch.Tensor,  # (batch_size, history_length, *target_shape)
+        past_observed_values: torch.Tensor,  # (batch_size, history_length, *target_shape)
+        future_time_feat: torch.Tensor,  # (batch_size, prediction_length, num_features)
+    ) -> torch.Tensor:
+        """
+        Predicts samples, all tensors should have NTC layout.
+        Parameters
+        ----------
+        F
+        feat_static_cat : (batch_size, num_features)
+        feat_static_real : (batch_size, num_features)
+        past_time_feat : (batch_size, history_length, num_features)
+        past_target : (batch_size, history_length, *target_shape)
+        past_observed_values : (batch_size, history_length, *target_shape)
+        future_time_feat : (batch_size, prediction_length, num_features)
+
+        Returns
+        -------
+        Tensor
+            Predicted samples
+        """
+
+        # unroll the decoder in "prediction mode", i.e. with past data only
+        _, state, scale, static_feat = self.unroll_encoder(
+            feat_static_cat=feat_static_cat,
+            feat_static_real=feat_static_real,
+            past_time_feat=past_time_feat,
+            past_target=past_target,
+            past_observed_values=past_observed_values,
+            future_time_feat=None,
+            future_target=None,
+        )
+
+        return self.sampling_decoder(
+            past_target=past_target,
+            time_feat=future_time_feat,
+            static_feat=static_feat,
+            scale=scale,
+            begin_states=state,
+        )
