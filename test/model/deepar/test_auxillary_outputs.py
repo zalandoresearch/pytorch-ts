@@ -35,6 +35,7 @@ def test_distribution():
     estimator = DeepAREstimator(
         freq=freq,
         prediction_length=prediction_length,
+        input_size=48,
         trainer=Trainer(epochs=1, num_batches_per_epoch=1),
         distr_output=StudentTOutput(),
     )

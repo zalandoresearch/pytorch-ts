@@ -17,6 +17,7 @@ def prod(xs):
 class DeepARNetwork(nn.Module):
     def __init__(
             self,
+            input_size: int,
             num_layers: int,
             num_cells: int,
             cell_type: str,
@@ -32,6 +33,7 @@ class DeepARNetwork(nn.Module):
             dtype: np.dtype = np.float32,
     ) -> None:
         super().__init__()
+        self.input_size = input_size
         self.num_layers = num_layers
         self.num_cells = num_cells
         self.cell_type = cell_type
@@ -49,7 +51,7 @@ class DeepARNetwork(nn.Module):
 
         self.distr_output = distr_output
         rnn = {"LSTM": nn.LSTM, "GRU": nn.GRU}[self.cell_type]
-        self.rnn = rnn(input_size=48,
+        self.rnn = rnn(input_size=input_size,
                        hidden_size=num_cells,
                        num_layers=num_layers,
                        dropout=dropout_rate,
@@ -72,8 +74,7 @@ class DeepARNetwork(nn.Module):
             sequence: torch.Tensor,
             sequence_length: int,
             indices: List[int],
-            subsequences_length: int = 1,
-    ) -> torch.Tensor:
+            subsequences_length: int = 1) -> torch.Tensor:
         """
         Returns lagged subsequences of a given sequence.
         Parameters

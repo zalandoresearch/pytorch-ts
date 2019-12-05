@@ -32,6 +32,7 @@ class DeepAREstimator(PTSEstimator):
             self,
             freq: str,
             prediction_length: int,
+            input_size: int,
             trainer: Trainer = Trainer(),
             context_length: Optional[int] = None,
             num_layers: int = 2,
@@ -58,6 +59,7 @@ class DeepAREstimator(PTSEstimator):
         self.prediction_length = prediction_length
         self.distr_output = distr_output
         self.distr_output.dtype = dtype
+        self.input_size = input_size
         self.num_layers = num_layers
         self.num_cells = num_cells
         self.cell_type = cell_type
@@ -65,9 +67,7 @@ class DeepAREstimator(PTSEstimator):
         self.use_feat_dynamic_real = use_feat_dynamic_real
         self.use_feat_static_cat = use_feat_static_cat
         self.use_feat_static_real = use_feat_static_real
-        self.cardinality = cardinality if cardinality and use_feat_static_cat else [
-            1
-        ]
+        self.cardinality = cardinality if cardinality and use_feat_static_cat else [1]
         self.embedding_dimension = (
             embedding_dimension if embedding_dimension is not None else
             [min(50, (cat + 1) // 2) for cat in self.cardinality])
@@ -153,6 +153,7 @@ class DeepAREstimator(PTSEstimator):
 
     def create_training_network(self, device: torch.device) -> DeepARTrainingNetwork:
         return DeepARTrainingNetwork(
+            input_size=self.input_size,
             num_layers=self.num_layers,
             num_cells=self.num_cells,
             cell_type=self.cell_type,
