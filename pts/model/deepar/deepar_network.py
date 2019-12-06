@@ -393,8 +393,7 @@ class DeepARPredictionNetwork(DeepARNetwork):
         return samples.reshape((
                 (-1, self.num_parallel_samples)
                 + (self.prediction_length,)
-                + self.target_shape
-            )
+                + self.target_shape)
         )
 
     # noinspection PyMethodOverriding,PyPep8Naming
@@ -411,7 +410,6 @@ class DeepARPredictionNetwork(DeepARNetwork):
         Predicts samples, all tensors should have NTC layout.
         Parameters
         ----------
-        F
         feat_static_cat : (batch_size, num_features)
         feat_static_real : (batch_size, num_features)
         past_time_feat : (batch_size, history_length, num_features)

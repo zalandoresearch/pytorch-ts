@@ -24,8 +24,8 @@ from pts.dataset import FieldName, ExpectedNumInstanceSampler
 from pts.model import PTSEstimator
 from pts.modules import DistributionOutput, StudentTOutput
 
-from .deepar_network import DeepARTrainingNetwork
-
+from .deepar_network import DeepARTrainingNetwork, DeepARPredictionNetwork
+from ..utils import copy_parameters
 
 class DeepAREstimator(PTSEstimator):
     def __init__(
@@ -167,3 +167,27 @@ class DeepAREstimator(PTSEstimator):
             lags_seq=self.lags_seq,
             scaling=self.scaling,
             dtype=self.dtype).to(device)
+
+    def create_predictor(
+        self, transformation: Transformation, trained_network: nn.Module
+    ) -> Predictor:
+        prediction_network = DeepARPredictionNetwork(
+            num_parallel_samples=self.num_parallel_samples,
+            input_size=self.input_size,
+            num_layers=self.num_layers,
+            num_cells=self.num_cells,
+            cell_type=self.cell_type,
+            history_length=self.history_length,
+            context_length=self.context_length,
+            prediction_length=self.prediction_length,
+            distr_output=self.distr_output,
+            dropout_rate=self.dropout_rate,
+            cardinality=self.cardinality,
+            embedding_dimension=self.embedding_dimension,
+            lags_seq=self.lags_seq,
+            scaling=self.scaling,
+            dtype=self.dtype).to(trained_network.device)
+
+        copy_parameters(trained_network, prediction_network)
+
+        return RepresentableBlockPredictor()
