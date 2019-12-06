@@ -324,20 +324,20 @@ class DeepARPredictionNetwork(DeepARNetwork):
         """
 
         # blows-up the dimension of each tensor to batch_size * self.num_parallel_samples for increasing parallelism
-        repeated_past_target = past_target.repeat(
-            repeats=self.num_parallel_samples, axis=0
+        repeated_past_target = past_target.repeat_interleave(
+            repeats=self.num_parallel_samples, dim=0
         )
-        repeated_time_feat = time_feat.repeat(
-            repeats=self.num_parallel_samples, axis=0
+        repeated_time_feat = time_feat.repeat_interleave(
+            repeats=self.num_parallel_samples, dim=0
         )
-        repeated_static_feat = static_feat.repeat(
-            repeats=self.num_parallel_samples, axis=0
+        repeated_static_feat = static_feat.repeat_interleave(
+            repeats=self.num_parallel_samples, dim=0
         ).expand_dims(axis=1)
-        repeated_scale = scale.repeat(
-            repeats=self.num_parallel_samples, axis=0
+        repeated_scale = scale.repeat_interleave(
+            repeats=self.num_parallel_samples, dim=0
         )
         repeated_states = [
-            s.repeat(repeats=self.num_parallel_samples, axis=0)
+            s.repeat_interleave(repeats=self.num_parallel_samples, dim=0)
             for s in begin_states
         ]
 
@@ -354,34 +354,23 @@ class DeepARPredictionNetwork(DeepARNetwork):
             )
 
             # (batch_size * num_samples, 1, *target_shape, num_lags)
-            lags_scaled = F.broadcast_div(
-                lags, repeated_scale.expand_dims(axis=-1)
-            )
+            lags_scaled = lags / repeated_scale.unsqueeze(-1)
 
             # from (batch_size * num_samples, 1, *target_shape, num_lags)
             # to (batch_size * num_samples, 1, prod(target_shape) * num_lags)
-            input_lags = F.reshape(
-                data=lags_scaled,
-                shape=(-1, 1, prod(self.target_shape) * len(self.lags_seq)),
-            )
+            input_lags = lags_scaled.reshape((-1, 1, prod(self.target_shape) * len(self.lags_seq)))
 
             # (batch_size * num_samples, 1, prod(target_shape) * num_lags + num_time_features + num_static_features)
-            decoder_input = F.concat(
+            decoder_input = torch.cat((
                 input_lags,
-                repeated_time_feat.slice_axis(axis=1, begin=k, end=k + 1),
-                repeated_static_feat,
-                dim=-1,
+                repeated_time_feat[:,k:k+1,:],
+                repeated_static_feat),
+                dim=-1
             )
 
             # output shape: (batch_size * num_samples, 1, num_cells)
             # state shape: (batch_size * num_samples, num_cells)
-            rnn_outputs, repeated_states = self.rnn.unroll(
-                inputs=decoder_input,
-                length=1,
-                begin_state=repeated_states,
-                layout="NTC",
-                merge_outputs=True,
-            )
+            rnn_outputs, repeated_states = self.rnn(decoder_input, repeated_states)
 
             distr_args = self.proj_distr_args(rnn_outputs)
 
@@ -391,20 +380,17 @@ class DeepARPredictionNetwork(DeepARNetwork):
             )
 
             # (batch_size * num_samples, 1, *target_shape)
-            new_samples = distr.sample(dtype=self.dtype)
+            new_samples = distr.sample()
 
             # (batch_size * num_samples, seq_len, *target_shape)
-            repeated_past_target = F.concat(
-                repeated_past_target, new_samples, dim=1
-            )
+            repeated_past_target = torch.cat((repeated_past_target, new_samples), dim=1)
             future_samples.append(new_samples)
 
         # (batch_size * num_samples, prediction_length, *target_shape)
-        samples = F.concat(*future_samples, dim=1)
+        samples = torch.cat(future_samples, dim=1)
 
         # (batch_size, num_samples, prediction_length, *target_shape)
-        return samples.reshape(
-            shape=(
+        return samples.reshape((
                 (-1, self.num_parallel_samples)
                 + (self.prediction_length,)
                 + self.target_shape
