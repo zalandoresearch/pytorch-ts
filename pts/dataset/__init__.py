@@ -1,6 +1,6 @@
 from .common import DataEntry, FieldName, Dataset
 from .list_dataset import ListDataset
-from .loader import TrainDataLoader
+from .loader import TrainDataLoader, InferenceDataLoader
 from .sampler import (
     InstanceSampler,
     BucketInstanceSampler,

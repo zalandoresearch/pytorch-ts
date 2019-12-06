@@ -20,3 +20,5 @@ class Predictor(ABC):
 
 class PTSPredictor(Predictor):
     BlockType = nn.Module
+
+    
