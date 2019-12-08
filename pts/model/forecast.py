@@ -30,41 +30,41 @@ class Forecast(ABC):
     mean: np.ndarray
     _index = None
 
-    @abstractmethod
-    def quantile(self, q: Union[float, str]) -> np.ndarray:
-        """
-        Computes a quantile from the predicted distribution.
+    # @abstractmethod
+    # def quantile(self, q: Union[float, str]) -> np.ndarray:
+    #     """
+    #     Computes a quantile from the predicted distribution.
 
-        Parameters
-        ----------
-        q
-            Quantile to compute.
+    #     Parameters
+    #     ----------
+    #     q
+    #         Quantile to compute.
 
-        Returns
-        -------
-        numpy.ndarray
-            Value of the quantile across the prediction range.
-        """
-        pass
+    #     Returns
+    #     -------
+    #     numpy.ndarray
+    #         Value of the quantile across the prediction range.
+    #     """
+    #     pass
 
-    @abstractmethod
-    def dim(self) -> int:
-        """
-        Returns the dimensionality of the forecast object.
-        """
-        pass
+    # @abstractmethod
+    # def dim(self) -> int:
+    #     """
+    #     Returns the dimensionality of the forecast object.
+    #     """
+    #     pass
 
-    @abstractmethod
-    def copy_dim(self, dim: int):
-        """
-        Returns a new Forecast object with only the selected sub-dimension.
+    # @abstractmethod
+    # def copy_dim(self, dim: int):
+    #     """
+    #     Returns a new Forecast object with only the selected sub-dimension.
 
-        Parameters
-        ----------
-        dim
-            The returned forecast object will only represent this dimension.
-        """
-        pass
+    #     Parameters
+    #     ----------
+    #     dim
+    #         The returned forecast object will only represent this dimension.
+    #     """
+    #     pass
 
     def as_json_dict(self, config: "Config") -> dict:
         result = {}
@@ -379,7 +379,7 @@ class DistributionForecast(Forecast):
         if self._mean is not None:
             return self._mean
         else:
-            self._mean = self.distribution.mean.asnumpy()
+            self._mean = self.distribution.mean.numpy()
             return self._mean
 
     @property
@@ -391,7 +391,7 @@ class DistributionForecast(Forecast):
 
     def quantile(self, level):
         level = Quantile.parse(level).value
-        q = self.distribution.quantile(mx.nd.array([level])).asnumpy()[0]
+        q = self.distribution.icdf(torch.tensor([level])).numpy()[0]
         return q
 
     def to_sample_forecast(self, num_samples: int = 200) -> SampleForecast:
