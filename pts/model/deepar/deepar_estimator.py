@@ -3,6 +3,7 @@ from typing import List, Optional
 import numpy as np
 
 import torch
+import torch.nn as nn
 
 from pts import Trainer
 from pts.feature import (
@@ -21,7 +22,7 @@ from pts.feature import (
     InstanceSplitter,
 )
 from pts.dataset import FieldName, ExpectedNumInstanceSampler
-from pts.model import PTSEstimator
+from pts.model import PTSEstimator, Predictor
 from pts.modules import DistributionOutput, StudentTOutput
 
 from .deepar_network import DeepARTrainingNetwork, DeepARPredictionNetwork
@@ -186,7 +187,7 @@ class DeepAREstimator(PTSEstimator):
             embedding_dimension=self.embedding_dimension,
             lags_seq=self.lags_seq,
             scaling=self.scaling,
-            dtype=self.dtype).to(trained_network.device)
+            dtype=self.dtype)
 
         copy_parameters(trained_network, prediction_network)
 
