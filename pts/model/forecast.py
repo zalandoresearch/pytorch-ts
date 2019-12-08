@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Dict, List, Optional, Set, Union
+from typing import Dict, List, Optional, Set, Union, Callable
 
 import numpy as np
 import pandas as pd
@@ -50,7 +50,7 @@ class Forecast(ABC):
     @property
     def median(self) -> np.ndarray:
         return self.quantile(0.5)
-    
+
     def plot(
         self,
         prediction_intervals=(50.0, 90.0),
@@ -95,14 +95,13 @@ class Forecast(ABC):
             assert 0.0 <= c <= 100.0
 
         ps = [50.0] + [
-            50.0 + f * c / 2.0
-            for c in prediction_intervals
+            50.0 + f * c / 2.0 for c in prediction_intervals
             for f in [-1.0, +1.0]
         ]
         percentiles_sorted = sorted(set(ps))
 
         def alpha_for_percentile(p):
-            return (p / 100.0) ** 0.3
+            return (p / 100.0)**0.3
 
         ps_data = [self.quantile(p / 100.0) for p in percentiles_sorted]
         i_p50 = len(percentiles_sorted) // 2
@@ -150,43 +149,10 @@ class Forecast(ABC):
     @property
     def index(self) -> pd.DatetimeIndex:
         if self._index is None:
-            self._index = pd.date_range(
-                self.start_date, periods=self.prediction_length, freq=self.freq
-            )
+            self._index = pd.date_range(self.start_date,
+                                        periods=self.prediction_length,
+                                        freq=self.freq)
         return self._index
-
-    # @abstractmethod
-    # def dim(self) -> int:
-    #     """
-    #     Returns the dimensionality of the forecast object.
-    #     """
-    #     pass
-
-    # @abstractmethod
-    # def copy_dim(self, dim: int):
-    #     """
-    #     Returns a new Forecast object with only the selected sub-dimension.
-
-    #     Parameters
-    #     ----------
-    #     dim
-    #         The returned forecast object will only represent this dimension.
-    #     """
-    #     pass
-
-    # @abstractmethod
-    # def copy_aggregate(self, agg_fun: Callable):
-    #     """
-    #     Returns a new Forecast object with a time series aggregated over the
-    #     dimension axis.
-
-    #     Parameters
-    #     ----------
-    #     agg_fun
-    #         Aggregation function that defines the aggregation operation
-    #         (typically mean or sum).
-    #     """
-    #     pass
 
     def as_json_dict(self, config: "Config") -> dict:
         result = {}
@@ -225,7 +191,6 @@ class SampleForecast(Forecast):
         additional information that the forecaster may provide e.g. estimated
         parameters, number of iterations ran etc.
     """
-
     def __init__(
         self,
         samples: Union[torch.Tensor, np.ndarray],
@@ -235,14 +200,15 @@ class SampleForecast(Forecast):
         info: Optional[Dict] = None,
     ):
         assert isinstance(
-            samples, (np.ndarray, torch.Tensor)
-        ), "samples should be either a numpy array or an torch tensor"
+            samples,
+            (np.ndarray, torch.Tensor
+             )), "samples should be either a numpy array or an torch tensor"
         assert (
             len(np.shape(samples)) == 2 or len(np.shape(samples)) == 3
         ), "samples should be a 2-dimensional or 3-dimensional array. Dimensions found: {}".format(
-            len(np.shape(samples))
-        )
-        self.samples = samples if (isinstance(samples, np.ndarray)) else samples.numpy()
+            len(np.shape(samples)))
+        self.samples = samples if (isinstance(
+            samples, np.ndarray)) else samples.numpy()
         self._sorted_samples_value = None
         self._mean = None
         self._dim = None
@@ -250,8 +216,8 @@ class SampleForecast(Forecast):
         self.info = info
 
         assert isinstance(
-            start_date, pd.Timestamp
-        ), "start_date should be a pandas Timestamp object"
+            start_date,
+            pd.Timestamp), "start_date should be a pandas Timestamp object"
         self.start_date = start_date
 
         assert isinstance(freq, str), "freq should be a string"
@@ -300,14 +266,21 @@ class SampleForecast(Forecast):
         return self._sorted_samples[sample_idx, :]
 
     def copy_dim(self, dim: int):
+        """
+        Returns a new Forecast object with only the selected sub-dimension.
+
+        Parameters
+        ----------
+        dim
+            The returned forecast object will only represent this dimension.
+        """
         if len(self.samples.shape) == 2:
             samples = self.samples
         else:
             target_dim = self.samples.shape[2]
             assert dim < target_dim, (
                 f"must set 0 <= dim < target_dim, but got dim={dim},"
-                f" target_dim={target_dim}"
-            )
+                f" target_dim={target_dim}")
             samples = self.samples[:, :, dim]
 
         return SampleForecast(
@@ -318,7 +291,34 @@ class SampleForecast(Forecast):
             info=self.info,
         )
 
+    def copy_aggregate(self, agg_fun: Callable):
+        """
+        Returns a new Forecast object with a time series aggregated over the
+        dimension axis.
+
+        Parameters
+        ----------
+        agg_fun
+            Aggregation function that defines the aggregation operation
+            (typically mean or sum).
+        """
+        if len(self.samples.shape) == 2:
+            samples = self.samples
+        else:
+            # Aggregate over target dimension axis
+            samples = agg_fun(self.samples, axis=2)
+        return SampleForecast(
+            samples=samples,
+            start_date=self.start_date,
+            freq=self.freq,
+            item_id=self.item_id,
+            info=self.info,
+        )
+
     def dim(self) -> int:
+        """
+        Returns the dimensionality of the forecast object.
+        """
         if self._dim is not None:
             return self._dim
         else:
@@ -340,15 +340,13 @@ class SampleForecast(Forecast):
         return result
 
     def __repr__(self):
-        return ", ".join(
-            [
-                f"SampleForecast({self.samples!r})",
-                f"{self.start_date!r}",
-                f"{self.freq!r}",
-                f"item_id={self.item_id!r}",
-                f"info={self.info!r})",
-            ]
-        )
+        return ", ".join([
+            f"SampleForecast({self.samples!r})",
+            f"{self.start_date!r}",
+            f"{self.freq!r}",
+            f"item_id={self.item_id!r}",
+            f"info={self.info!r})",
+        ])
 
 
 class QuantileForecast(Forecast):
@@ -371,7 +369,6 @@ class QuantileForecast(Forecast):
         additional information that the forecaster may provide e.g. estimated
         parameters, number of iterations ran etc.
     """
-
     def __init__(
         self,
         forecast_arrays: np.ndarray,
@@ -397,11 +394,11 @@ class QuantileForecast(Forecast):
         shape = self.forecast_array.shape
         assert shape[0] == len(self.forecast_keys), (
             f"The forecast_array (shape={shape} should have the same "
-            f"length as the forecast_keys (len={len(self.forecast_keys)})."
-        )
+            f"length as the forecast_keys (len={len(self.forecast_keys)}).")
         self.prediction_length = shape[-1]
         self._forecast_dict = {
-            k: self.forecast_array[i] for i, k in enumerate(self.forecast_keys)
+            k: self.forecast_array[i]
+            for i, k in enumerate(self.forecast_keys)
         }
 
         self._nan_out = np.array([np.nan] * self.prediction_length)
@@ -419,29 +416,28 @@ class QuantileForecast(Forecast):
         return self._forecast_dict.get("mean", self._nan_out)
 
     def dim(self) -> int:
+        """
+        Returns the dimensionality of the forecast object.
+        """
         if self._dim is not None:
             return self._dim
         else:
-            if (
-                len(self.forecast_array.shape) == 2
-            ):  # 1D target. shape: (num_samples, prediction_length)
+            if (len(self.forecast_array.shape) == 2
+                ):  # 1D target. shape: (num_samples, prediction_length)
                 return 1
             else:
                 return self.forecast_array.shape[
-                    1
-                ]  # 2D target. shape: (num_samples, target_dim, prediction_length)
+                    1]  # 2D target. shape: (num_samples, target_dim, prediction_length)
 
     def __repr__(self):
-        return ", ".join(
-            [
-                f"QuantileForecast({self.forecast_array!r})",
-                f"start_date={self.start_date!r}",
-                f"freq={self.freq!r}",
-                f"forecast_keys={self.forecast_keys!r}",
-                f"item_id={self.item_id!r}",
-                f"info={self.info!r})",
-            ]
-        )
+        return ", ".join([
+            f"QuantileForecast({self.forecast_array!r})",
+            f"start_date={self.start_date!r}",
+            f"freq={self.freq!r}",
+            f"forecast_keys={self.forecast_keys!r}",
+            f"item_id={self.item_id!r}",
+            f"info={self.info!r})",
+        ])
 
 
 class DistributionForecast(Forecast):
@@ -470,12 +466,12 @@ class DistributionForecast(Forecast):
         parameters, number of iterations ran etc.
     """
     def __init__(
-            self,
-            distribution: Distribution,
-            start_date,
-            freq,
-            item_id: Optional[str] = None,
-            info: Optional[Dict] = None,
+        self,
+        distribution: Distribution,
+        start_date,
+        freq,
+        item_id: Optional[str] = None,
+        info: Optional[Dict] = None,
     ):
         self.distribution = distribution
         self.shape = (self.distribution.batch_shape +
