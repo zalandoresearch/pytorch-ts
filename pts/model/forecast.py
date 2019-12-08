@@ -30,22 +30,130 @@ class Forecast(ABC):
     mean: np.ndarray
     _index = None
 
-    # @abstractmethod
-    # def quantile(self, q: Union[float, str]) -> np.ndarray:
-    #     """
-    #     Computes a quantile from the predicted distribution.
+    @abstractmethod
+    def quantile(self, q: Union[float, str]) -> np.ndarray:
+        """
+        Computes a quantile from the predicted distribution.
 
-    #     Parameters
-    #     ----------
-    #     q
-    #         Quantile to compute.
+        Parameters
+        ----------
+        q
+            Quantile to compute.
 
-    #     Returns
-    #     -------
-    #     numpy.ndarray
-    #         Value of the quantile across the prediction range.
-    #     """
-    #     pass
+        Returns
+        -------
+        numpy.ndarray
+            Value of the quantile across the prediction range.
+        """
+        pass
+
+    @property
+    def median(self) -> np.ndarray:
+        return self.quantile(0.5)
+    
+    def plot(
+        self,
+        prediction_intervals=(50.0, 90.0),
+        show_mean=False,
+        color="b",
+        label=None,
+        output_file=None,
+        *args,
+        **kwargs,
+    ):
+        """
+        Plots the median of the forecast as well as confidence bounds.
+        (requires matplotlib and pandas).
+
+        Parameters
+        ----------
+        prediction_intervals : float or list of floats in [0, 100]
+            Confidence interval size(s). If a list, it will stack the error
+            plots for each confidence interval. Only relevant for error styles
+            with "ci" in the name.
+        show_mean : boolean
+            Whether to also show the mean of the forecast.
+        color : matplotlib color name or dictionary
+            The color used for plotting the forecast.
+        label : string
+            A label (prefix) that is used for the forecast
+        output_file : str or None, default None
+            Output path for the plot file. If None, plot is not saved to file.
+        args :
+            Other arguments are passed to main plot() call
+        kwargs :
+            Other keyword arguments are passed to main plot() call
+        """
+
+        # matplotlib==2.0.* gives errors in Brazil builds and has to be
+        # imported locally
+        import matplotlib.pyplot as plt
+
+        label_prefix = "" if label is None else label + "-"
+
+        for c in prediction_intervals:
+            assert 0.0 <= c <= 100.0
+
+        ps = [50.0] + [
+            50.0 + f * c / 2.0
+            for c in prediction_intervals
+            for f in [-1.0, +1.0]
+        ]
+        percentiles_sorted = sorted(set(ps))
+
+        def alpha_for_percentile(p):
+            return (p / 100.0) ** 0.3
+
+        ps_data = [self.quantile(p / 100.0) for p in percentiles_sorted]
+        i_p50 = len(percentiles_sorted) // 2
+
+        p50_data = ps_data[i_p50]
+        p50_series = pd.Series(data=p50_data, index=self.index)
+        p50_series.plot(color=color, ls="-", label=f"{label_prefix}median")
+
+        if show_mean:
+            mean_data = np.mean(self._sorted_samples, axis=0)
+            pd.Series(data=mean_data, index=self.index).plot(
+                color=color,
+                ls=":",
+                label=f"{label_prefix}mean",
+                *args,
+                **kwargs,
+            )
+
+        for i in range(len(percentiles_sorted) // 2):
+            ptile = percentiles_sorted[i]
+            alpha = alpha_for_percentile(ptile)
+            plt.fill_between(
+                self.index,
+                ps_data[i],
+                ps_data[-i - 1],
+                facecolor=color,
+                alpha=alpha,
+                interpolate=True,
+                *args,
+                **kwargs,
+            )
+            # Hack to create labels for the error intervals.
+            # Doesn't actually plot anything, because we only pass a single data point
+            pd.Series(data=p50_data[:1], index=self.index[:1]).plot(
+                color=color,
+                alpha=alpha,
+                linewidth=10,
+                label=f"{label_prefix}{100 - ptile * 2}%",
+                *args,
+                **kwargs,
+            )
+        if output_file:
+            plt.savefig(output_file)
+
+    @property
+    def index(self) -> pd.DatetimeIndex:
+        if self._index is None:
+            self._index = pd.date_range(
+                self.start_date, periods=self.prediction_length, freq=self.freq
+            )
+        return self._index
 
     # @abstractmethod
     # def dim(self) -> int:
@@ -63,6 +171,20 @@ class Forecast(ABC):
     #     ----------
     #     dim
     #         The returned forecast object will only represent this dimension.
+    #     """
+    #     pass
+
+    # @abstractmethod
+    # def copy_aggregate(self, agg_fun: Callable):
+    #     """
+    #     Returns a new Forecast object with a time series aggregated over the
+    #     dimension axis.
+
+    #     Parameters
+    #     ----------
+    #     agg_fun
+    #         Aggregation function that defines the aggregation operation
+    #         (typically mean or sum).
     #     """
     #     pass
 
@@ -391,7 +513,7 @@ class DistributionForecast(Forecast):
 
     def quantile(self, level):
         level = Quantile.parse(level).value
-        q = self.distribution.icdf(torch.tensor([level])).numpy()[0]
+        q = self.distribution.icdf(torch.tensor([level])).numpy()
         return q
 
     def to_sample_forecast(self, num_samples: int = 200) -> SampleForecast:
