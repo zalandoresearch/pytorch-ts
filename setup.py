@@ -22,9 +22,7 @@ setup(
         'tqdm',
         'ujson',
         'pydantic',
-        'gin-config',
-        'absl-py',
-        'pydantic',
+        'matplotlib',
     ],
 
     test_suite='tests',
