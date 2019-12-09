@@ -47,3 +47,4 @@ def get_seasonality(freq: str) -> int:
         #     f"Falling back to seasonality 1"
         # )
         return 1
+    return seasonality // multiple
