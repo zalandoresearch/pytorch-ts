@@ -5,9 +5,9 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from pts.dataset import InferenceDataLoader, DataEntry
-from pts.model import Forecast, DistributionForecast, QuantileForecast, SampleForecast
+from pts.dataset import InferenceDataLoader, DataEntry, FieldName
 from pts.modules import DistributionOutput
+from .forecast import Forecast, DistributionForecast, QuantileForecast, SampleForecast
 
 OutputTransform = Callable[[DataEntry, np.ndarray], np.ndarray]
 
@@ -90,7 +90,7 @@ class QuantileForecastGenerator(ForecastGenerator):
         self.quantiles = quantiles
 
     def __call__(self, inference_data_loader: InferenceDataLoader,
-                 prediction_net: BlockType, input_names: List[str], freq: str,
+                 prediction_net: nn.Module, input_names: List[str], freq: str,
                  output_transform: Optional[OutputTransform],
                  num_samples: Optional[int], **kwargs) -> Iterator[Forecast]:
         for batch in inference_data_loader:
@@ -115,7 +115,7 @@ class QuantileForecastGenerator(ForecastGenerator):
 
 class SampleForecastGenerator(ForecastGenerator):
     def __call__(self, inference_data_loader: InferenceDataLoader,
-                 prediction_net: BlockType, input_names: List[str], freq: str,
+                 prediction_net: nn.Module, input_names: List[str], freq: str,
                  output_transform: Optional[OutputTransform],
                  num_samples: Optional[int], **kwargs) -> Iterator[Forecast]:
         for batch in inference_data_loader:

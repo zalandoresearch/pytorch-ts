@@ -81,7 +81,7 @@ class PTSEstimator(Estimator):
 
     @abstractmethod
     def create_predictor(
-        self, transformation: Transformation, trained_network: nn.Module) -> Predictor:
+        self, transformation: Transformation, trained_network: nn.Module, device: torch.device) -> Predictor:
         """
         Create and return a predictor object.
 
@@ -118,7 +118,7 @@ class PTSEstimator(Estimator):
         return TrainOutput(
             transformation=transformation,
             trained_net=trained_net,
-            predictor=self.create_predictor(transformation, trained_net),
+            predictor=self.create_predictor(transformation, trained_net, self.trainer.device),
         )
 
     def train(self, training_data: Dataset) -> Predictor:

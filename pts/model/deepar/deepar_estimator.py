@@ -22,7 +22,7 @@ from pts.feature import (
     InstanceSplitter,
 )
 from pts.dataset import FieldName, ExpectedNumInstanceSampler
-from pts.model import PTSEstimator, Predictor
+from pts.model import PTSEstimator, Predictor, PTSPredictor
 from pts.modules import DistributionOutput, StudentTOutput
 
 from .deepar_network import DeepARTrainingNetwork, DeepARPredictionNetwork
@@ -170,7 +170,7 @@ class DeepAREstimator(PTSEstimator):
             dtype=self.dtype).to(device)
 
     def create_predictor(
-        self, transformation: Transformation, trained_network: nn.Module
+        self, transformation: Transformation, trained_network: nn.Module, device: torch.device
     ) -> Predictor:
         prediction_network = DeepARPredictionNetwork(
             num_parallel_samples=self.num_parallel_samples,
@@ -187,8 +187,16 @@ class DeepAREstimator(PTSEstimator):
             embedding_dimension=self.embedding_dimension,
             lags_seq=self.lags_seq,
             scaling=self.scaling,
-            dtype=self.dtype)
+            dtype=self.dtype).to(device)
 
         copy_parameters(trained_network, prediction_network)
 
-        return RepresentableBlockPredictor()
+        return PTSPredictor(
+            input_transform=transformation,
+            prediction_net=prediction_network,
+            batch_size=self.trainer.batch_size,
+            freq=self.freq,
+            prediction_length=self.prediction_length,
+            device=device,
+            dtype=self.dtype
+        )
