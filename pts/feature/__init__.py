@@ -36,3 +36,4 @@ from .transform import (
     Transformation,
     VstackFeatures,
 )
+from .utils import get_granularity, get_seasonality
