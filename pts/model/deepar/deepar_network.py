@@ -331,13 +331,12 @@ class DeepARPredictionNetwork(DeepARNetwork):
             repeats=self.num_parallel_samples, dim=0
         )
         repeated_static_feat = static_feat.repeat_interleave(
-            repeats=self.num_parallel_samples, dim=0
-        ).expand_dims(axis=1)
+            repeats=self.num_parallel_samples, dim=0).unsqueeze(1)
         repeated_scale = scale.repeat_interleave(
             repeats=self.num_parallel_samples, dim=0
         )
         repeated_states = [
-            s.repeat_interleave(repeats=self.num_parallel_samples, dim=0)
+            s.repeat_interleave(repeats=self.num_parallel_samples, dim=1)
             for s in begin_states
         ]
 
