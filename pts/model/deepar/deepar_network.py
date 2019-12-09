@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 import torch
 import torch.nn as nn
@@ -140,7 +140,7 @@ class DeepARNetwork(nn.Module):
                 torch.Tensor]=None,  # (batch_size, prediction_length, num_features)
             future_target: Optional[
                 torch.Tensor]=None,  # (batch_size, prediction_length, *target_shape)
-    ) -> Tuple[torch.Tensor, List, torch.Tensor, torch.Tensor]:
+    ) -> Tuple[torch.Tensor, Union[torch.Tensor, List], torch.Tensor, torch.Tensor]:
         
         if future_time_feat is None or future_target is None:
             time_feat = past_time_feat[:,self.history_length - self.context_length:,...]
@@ -202,7 +202,7 @@ class DeepARNetwork(nn.Module):
         outputs, state = self.rnn(inputs)
 
         # outputs: (batch_size, seq_len, num_cells)
-        # state: list of (batch_size, num_cells) tensors
+        # state: list of (num_layers, batch_size, num_cells) tensors
         # scale: (batch_size, 1, *target_shape)
         # static_feat: (batch_size, num_features + prod(target_shape))
         return outputs, state, scale, static_feat
@@ -297,7 +297,7 @@ class DeepARPredictionNetwork(DeepARNetwork):
         past_target: torch.Tensor,
         time_feat: torch.Tensor,
         scale: torch.Tensor,
-        begin_states: List,
+        begin_states: Union[torch.Tensor, List],
     ) -> torch.Tensor:
         """
         Computes sample paths by unrolling the LSTM starting with a initial
@@ -313,9 +313,9 @@ class DeepARPredictionNetwork(DeepARNetwork):
             time features. Shape: (batch_size, prediction_length, num_time_features).
         scale : Tensor
             tensor containing the scale of each element in the batch. Shape: (batch_size, 1, 1).
-        begin_states : List
-            list of initial states for the LSTM layers.
-            the shape of each tensor of the list should be (batch_size, num_cells)
+        begin_states : List or Tensor
+            list of initial states for the LSTM layers or tensor for GRU.
+            the shape of each tensor of the list should be (num_layers, batch_size, num_cells)
         Returns
         --------
         Tensor
@@ -335,10 +335,14 @@ class DeepARPredictionNetwork(DeepARNetwork):
         repeated_scale = scale.repeat_interleave(
             repeats=self.num_parallel_samples, dim=0
         )
-        repeated_states = [
-            s.repeat_interleave(repeats=self.num_parallel_samples, dim=1)
-            for s in begin_states
-        ]
+        if self.cell_type == 'LSTM':
+            repeated_states = [
+                s.repeat_interleave(repeats=self.num_parallel_samples, dim=1)
+                for s in begin_states
+            ]
+        else:
+            repeated_states = begin_states.repeat_interleave(
+                repeats=self.num_parallel_samples, dim=1)
 
         future_samples = []
 

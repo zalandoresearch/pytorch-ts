@@ -62,7 +62,6 @@ class Output(ABC):
 
 
 class DistributionOutput(Output):
-
     distr_cls: type
 
     def distribution(
