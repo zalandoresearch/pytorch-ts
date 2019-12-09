@@ -94,7 +94,6 @@ def backtest_metrics(
                                    0.9)),
     num_samples: int = 100,
     logging_file: Optional[str] = None,
-    use_symbol_block_predictor: bool = False,
 ):
     """
     Parameters
@@ -111,8 +110,6 @@ def backtest_metrics(
         Number of samples to use when generating sample-based forecasts.
     logging_file
         If specified, information of the backtest is redirected to this file.
-    use_symbol_block_predictor
-        Use a :class:`SymbolBlockPredictor` during testing.
 
     Returns
     -------
@@ -145,23 +142,6 @@ def backtest_metrics(
         serialize_message(logger, estimator_key, forecaster)
         assert train_dataset is not None
         predictor = forecaster.train(train_dataset)
-
-        if isinstance(forecaster, PTSEstimator) and isinstance(
-                predictor, PTSPredictor):
-            inference_data_loader = InferenceDataLoader(
-                dataset=test_dataset,
-                transform=predictor.input_transform,
-                batch_size=forecaster.trainer.batch_size,
-                ctx=forecaster.trainer.ctx,
-                dtype=forecaster.dtype,
-            )
-
-            if forecaster.trainer.hybridize:
-                predictor.hybridize(batch=next(iter(inference_data_loader)))
-
-            if use_symbol_block_predictor:
-                predictor = predictor.as_symbol_block_predictor(
-                    batch=next(iter(inference_data_loader)))
     else:
         predictor = forecaster
 
@@ -201,7 +181,7 @@ class BacktestInformation(NamedTuple):
 
     # @staticmethod
     # def make_from_log_contents(log_contents):
-    #     messages = dict(re.findall(r"gluonts\[(.*)\]: (.*)", log_contents))
+    #     messages = dict(re.findall(r"pts\[(.*)\]: (.*)", log_contents))
 
     #     # avoid to fail if a key is missing for instance in the case a run did
     #     # not finish so that we can still get partial information
