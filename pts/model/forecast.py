@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Dict, List, Optional, Set, Union, Callable
 
+from pydantic import BaseModel, Field
 import numpy as np
 import pandas as pd
 import torch
@@ -16,9 +17,16 @@ class OutputType(str, Enum):
     quantiles = "quantiles"
 
 
-class Config:
+class Config(BaseModel):
+    num_samples: int = Field(100, alias="num_eval_samples")
     output_types: Set[OutputType] = {"quantiles", "mean"}
+    # FIXME: validate list elements
     quantiles: List[str] = ["0.1", "0.5", "0.9"]
+
+    class Config:
+        allow_population_by_field_name = True
+        # store additional fields
+        extra = "allow"
 
 
 class Forecast(ABC):
