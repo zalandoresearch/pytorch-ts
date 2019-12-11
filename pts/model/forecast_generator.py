@@ -95,7 +95,7 @@ class QuantileForecastGenerator(ForecastGenerator):
                  num_samples: Optional[int], **kwargs) -> Iterator[Forecast]:
         for batch in inference_data_loader:
             inputs = [batch[k] for k in input_names]
-            outputs = prediction_net(*inputs).numpy()
+            outputs = prediction_net(*inputs).cpu().numpy()
             if output_transform is not None:
                 outputs = output_transform(batch, outputs)
 
@@ -120,14 +120,14 @@ class SampleForecastGenerator(ForecastGenerator):
                  num_samples: Optional[int], **kwargs) -> Iterator[Forecast]:
         for batch in inference_data_loader:
             inputs = [batch[k] for k in input_names]
-            outputs = prediction_net(*inputs).numpy()
+            outputs = prediction_net(*inputs).cpu().numpy()
             if output_transform is not None:
                 outputs = output_transform(batch, outputs)
             if num_samples:
                 num_collected_samples = outputs[0].shape[0]
                 collected_samples = [outputs]
                 while num_collected_samples < num_samples:
-                    outputs = prediction_net(*inputs).numpy()
+                    outputs = prediction_net(*inputs).cpu().numpy()
                     if output_transform is not None:
                         outputs = output_transform(batch, outputs)
                     collected_samples.append(outputs)
