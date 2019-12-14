@@ -34,9 +34,7 @@ def shift_timestamp(ts: pd.Timestamp, offset: int) -> pd.Timestamp:
 
 
 @lru_cache(maxsize=10000)
-def _shift_timestamp_helper(
-    ts: pd.Timestamp, freq: str, offset: int
-) -> pd.Timestamp:
+def _shift_timestamp_helper(ts: pd.Timestamp, freq: str, offset: int) -> pd.Timestamp:
     """
     We are using this helper function which explicitly uses the frequency as a
     parameter, because the frequency is not included in the hash of a time
@@ -128,9 +126,7 @@ class InstanceSplitter(FlatMapTransformation):
         self.past_length = past_length
         self.future_length = future_length
         self.output_NTC = output_NTC
-        self.ts_fields = (
-            time_series_fields if time_series_fields is not None else []
-        )
+        self.ts_fields = time_series_fields if time_series_fields is not None else []
         self.target_field = target_field
         self.is_pad_field = is_pad_field
         self.start_field = start_field
@@ -143,9 +139,7 @@ class InstanceSplitter(FlatMapTransformation):
     def _future(self, col_name):
         return f"future_{col_name}"
 
-    def flatmap_transform(
-        self, data: DataEntry, is_train: bool
-    ) -> Iterator[DataEntry]:
+    def flatmap_transform(self, data: DataEntry, is_train: bool) -> Iterator[DataEntry]:
         pl = self.future_length
         slice_cols = self.ts_fields + [self.target_field]
         target = data[self.target_field]
@@ -166,9 +160,7 @@ class InstanceSplitter(FlatMapTransformation):
                     )
                 else:
                     sampling_indices = self.train_sampler(
-                        target,
-                        self.past_length,
-                        len_target - self.future_length,
+                        target, self.past_length, len_target - self.future_length,
                     )
         else:
             sampling_indices = [len_target]
@@ -183,8 +175,7 @@ class InstanceSplitter(FlatMapTransformation):
                     past_piece = d[ts_field][..., i - self.past_length : i]
                 elif i < self.past_length:
                     pad_block = np.zeros(
-                        d[ts_field].shape[:-1] + (pad_length,),
-                        dtype=d[ts_field].dtype,
+                        d[ts_field].shape[:-1] + (pad_length,), dtype=d[ts_field].dtype,
                     )
                     past_piece = np.concatenate(
                         [pad_block, d[ts_field][..., :i]], axis=-1
@@ -200,17 +191,11 @@ class InstanceSplitter(FlatMapTransformation):
 
             if self.output_NTC:
                 for ts_field in slice_cols:
-                    d[self._past(ts_field)] = d[
-                        self._past(ts_field)
-                    ].transpose()
-                    d[self._future(ts_field)] = d[
-                        self._future(ts_field)
-                    ].transpose()
+                    d[self._past(ts_field)] = d[self._past(ts_field)].transpose()
+                    d[self._future(ts_field)] = d[self._future(ts_field)].transpose()
 
             d[self._past(self.is_pad_field)] = pad_indicator
-            d[self.forecast_start_field] = shift_timestamp(
-                d[self.start_field], i
-            )
+            d[self.forecast_start_field] = shift_timestamp(d[self.start_field], i)
             yield d
 
 
@@ -308,9 +293,7 @@ class CanonicalInstanceSplitter(FlatMapTransformation):
     def _future(self, col_name):
         return f"future_{col_name}"
 
-    def flatmap_transform(
-        self, data: DataEntry, is_train: bool
-    ) -> Iterator[DataEntry]:
+    def flatmap_transform(self, data: DataEntry, is_train: bool) -> Iterator[DataEntry]:
         ts_fields = self.dynamic_feature_fields + [self.target_field]
         ts_target = data[self.target_field]
 
@@ -354,9 +337,7 @@ class CanonicalInstanceSplitter(FlatMapTransformation):
                     pad_pre = self.pad_value * np.ones(
                         shape=full_ts.shape[:-1] + (pad_length,)
                     )
-                    past_ts = np.concatenate(
-                        [pad_pre, full_ts[..., :i]], axis=-1
-                    )
+                    past_ts = np.concatenate([pad_pre, full_ts[..., :i]], axis=-1)
                 else:
                     past_ts = full_ts[..., (i - self.instance_length) : i]
 
@@ -365,13 +346,9 @@ class CanonicalInstanceSplitter(FlatMapTransformation):
 
                 if self.use_prediction_features and not is_train:
                     if not ts_field == self.target_field:
-                        future_ts = full_ts[
-                            ..., i : i + self.prediction_length
-                        ]
+                        future_ts = full_ts[..., i : i + self.prediction_length]
                         future_ts = (
-                            future_ts.transpose()
-                            if self.output_NTC
-                            else future_ts
+                            future_ts.transpose() if self.output_NTC else future_ts
                         )
                         d[self._future(ts_field)] = future_ts
 
@@ -386,7 +363,7 @@ class CanonicalInstanceSplitter(FlatMapTransformation):
 
 class ContinuousTimeInstanceSplitter(FlatMapTransformation):
     """
-    Selects training instances by slicing "intervals" from a continous-time
+    Selects training instances by slicing "intervals" from a continuos-time
     process instantiation. Concretely, the input data is expected to describe an
     instantiation from a point (or jump) process, with the "target"
     identifying inter-arrival times and other features (marks), as described
@@ -461,15 +438,13 @@ class ContinuousTimeInstanceSplitter(FlatMapTransformation):
         end = np.searchsorted(a, ub)
         return np.arange(start, end)
 
-    def flatmap_transform(
-        self, data: DataEntry, is_train: bool
-    ) -> Iterator[DataEntry]:
+    def flatmap_transform(self, data: DataEntry, is_train: bool) -> Iterator[DataEntry]:
 
         assert data[self.start_field].freq == data[self.end_field].freq
 
-        total_interval_length = (
-            data[self.end_field] - data[self.start_field]
-        ) / data[self.start_field].freq.delta
+        total_interval_length = (data[self.end_field] - data[self.start_field]) / data[
+            self.start_field
+        ].freq.delta
 
         # sample forecast start times in continuous time
         if is_train:
@@ -512,9 +487,7 @@ class ContinuousTimeInstanceSplitter(FlatMapTransformation):
 
             past_mask = self._mask_sorted(ts, past_start, future_start)
 
-            past_ia_times = np.diff(np.r_[0, ts[past_mask] - past_start])[
-                np.newaxis
-            ]
+            past_ia_times = np.diff(np.r_[0, ts[past_mask] - past_start])[np.newaxis]
 
             r[f"past_{self.target_field}"] = np.concatenate(
                 [past_ia_times, marks[:, past_mask]], axis=0
@@ -532,9 +505,9 @@ class ContinuousTimeInstanceSplitter(FlatMapTransformation):
 
                 future_mask = self._mask_sorted(ts, future_start, future_end)
 
-                future_ia_times = np.diff(
-                    np.r_[0, ts[future_mask] - future_start]
-                )[np.newaxis]
+                future_ia_times = np.diff(np.r_[0, ts[future_mask] - future_start])[
+                    np.newaxis
+                ]
 
                 r[f"future_{self.target_field}"] = np.concatenate(
                     [future_ia_times, marks[:, future_mask]], axis=0

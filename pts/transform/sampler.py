@@ -60,9 +60,7 @@ class UniformSplitSampler(InstanceSampler):
         self.lookup = np.arange(2 ** 13)
 
     def __call__(self, ts: np.ndarray, a: int, b: int) -> np.ndarray:
-        assert (
-            a <= b
-        ), "First index must be less than or equal to the last index."
+        assert a <= b, "First index must be less than or equal to the last index."
         while ts.shape[-1] >= len(self.lookup):
             self.lookup = np.arange(2 * len(self.lookup))
         mask = np.random.uniform(low=0.0, high=1.0, size=b - a + 1) < self.p

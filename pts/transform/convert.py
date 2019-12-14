@@ -114,27 +114,18 @@ class VstackFeatures(SimpleTransformation):
     """
 
     def __init__(
-        self,
-        output_field: str,
-        input_fields: List[str],
-        drop_inputs: bool = True,
+        self, output_field: str, input_fields: List[str], drop_inputs: bool = True,
     ) -> None:
         self.output_field = output_field
         self.input_fields = input_fields
         self.cols_to_drop = (
             []
             if not drop_inputs
-            else [
-                fname for fname in self.input_fields if fname != output_field
-            ]
+            else [fname for fname in self.input_fields if fname != output_field]
         )
 
     def transform(self, data: DataEntry) -> DataEntry:
-        r = [
-            data[fname]
-            for fname in self.input_fields
-            if data[fname] is not None
-        ]
+        r = [data[fname] for fname in self.input_fields if data[fname] is not None]
         output = np.vstack(r)
         data[self.output_field] = output
         for fname in self.cols_to_drop:
@@ -159,27 +150,18 @@ class ConcatFeatures(SimpleTransformation):
     """
 
     def __init__(
-        self,
-        output_field: str,
-        input_fields: List[str],
-        drop_inputs: bool = True,
+        self, output_field: str, input_fields: List[str], drop_inputs: bool = True,
     ) -> None:
         self.output_field = output_field
         self.input_fields = input_fields
         self.cols_to_drop = (
             []
             if not drop_inputs
-            else [
-                fname for fname in self.input_fields if fname != output_field
-            ]
+            else [fname for fname in self.input_fields if fname != output_field]
         )
 
     def transform(self, data: DataEntry) -> DataEntry:
-        r = [
-            data[fname]
-            for fname in self.input_fields
-            if data[fname] is not None
-        ]
+        r = [data[fname] for fname in self.input_fields if data[fname] is not None]
         output = np.concatenate(r)
         data[self.output_field] = output
         for fname in self.cols_to_drop:
@@ -235,19 +217,14 @@ class ListFeatures(SimpleTransformation):
     """
 
     def __init__(
-        self,
-        output_field: str,
-        input_fields: List[str],
-        drop_inputs: bool = True,
+        self, output_field: str, input_fields: List[str], drop_inputs: bool = True,
     ) -> None:
         self.output_field = output_field
         self.input_fields = input_fields
         self.cols_to_drop = (
             []
             if not drop_inputs
-            else [
-                fname for fname in self.input_fields if fname != output_field
-            ]
+            else [fname for fname in self.input_fields if fname != output_field]
         )
 
     def transform(self, data: DataEntry) -> DataEntry:
@@ -462,17 +439,14 @@ class CDFtoGaussianTransform(MapTransformation):
         sorted_target_length, target_dim = sorted_target.shape
 
         quantiles = np.stack(
-            [np.arange(sorted_target_length) for _ in range(target_dim)],
-            axis=1,
+            [np.arange(sorted_target_length) for _ in range(target_dim)], axis=1,
         ) / float(sorted_target_length)
 
         x_diff = np.diff(sorted_target, axis=0)
         y_diff = np.diff(quantiles, axis=0)
 
         # Calculate slopes of the pw-linear pieces.
-        slopes = np.where(
-            x_diff == 0.0, np.zeros_like(x_diff), y_diff / x_diff
-        )
+        slopes = np.where(x_diff == 0.0, np.zeros_like(x_diff), y_diff / x_diff)
 
         zeroes = np.zeros_like(np.expand_dims(slopes[0, :], axis=0))
         slopes = np.append(slopes, zeroes, axis=0)
@@ -513,9 +487,7 @@ class CDFtoGaussianTransform(MapTransformation):
 
         """
         m = sorted_values.shape[0]
-        quantiles = self._forward_transform(
-            sorted_values, values, slopes, intercepts
-        )
+        quantiles = self._forward_transform(sorted_values, values, slopes, intercepts)
 
         quantiles = np.clip(
             quantiles, self.winsorized_cutoff(m), 1 - self.winsorized_cutoff(m)
@@ -526,9 +498,7 @@ class CDFtoGaussianTransform(MapTransformation):
     def _add_noise(x: np.array) -> np.array:
         scale_noise = 0.2
         std = np.sqrt(
-            (np.square(x - x.mean(axis=1, keepdims=True))).mean(
-                axis=1, keepdims=True
-            )
+            (np.square(x - x.mean(axis=1, keepdims=True))).mean(axis=1, keepdims=True)
         )
         noise = np.random.normal(
             loc=np.zeros_like(x), scale=np.ones_like(x) * std * scale_noise
@@ -537,9 +507,7 @@ class CDFtoGaussianTransform(MapTransformation):
         return x
 
     @staticmethod
-    def _search_sorted(
-        sorted_vec: np.array, to_insert_vec: np.array
-    ) -> np.array:
+    def _search_sorted(sorted_vec: np.array, to_insert_vec: np.array) -> np.array:
         """
         Finds the indices of the active piece-wise linear function.
 
@@ -557,9 +525,7 @@ class CDFtoGaussianTransform(MapTransformation):
             Indices mapping to the active linear function.
         """
         indices_left = np.searchsorted(sorted_vec, to_insert_vec, side="left")
-        indices_right = np.searchsorted(
-            sorted_vec, to_insert_vec, side="right"
-        )
+        indices_right = np.searchsorted(sorted_vec, to_insert_vec, side="right")
 
         indices = indices_left + (indices_right - indices_left) // 2
         indices = indices - 1
