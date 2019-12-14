@@ -5,11 +5,11 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from ..dataset import Dataset, TrainDataLoader
-from ..feature import Transformation
+from pts.dataset import Dataset, TrainDataLoader
+from pts.transform import Transformation
+from pts import Trainer
 
 from .predictor import Predictor
-from ..trainer import Trainer
 from .utils import get_module_forward_input_names
 
 

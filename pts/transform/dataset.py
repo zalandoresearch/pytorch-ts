@@ -1,8 +1,7 @@
 from typing import Iterator, List
 
-from pts.feature import Chain, Transformation
-
-from .common import DataEntry, Dataset
+from pts.dataset import DataEntry, Dataset
+from .transform import Chain, Transformation
 
 
 class TransformedDataset(Dataset):
@@ -11,6 +10,8 @@ class TransformedDataset(Dataset):
     element in the base_dataset.
     This only supports SimpleTransformations, which do the same thing at
     prediction and training time.
+
+
     Parameters
     ----------
     base_dataset

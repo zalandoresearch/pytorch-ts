@@ -8,8 +8,8 @@ import numpy as np
 import torch
 
 # First-party imports
-from ..feature import Transformation
 from .common import DataEntry, Dataset
+from pts.transform import Transformation
 
 DataBatch = Dict[str, Any]
 

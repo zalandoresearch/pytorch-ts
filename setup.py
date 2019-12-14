@@ -19,6 +19,7 @@ setup(
         'holidays',
         'numpy',
         'pandas',
+        'scipy',
         'tqdm',
         'ujson',
         'pydantic',

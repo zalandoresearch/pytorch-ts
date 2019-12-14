@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 
 from pts.dataset import Dataset, DataEntry, InferenceDataLoader
-from pts.feature import Transformation
+from pts.transform import Transformation
 
 from .forecast import Forecast
 from .forecast_generator import ForecastGenerator, SampleForecastGenerator

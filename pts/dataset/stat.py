@@ -6,7 +6,7 @@ import numpy as np
 from tqdm import tqdm
 
 from .common import FieldName
-from ..exception import assert_pts
+from pts.exception import assert_pts
 
 
 class ScaleHistogram:

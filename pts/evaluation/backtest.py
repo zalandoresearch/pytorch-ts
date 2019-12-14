@@ -6,7 +6,7 @@ from typing import Dict, Iterator, NamedTuple, Optional, Tuple, Union
 import pandas as pd
 
 # First-party imports
-from pts.feature import AdhocTransform
+from pts.transform import AdhocTransform
 from pts.dataset import DataEntry, Dataset, TransformedDataset, InferenceDataLoader, DatasetStatistics, calculate_dataset_statistics
 from pts.model import Estimator, PTSEstimator, PTSPredictor, Predictor, Forecast
 from .evaluator import Evaluator

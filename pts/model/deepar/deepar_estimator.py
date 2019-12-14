@@ -9,7 +9,8 @@ from pts import Trainer
 from pts.feature import (
     TimeFeature,
     get_lags_for_frequency,
-    time_features_from_frequency_str,
+    time_features_from_frequency_str)
+from pts.transform import (
     Transformation,
     Chain,
     RemoveFields,
@@ -20,13 +21,13 @@ from pts.feature import (
     AddAgeFeature,
     VstackFeatures,
     InstanceSplitter,
+    ExpectedNumInstanceSampler,
 )
-from pts.dataset import FieldName, ExpectedNumInstanceSampler
-from pts.model import PTSEstimator, Predictor, PTSPredictor
+from pts.dataset import FieldName
+from pts.model import PTSEstimator, Predictor, PTSPredictor, copy_parameters
 from pts.modules import DistributionOutput, StudentTOutput
 
 from .deepar_network import DeepARTrainingNetwork, DeepARPredictionNetwork
-from ..utils import copy_parameters
 
 class DeepAREstimator(PTSEstimator):
     def __init__(
