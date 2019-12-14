@@ -215,8 +215,7 @@ class SampleForecast(Forecast):
             len(np.shape(samples)) == 2 or len(np.shape(samples)) == 3
         ), "samples should be a 2-dimensional or 3-dimensional array. Dimensions found: {}".format(
             len(np.shape(samples)))
-        self.samples = samples if (isinstance(
-            samples, np.ndarray)) else samples.numpy()
+        self.samples = samples if (isinstance(samples, np.ndarray)) else samples.cpu().numpy()
         self._sorted_samples_value = None
         self._mean = None
         self._dim = None
@@ -505,7 +504,7 @@ class DistributionForecast(Forecast):
         if self._mean is not None:
             return self._mean
         else:
-            self._mean = self.distribution.mean.numpy()
+            self._mean = self.distribution.mean.cpu().numpy()
             return self._mean
 
     @property
@@ -517,7 +516,7 @@ class DistributionForecast(Forecast):
 
     def quantile(self, level):
         level = Quantile.parse(level).value
-        q = self.distribution.icdf(torch.tensor([level])).numpy()
+        q = self.distribution.icdf(torch.tensor([level])).cpu().numpy()
         return q
 
     def to_sample_forecast(self, num_samples: int = 200) -> SampleForecast:
