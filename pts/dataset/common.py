@@ -62,3 +62,15 @@ class MetaData(BaseModel):
     feat_dynamic_cat: List[CategoricalFeatureInfo] = []
 
     prediction_length: Optional[int] = None
+
+
+class TrainDatasets(NamedTuple):
+    """
+    A dataset containing two subsets, one to be used for training purposes,
+    and the other for testing purposes, as well as metadata.
+    """
+
+    metadata: MetaData
+    train: Dataset
+    test: Optional[Dataset] = None
+

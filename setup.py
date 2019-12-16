@@ -24,6 +24,7 @@ setup(
         'ujson',
         'pydantic',
         'matplotlib',
+        'python-rapidjson',
     ],
 
     test_suite='tests',
