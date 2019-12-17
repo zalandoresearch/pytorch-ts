@@ -34,6 +34,7 @@ class Trainer:
         for epoch_no in range(self.epochs):
             # mark epoch start time
             tic = time.time()
+            avg_epoch_loss = 0.0
 
             with tqdm(train_iter) as it:
                 for batch_no, data_entry in enumerate(it, start=1):
@@ -45,6 +46,15 @@ class Trainer:
                         loss = output[0]
                     else:
                         loss = output
+                    
+                    avg_epoch_loss += loss.item()
+                    it.set_postfix(
+                        ordered_dict={
+                            ("" if is_training else "validation_")
+                            + "avg_epoch_loss": avg_epoch_loss/batch_no
+                        },
+                        refresh=False,
+                    )
 
                     loss.backward()
                     optimizer.step()
