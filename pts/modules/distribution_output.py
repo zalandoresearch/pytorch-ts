@@ -5,7 +5,14 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.distributions import Distribution, StudentT, TransformedDistribution, AffineTransform
+from torch.distributions import (
+    Distribution,
+    Beta,
+    NegativeBinomial,
+    StudentT,
+    TransformedDistribution,
+    AffineTransform,
+)
 
 from .lambda_layer import LambdaLayer
 
@@ -73,6 +80,50 @@ class DistributionOutput(Output):
         else:
             distr = self.distr_cls(*distr_args)
             return TransformedDistribution(distr, [AffineTransform(loc=0, scale=scale)])
+
+
+class BetaOutput(DistributionOutput):
+    args_dim: Dict[str, int] = {"concentration1": 1, "concentration0": 1}
+    distr_cls: type = Beta
+
+    @classmethod
+    def domain_map(cls, concentration1, concentration0):
+        concentration1 = F.softplus(concentration1) + 1e-8
+        concentration0 = F.softplus(concentration0) + 1e-8
+        return concentration1.squeeze(-1), concentration0.squeeze(-1)
+    
+    @property
+    def event_shape(self) -> Tuple:
+        return ()
+
+
+class NegativeBinomialOutput(DistributionOutput):
+    args_dim: Dict[str, int] = {"mu": 1, "alpha": 1}
+    distr_cls: Distribution = NegativeBinomial
+
+    @classmethod
+    def domain_map(cls, mu, alpha):
+        mu = F.softplus(mu) + 1e-8
+        alpha = F.softplus(alpha) + 1e-8
+        return mu.squeeze(-1), alpha.squeeze(-1)
+
+    def distribution(
+        self, distr_args, scale: Optional[torch.Tensor] = None
+    ) -> Distribution:
+        mu, alpha = distr_args
+
+        if scale is not None:
+            mu *= scale
+            alpha *= torch.sqrt(scale + 1.0)
+
+        n = 1.0 / alpha
+        p = mu * alpha / (1.0 + mu * alpha)
+
+        return NegativeBinomial(total_count=n, probs=p)
+    
+    @property
+    def event_shape(self) -> Tuple:
+        return ()
 
 
 class StudentTOutput(DistributionOutput):
