@@ -92,7 +92,7 @@ class InstanceSplitter(FlatMapTransformation):
         length of the target seen before making prediction
     future_length
         length of the target that must be predicted
-    output_NTC
+    batch_first
         whether to have time series output in (time, dimension) or in
         (dimension, time) layout
     time_series_fields
@@ -115,7 +115,7 @@ class InstanceSplitter(FlatMapTransformation):
         train_sampler: InstanceSampler,
         past_length: int,
         future_length: int,
-        output_NTC: bool = True,
+        batch_first: bool = True,
         time_series_fields: Optional[List[str]] = None,
         pick_incomplete: bool = True,
     ) -> None:
@@ -125,7 +125,7 @@ class InstanceSplitter(FlatMapTransformation):
         self.train_sampler = train_sampler
         self.past_length = past_length
         self.future_length = future_length
-        self.output_NTC = output_NTC
+        self.batch_first = batch_first
         self.ts_fields = time_series_fields if time_series_fields is not None else []
         self.target_field = target_field
         self.is_pad_field = is_pad_field
@@ -189,7 +189,7 @@ class InstanceSplitter(FlatMapTransformation):
             if pad_length > 0:
                 pad_indicator[:pad_length] = 1
 
-            if self.output_NTC:
+            if self.batch_first:
                 for ts_field in slice_cols:
                     d[self._past(ts_field)] = d[self._past(ts_field)].transpose()
                     d[self._future(ts_field)] = d[self._future(ts_field)].transpose()
