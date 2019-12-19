@@ -18,7 +18,7 @@ import numpy as np
 from pts.dataset.stat import ScaleHistogram
 
 
-class InstanceSampler:
+class InstanceSampler(ABC):
     """
     An InstanceSampler is called with the time series and the valid
     index bounds a, b and should return a set of indices a <= i <= b
@@ -41,8 +41,9 @@ class InstanceSampler:
         Selected points to sample
     """
 
+    @abstractmethod
     def __call__(self, ts: np.ndarray, a: int, b: int) -> np.ndarray:
-        raise NotImplementedError()
+        pass
 
 
 class UniformSplitSampler(InstanceSampler):

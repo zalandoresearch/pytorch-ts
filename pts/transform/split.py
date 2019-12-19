@@ -12,7 +12,7 @@
 # permissions and limitations under the License.
 
 from functools import lru_cache
-from typing import Iterator, List, Optional
+from typing import Iterator, List, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -152,7 +152,7 @@ class InstanceSplitter(FlatMapTransformation):
                 # the prediction length during training, so we just skip these.
                 # If we want to include them we would need to pad and to mask
                 # the loss.
-                sampling_indices: List[int] = []
+                sampling_indices: Union[np.ndarray, List[int]] = []
             else:
                 if self.pick_incomplete:
                     sampling_indices = self.train_sampler(

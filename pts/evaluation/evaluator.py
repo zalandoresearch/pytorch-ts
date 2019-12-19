@@ -113,7 +113,7 @@ class Evaluator:
     @staticmethod
     def extract_pred_target(
             time_series: Union[pd.Series, pd.DataFrame],
-            forecast: Forecast) -> Union[pd.Series, pd.DataFrame]:
+            forecast: Forecast) -> np.ndarray:
         """
 
         Parameters

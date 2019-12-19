@@ -68,7 +68,7 @@ class Output(ABC):
         pass
 
 
-class DistributionOutput(Output):
+class DistributionOutput(Output, ABC):
     distr_cls: type
 
     def distribution(
