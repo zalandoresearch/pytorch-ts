@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Iterable, NamedTuple, Sized, List, Optional
+from typing import Any, Dict, Iterable, NamedTuple, Sized, List, Optional, Iterator
 
 from pydantic import BaseModel
 
@@ -38,19 +38,22 @@ class FieldName:
 
 class Dataset(Sized, Iterable[DataEntry], ABC):
     @abstractmethod
-    def __iter__(self) -> Iterable[DataEntry]:
+    def __iter__(self) -> Iterator[DataEntry]:
         pass
 
     @abstractmethod
     def __len__(self):
         pass
 
+
 class CategoricalFeatureInfo(BaseModel):
     name: str
     cardinality: str
 
+
 class BasicFeatureInfo(BaseModel):
     name: str
+
 
 class MetaData(BaseModel):
     freq: str = None
@@ -73,4 +76,3 @@ class TrainDatasets(NamedTuple):
     metadata: MetaData
     train: Dataset
     test: Optional[Dataset] = None
-
