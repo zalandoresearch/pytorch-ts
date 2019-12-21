@@ -51,7 +51,7 @@ def test_distribution():
         transform=train_output.transformation,
         batch_size=batch_size,
         num_batches_per_epoch=estimator.trainer.num_batches_per_epoch,
-        device=torch.device("cpu")
+        device=torch.device("cpu"),
     )
 
     seq_len = 2 * ds_info.prediction_length
@@ -63,8 +63,4 @@ def test_distribution():
             *[data_entry[k] for k in input_names]
         )
 
-        assert distr.sample((num_samples,)).shape == (
-            num_samples,
-            batch_size,
-            seq_len,
-        )
+        assert distr.sample((num_samples,)).shape == (num_samples, batch_size, seq_len,)

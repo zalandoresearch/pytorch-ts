@@ -805,4 +805,3 @@ def assert_padded_array(
         f"Sampled and reference arrays do not match. '"
         f"Got {sampled_no_padding} but should be {reference_no_padding}."
     )
-

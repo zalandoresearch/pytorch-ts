@@ -38,9 +38,7 @@ FORECASTS = {
         forecast_keys=np.array(QUANTILES, str),
         freq=FREQ,
     ),
-    "SampleForecast": SampleForecast(
-        samples=SAMPLES, start_date=START_DATE, freq=FREQ
-    ),
+    "SampleForecast": SampleForecast(samples=SAMPLES, start_date=START_DATE, freq=FREQ),
     "DistributionForecast": DistributionForecast(
         distribution=Uniform(low=torch.zeros(1), high=torch.ones(1)),
         start_date=START_DATE,

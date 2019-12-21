@@ -3,6 +3,7 @@ import pandas as pd
 
 from pts.dataset import ProcessStartField, ProcessDataEntry
 
+
 @pytest.mark.parametrize(
     "freq, expected",
     [

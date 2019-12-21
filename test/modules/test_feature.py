@@ -8,45 +8,33 @@ from torch.distributions import Uniform
 
 from pts.modules import FeatureEmbedder, FeatureAssembler
 
+
 @pytest.mark.parametrize(
     "config",
     (
         lambda N, T: [
             # single static feature
-            dict(
-                shape=(N, 1),
-                kwargs=dict(cardinalities=[50], embedding_dims=[10]),
-            ),
+            dict(shape=(N, 1), kwargs=dict(cardinalities=[50], embedding_dims=[10]),),
             # single dynamic feature
-            dict(
-                shape=(N, T, 1),
-                kwargs=dict(cardinalities=[2], embedding_dims=[10]),
-            ),
+            dict(shape=(N, T, 1), kwargs=dict(cardinalities=[2], embedding_dims=[10]),),
             # multiple static features
             dict(
                 shape=(N, 4),
                 kwargs=dict(
-                    cardinalities=[50, 50, 50, 50],
-                    embedding_dims=[10, 20, 30, 40],
+                    cardinalities=[50, 50, 50, 50], embedding_dims=[10, 20, 30, 40],
                 ),
             ),
             # multiple dynamic features
             dict(
                 shape=(N, T, 3),
-                kwargs=dict(
-                    cardinalities=[30, 30, 30], embedding_dims=[10, 20, 30]
-                ),
+                kwargs=dict(cardinalities=[30, 30, 30], embedding_dims=[10, 20, 30]),
             ),
         ]
     )(10, 20),
 )
 def test_feature_embedder(config):
-    out_shape = config["shape"][:-1] + (
-        sum(config["kwargs"]["embedding_dims"]),
-    )
-    embed_feature = FeatureEmbedder(
-        **config["kwargs"]
-    )
+    out_shape = config["shape"][:-1] + (sum(config["kwargs"]["embedding_dims"]),)
+    embed_feature = FeatureEmbedder(**config["kwargs"])
     for embed in embed_feature._FeatureEmbedder__embedders:
         nn.init.constant_(embed.weight, 1.0)
 
@@ -54,16 +42,17 @@ def test_feature_embedder(config):
         exp_params_len = len([p for p in embed_feature.parameters()])
         act_params_len = len(config["kwargs"]["embedding_dims"])
         assert exp_params_len == act_params_len
-    
+
     def test_forward_pass():
         act_output = embed_feature(torch.ones(config["shape"]).to(torch.long))
         exp_output = torch.ones(out_shape)
-        
+
         assert act_output.shape == exp_output.shape
         assert torch.abs(torch.sum(act_output - exp_output)) < 1e-20
 
     test_parameters_length()
     test_forward_pass()
+
 
 @pytest.mark.parametrize(
     "config",
@@ -76,13 +65,9 @@ def test_feature_embedder(config):
                 static_real=dict(C=5),
                 dynamic_cat=dict(C=3),
                 dynamic_real=dict(C=4),
-                embed_static=dict(
-                    cardinalities=[2, 4],
-                    embedding_dims=[3, 6],
-                ),
+                embed_static=dict(cardinalities=[2, 4], embedding_dims=[3, 6],),
                 embed_dynamic=dict(
-                    cardinalities=[30, 30, 30],
-                    embedding_dims=[10, 20, 30],
+                    cardinalities=[30, 30, 30], embedding_dims=[10, 20, 30],
                 ),
             )
         ]
@@ -97,17 +82,15 @@ def test_feature_assembler(config):
         "dynamic_real",
     }
     feature_combs = chain.from_iterable(
-        combinations(feature_types, r)
-        for r in range(1, len(feature_types) + 1)
+        combinations(feature_types, r) for r in range(1, len(feature_types) + 1)
     )
 
     # iterate over the power-set of all possible feature types, including the empty set
     embedder_types = {"embed_static", "embed_dynamic"}
     embedder_combs = chain.from_iterable(
-        combinations(embedder_types, r)
-        for r in range(0, len(embedder_types) + 1)
+        combinations(embedder_types, r) for r in range(0, len(embedder_types) + 1)
     )
-    
+
     for enabled_embedders in embedder_combs:
         embed_static = (
             FeatureEmbedder(**config["embed_static"])
@@ -122,12 +105,9 @@ def test_feature_assembler(config):
 
         for enabled_features in feature_combs:
             assemble_feature = FeatureAssembler(
-                T=config["T"],
-                embed_static=embed_static,
-                embed_dynamic=embed_dynamic,
+                T=config["T"], embed_static=embed_static, embed_dynamic=embed_dynamic,
             )
             # assemble_feature.collect_params().initialize(mx.initializer.One())
-
 
             def test_parameters_length():
                 exp_params_len = sum(
@@ -166,11 +146,7 @@ def test_feature_assembler(config):
                     )
                     out_features.append(
                         torch.ones(
-                            (
-                                N,
-                                T,
-                                sum(config["embed_static"]["embedding_dims"]),
-                            )
+                            (N, T, sum(config["embed_static"]["embedding_dims"]),)
                         )
                     )
                 else:  # not embed_static and 'static_cat' in enabled_features
@@ -197,11 +173,9 @@ def test_feature_assembler(config):
                     out_features.append(torch.zeros((N, T, 1)))
                 else:
                     C = config["static_real"]["C"]
-                    static_real = torch.empty((N,C)).uniform_(0,100)
+                    static_real = torch.empty((N, C)).uniform_(0, 100)
                     inp_features.append(static_real)
-                    out_features.append(
-                        static_real.unsqueeze(-2).expand(-1, T, -1)
-                    )
+                    out_features.append(static_real.unsqueeze(-2).expand(-1, T, -1))
 
                 if "dynamic_cat" not in enabled_features:
                     inp_features.append(torch.zeros((N, T, 1)))
@@ -213,9 +187,7 @@ def test_feature_assembler(config):
                             [
                                 torch.randint(
                                     0,
-                                    config["embed_dynamic"]["cardinalities"][
-                                        c
-                                    ],
+                                    config["embed_dynamic"]["cardinalities"][c],
                                     (N, T, 1),
                                 )
                                 for c in range(C)
@@ -225,11 +197,7 @@ def test_feature_assembler(config):
                     )
                     out_features.append(
                         torch.ones(
-                            (
-                                N,
-                                T,
-                                sum(config["embed_dynamic"]["embedding_dims"]),
-                            )
+                            (N, T, sum(config["embed_dynamic"]["embedding_dims"]),)
                         )
                     )
                 else:  # not embed_dynamic and 'dynamic_cat' in enabled_features
@@ -239,9 +207,7 @@ def test_feature_assembler(config):
                             [
                                 torch.randint(
                                     0,
-                                    config["embed_dynamic"]["cardinalities"][
-                                        c
-                                    ],
+                                    config["embed_dynamic"]["cardinalities"][c],
                                     (N, T, 1),
                                 )
                                 for c in range(C)
@@ -256,7 +222,7 @@ def test_feature_assembler(config):
                     out_features.append(torch.zeros((N, T, 1)))
                 else:
                     C = config["dynamic_real"]["C"]
-                    dynamic_real = torch.empty((N, T, C)).uniform_(0,100)
+                    dynamic_real = torch.empty((N, T, C)).uniform_(0, 100)
                     inp_features.append(dynamic_real)
                     out_features.append(dynamic_real)
 
