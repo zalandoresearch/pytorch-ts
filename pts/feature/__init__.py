@@ -10,5 +10,5 @@ from .time_feature import (
     WeekOfYear,
     time_features_from_frequency_str,
 )
-
+from .holiday import SPECIAL_DATE_FEATURES, SpecialDateFeatureSet
 from .utils import get_granularity, get_seasonality
