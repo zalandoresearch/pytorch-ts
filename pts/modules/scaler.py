@@ -64,7 +64,7 @@ class MeanScaler(Scaler):
 
     def __init__(self, minimum_scale: float = 1e-10, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.register_buffer('minimum_scale', torch.tensor(minimum_scale))
+        self.register_buffer("minimum_scale", torch.tensor(minimum_scale))
 
     def compute_scale(
         self, data: torch.Tensor, observed_indicator: torch.Tensor
@@ -106,4 +106,3 @@ class NOPScaler(Scaler):
         self, data: torch.Tensor, observed_indicator: torch.Tensor
     ) -> torch.Tensor:
         return torch.ones_like(data).mean(dim=1)
-

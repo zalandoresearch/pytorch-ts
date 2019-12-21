@@ -7,14 +7,20 @@ import pandas as pd
 
 # First-party imports
 from pts.transform import AdhocTransform, TransformedDataset
-from pts.dataset import DataEntry, Dataset, InferenceDataLoader, DatasetStatistics, calculate_dataset_statistics
+from pts.dataset import (
+    DataEntry,
+    Dataset,
+    InferenceDataLoader,
+    DatasetStatistics,
+    calculate_dataset_statistics,
+)
 from pts.model import Estimator, PTSEstimator, PTSPredictor, Predictor, Forecast
 from .evaluator import Evaluator
 
 
 def make_evaluation_predictions(
-        dataset: Dataset, predictor: Predictor,
-        num_samples: int) -> Tuple[Iterator[Forecast], Iterator[pd.Series]]:
+    dataset: Dataset, predictor: Predictor, num_samples: int
+) -> Tuple[Iterator[Forecast], Iterator[pd.Series]]:
     """
     Return predictions on the last portion of predict_length time units of the
     target. Such portion is cut before making predictions, such a function can
@@ -38,17 +44,13 @@ def make_evaluation_predictions(
     prediction_length = predictor.prediction_length
     freq = predictor.freq
 
-    def add_ts_dataframe(
-            data_iterator: Iterator[DataEntry]) -> Iterator[DataEntry]:
+    def add_ts_dataframe(data_iterator: Iterator[DataEntry]) -> Iterator[DataEntry]:
         for data_entry in data_iterator:
             data = data_entry.copy()
             index = pd.date_range(
-                start=data["start"],
-                freq=freq,
-                periods=data["target"].shape[-1],
+                start=data["start"], freq=freq, periods=data["target"].shape[-1],
             )
-            data["ts"] = pd.DataFrame(index=index,
-                                      data=data["target"].transpose())
+            data["ts"] = pd.DataFrame(index=index, data=data["target"].transpose())
             yield data
 
     def ts_iter(dataset: Dataset) -> pd.DataFrame:
@@ -58,8 +60,9 @@ def make_evaluation_predictions(
     def truncate_target(data):
         data = data.copy()
         target = data["target"]
-        assert (target.shape[-1] >= prediction_length
-                )  # handles multivariate case (target_dim, history_length)
+        assert (
+            target.shape[-1] >= prediction_length
+        )  # handles multivariate case (target_dim, history_length)
         data["target"] = target[..., :-prediction_length]
         return data
 
@@ -68,7 +71,8 @@ def make_evaluation_predictions(
     # TODO the test set may be gone otherwise with such a filtering)
 
     dataset_trunc = TransformedDataset(
-        dataset, transformations=[AdhocTransform(truncate_target)])
+        dataset, transformations=[AdhocTransform(truncate_target)]
+    )
 
     return (
         predictor.predict(dataset_trunc, num_samples=num_samples),
@@ -90,8 +94,7 @@ def backtest_metrics(
     train_dataset: Optional[Dataset],
     test_dataset: Dataset,
     forecaster: Union[Estimator, Predictor],
-    evaluator=Evaluator(quantiles=(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8,
-                                   0.9)),
+    evaluator=Evaluator(quantiles=(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9)),
     num_samples: int = 100,
     logging_file: Optional[str] = None,
 ):
@@ -145,13 +148,13 @@ def backtest_metrics(
     else:
         predictor = forecaster
 
-    forecast_it, ts_it = make_evaluation_predictions(test_dataset,
-                                                     predictor=predictor,
-                                                     num_samples=num_samples)
+    forecast_it, ts_it = make_evaluation_predictions(
+        test_dataset, predictor=predictor, num_samples=num_samples
+    )
 
-    agg_metrics, item_metrics = evaluator(ts_it,
-                                          forecast_it,
-                                          num_series=len(test_dataset))
+    agg_metrics, item_metrics = evaluator(
+        ts_it, forecast_it, num_series=len(test_dataset)
+    )
 
     # we only log aggregate metrics for now as item metrics may be very large
     for name, value in agg_metrics.items():

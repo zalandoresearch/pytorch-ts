@@ -22,6 +22,7 @@ def get_granularity(freq_str: str) -> Tuple[int, str]:
     granularity = groups[2]
     return multiple, granularity
 
+
 @lru_cache()
 def get_seasonality(freq: str) -> int:
     """

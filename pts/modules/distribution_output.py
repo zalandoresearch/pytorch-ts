@@ -91,7 +91,7 @@ class BetaOutput(DistributionOutput):
         concentration1 = F.softplus(concentration1) + 1e-8
         concentration0 = F.softplus(concentration0) + 1e-8
         return concentration1.squeeze(-1), concentration0.squeeze(-1)
-    
+
     @property
     def event_shape(self) -> Tuple:
         return ()
@@ -120,7 +120,7 @@ class NegativeBinomialOutput(DistributionOutput):
         p = mu * alpha / (1.0 + mu * alpha)
 
         return NegativeBinomial(total_count=n, probs=p)
-    
+
     @property
     def event_shape(self) -> Tuple:
         return ()

@@ -1,8 +1,15 @@
 from typing import Callable, List, NamedTuple, Optional, Tuple, Union
 
-from .common import MetaData, CategoricalFeatureInfo, BasicFeatureInfo, FieldName, Dataset
+from .common import (
+    MetaData,
+    CategoricalFeatureInfo,
+    BasicFeatureInfo,
+    FieldName,
+    Dataset,
+)
 from .list_dataset import ListDataset
 from .stat import DatasetStatistics, calculate_dataset_statistics
+
 
 class DatasetInfo(NamedTuple):
     """
@@ -22,9 +29,7 @@ def constant_dataset() -> Tuple[DatasetInfo, Dataset, Dataset]:
     metadata = MetaData(
         freq="1H",
         feat_static_cat=[
-            CategoricalFeatureInfo(
-                name="feat_static_cat_000", cardinality="10"
-            )
+            CategoricalFeatureInfo(name="feat_static_cat_000", cardinality="10")
         ],
         feat_static_real=[BasicFeatureInfo(name="feat_static_real_000")],
     )

@@ -49,9 +49,9 @@ class PTSPredictor(Predictor):
         self.device = device
         self.dtype = dtype
 
-    def predict(self,
-                dataset: Dataset,
-                num_samples: Optional[int] = None) -> Iterator[Forecast]:
+    def predict(
+        self, dataset: Dataset, num_samples: Optional[int] = None
+    ) -> Iterator[Forecast]:
         inference_data_loader = InferenceDataLoader(
             dataset,
             self.input_transform,

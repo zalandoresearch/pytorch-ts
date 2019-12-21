@@ -84,7 +84,9 @@ class FileDataset(Dataset):
         for path in self.files():
             for line in JsonLinesFile(path):
                 data = self.process(line.content)
-                data["source"] = SourceContext(source=line.span.path, row=line.span.line)
+                data["source"] = SourceContext(
+                    source=line.span.path, row=line.span.line
+                )
                 yield data
 
     def __len__(self):

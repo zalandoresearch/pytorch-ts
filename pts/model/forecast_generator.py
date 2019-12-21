@@ -44,11 +44,18 @@ class ForecastGenerator(ABC):
     """
     Classes used to bring the output of a network into a class.
     """
+
     @abstractmethod
-    def __call__(self, inference_data_loader: InferenceDataLoader,
-                 prediction_net: nn.Module, input_names: List[str], freq: str,
-                 output_transform: Optional[OutputTransform],
-                 num_samples: Optional[int], **kwargs) -> Iterator[Forecast]:
+    def __call__(
+        self,
+        inference_data_loader: InferenceDataLoader,
+        prediction_net: nn.Module,
+        input_names: List[str],
+        freq: str,
+        output_transform: Optional[OutputTransform],
+        num_samples: Optional[int],
+        **kwargs
+    ) -> Iterator[Forecast]:
         pass
 
 
@@ -56,11 +63,16 @@ class DistributionForecastGenerator(ForecastGenerator):
     def __init__(self, distr_output: DistributionOutput) -> None:
         self.distr_output = distr_output
 
-    def __call__(self, inference_data_loader: InferenceDataLoader,
-                 prediction_net: nn.Module, input_names: List[str], freq: str,
-                 output_transform: Optional[OutputTransform],
-                 num_samples: Optional[int],
-                 **kwargs) -> Iterator[DistributionForecast]:
+    def __call__(
+        self,
+        inference_data_loader: InferenceDataLoader,
+        prediction_net: nn.Module,
+        input_names: List[str],
+        freq: str,
+        output_transform: Optional[OutputTransform],
+        num_samples: Optional[int],
+        **kwargs
+    ) -> Iterator[DistributionForecast]:
         for batch in inference_data_loader:
             inputs = [batch[k] for k in input_names]
             outputs = prediction_net(*inputs)
@@ -68,8 +80,7 @@ class DistributionForecastGenerator(ForecastGenerator):
                 outputs = output_transform(batch, outputs)
 
             distributions = [
-                self.distr_output.distribution(*u)
-                for u in _extract_instances(outputs)
+                self.distr_output.distribution(*u) for u in _extract_instances(outputs)
             ]
 
             i = -1
@@ -79,7 +90,8 @@ class DistributionForecastGenerator(ForecastGenerator):
                     start_date=batch["forecast_start"][i],
                     freq=freq,
                     item_id=batch[FieldName.ITEM_ID][i]
-                    if FieldName.ITEM_ID in batch else None,
+                    if FieldName.ITEM_ID in batch
+                    else None,
                     info=batch["info"][i] if "info" in batch else None,
                 )
             assert i + 1 == len(batch["forecast_start"])
@@ -89,10 +101,16 @@ class QuantileForecastGenerator(ForecastGenerator):
     def __init__(self, quantiles: List[str]) -> None:
         self.quantiles = quantiles
 
-    def __call__(self, inference_data_loader: InferenceDataLoader,
-                 prediction_net: nn.Module, input_names: List[str], freq: str,
-                 output_transform: Optional[OutputTransform],
-                 num_samples: Optional[int], **kwargs) -> Iterator[Forecast]:
+    def __call__(
+        self,
+        inference_data_loader: InferenceDataLoader,
+        prediction_net: nn.Module,
+        input_names: List[str],
+        freq: str,
+        output_transform: Optional[OutputTransform],
+        num_samples: Optional[int],
+        **kwargs
+    ) -> Iterator[Forecast]:
         for batch in inference_data_loader:
             inputs = [batch[k] for k in input_names]
             outputs = prediction_net(*inputs).cpu().numpy()
@@ -106,7 +124,8 @@ class QuantileForecastGenerator(ForecastGenerator):
                     start_date=batch["forecast_start"][i],
                     freq=freq,
                     item_id=batch[FieldName.ITEM_ID][i]
-                    if FieldName.ITEM_ID in batch else None,
+                    if FieldName.ITEM_ID in batch
+                    else None,
                     info=batch["info"][i] if "info" in batch else None,
                     forecast_keys=self.quantiles,
                 )
@@ -114,10 +133,16 @@ class QuantileForecastGenerator(ForecastGenerator):
 
 
 class SampleForecastGenerator(ForecastGenerator):
-    def __call__(self, inference_data_loader: InferenceDataLoader,
-                 prediction_net: nn.Module, input_names: List[str], freq: str,
-                 output_transform: Optional[OutputTransform],
-                 num_samples: Optional[int], **kwargs) -> Iterator[Forecast]:
+    def __call__(
+        self,
+        inference_data_loader: InferenceDataLoader,
+        prediction_net: nn.Module,
+        input_names: List[str],
+        freq: str,
+        output_transform: Optional[OutputTransform],
+        num_samples: Optional[int],
+        **kwargs
+    ) -> Iterator[Forecast]:
         for batch in inference_data_loader:
             inputs = [batch[k] for k in input_names]
             outputs = prediction_net(*inputs).cpu().numpy()
@@ -133,8 +158,7 @@ class SampleForecastGenerator(ForecastGenerator):
                     collected_samples.append(outputs)
                     num_collected_samples += outputs[0].shape[0]
                 outputs = [
-                    np.concatenate(s)[:num_samples]
-                    for s in zip(*collected_samples)
+                    np.concatenate(s)[:num_samples] for s in zip(*collected_samples)
                 ]
                 assert len(outputs[0]) == num_samples
             i = -1
@@ -144,7 +168,8 @@ class SampleForecastGenerator(ForecastGenerator):
                     start_date=batch["forecast_start"][i],
                     freq=freq,
                     item_id=batch[FieldName.ITEM_ID][i]
-                    if FieldName.ITEM_ID in batch else None,
+                    if FieldName.ITEM_ID in batch
+                    else None,
                     info=batch["info"][i] if "info" in batch else None,
                 )
             assert i + 1 == len(batch["forecast_start"])

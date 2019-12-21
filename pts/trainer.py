@@ -46,12 +46,12 @@ class Trainer:
                         loss = output[0]
                     else:
                         loss = output
-                    
+
                     avg_epoch_loss += loss.item()
                     it.set_postfix(
                         ordered_dict={
-                            "avg_epoch_loss": avg_epoch_loss/batch_no,
-                            'epoch': epoch_no,
+                            "avg_epoch_loss": avg_epoch_loss / batch_no,
+                            "epoch": epoch_no,
                         },
                         refresh=False,
                     )
