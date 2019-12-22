@@ -16,6 +16,8 @@ from typing import List, Callable
 import numpy as np
 import pandas as pd
 from pandas.tseries.holiday import (
+    FR,
+    SA,
     SU,
     EasterMonday,
     GoodFriday,
