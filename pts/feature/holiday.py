@@ -16,8 +16,7 @@ from typing import List, Callable
 import numpy as np
 import pandas as pd
 from pandas.tseries.holiday import (
-    FR,
-    SA,
+    TH,
     SU,
     EasterMonday,
     GoodFriday,
@@ -60,9 +59,15 @@ IndependenceDay = Holiday("Independence Day", month=7, day=4)
 ChristmasEve = Holiday("Christmas", month=12, day=24)
 ChristmasDay = Holiday("Christmas", month=12, day=25)
 NewYearsEve = Holiday("New Years Eve", month=12, day=31)
-BlackFriday = Holiday('Black Friday', month=11, day=1, offset=pd.DateOffset(weekday=FR(4)))
-CyberMonday = Holiday("Cyber Monday", month=11, day=1, offset=[pd.DateOffset(weekday=SA(4)), pd.DateOffset(2)])
-
+BlackFriday = Holiday(
+    "Black Friday", month=11, day=1, offset=[pd.DateOffset(weekday=TH(4)), Day(1)]
+)
+CyberMonday = Holiday(
+    "Cyber Monday",
+    month=11,
+    day=1,
+    offset=[pd.DateOffset(weekday=TH(4)), pd.DateOffset(4)],
+)
 
 
 NEW_YEARS_DAY = "new_years_day"
