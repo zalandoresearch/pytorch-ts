@@ -44,6 +44,7 @@ class DeepAREstimator(PTSEstimator):
         cell_type: str = "LSTM",
         dropout_rate: float = 0.1,
         use_feat_dynamic_real: bool = False,
+        use_feat_dynamic_cat: bool = False,
         use_feat_static_cat: bool = False,
         use_feat_static_real: bool = False,
         cardinality: Optional[List[int]] = None,
@@ -70,6 +71,7 @@ class DeepAREstimator(PTSEstimator):
         self.cell_type = cell_type
         self.dropout_rate = dropout_rate
         self.use_feat_dynamic_real = use_feat_dynamic_real
+        self.use_feat_dynamic_cat = use_feat_dynamic_cat
         self.use_feat_static_cat = use_feat_static_cat
         self.use_feat_static_real = use_feat_static_real
         self.cardinality = cardinality if cardinality and use_feat_static_cat else [1]
@@ -93,11 +95,13 @@ class DeepAREstimator(PTSEstimator):
         self.num_parallel_samples = num_parallel_samples
 
     def create_transformation(self) -> Transformation:
-        remove_field_names = [FieldName.FEAT_DYNAMIC_CAT]
+        remove_field_names = []
         if not self.use_feat_static_real:
             remove_field_names.append(FieldName.FEAT_STATIC_REAL)
         if not self.use_feat_dynamic_real:
             remove_field_names.append(FieldName.FEAT_DYNAMIC_REAL)
+        if not self.use_feat_dynamic_cat:
+            remove_field_names.append(FieldName.FEAT_DYNAMIC_CAT)
 
         return Chain(
             [RemoveFields(field_names=remove_field_names)]
@@ -149,6 +153,11 @@ class DeepAREstimator(PTSEstimator):
                     + (
                         [FieldName.FEAT_DYNAMIC_REAL]
                         if self.use_feat_dynamic_real
+                        else []
+                    )
+                    + (
+                        [FieldName.FEAT_DYNAMIC_CAT]
+                        if self.use_feat_dynamic_cat
                         else []
                     ),
                 ),
