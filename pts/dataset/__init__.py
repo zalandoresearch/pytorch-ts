@@ -19,4 +19,5 @@ from .artificial import (
     RecipeDataset,
     constant_dataset,
     default_synthetic,
+    generate_sf2,
 )

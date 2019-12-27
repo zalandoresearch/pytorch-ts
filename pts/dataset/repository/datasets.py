@@ -18,6 +18,7 @@ from pathlib import Path
 
 from pts.dataset import ConstantDataset, TrainDatasets, load_datasets
 
+from ._artificial import generate_artificial_dataset
 from ._lstnet import generate_lstnet_dataset
 from ._m4 import generate_m4_dataset
 from ._gp_copula_2019 import generate_gp_copula_dataset
@@ -30,6 +31,8 @@ prediction_length = 48
 
 dataset_recipes = OrderedDict(
     {
+        # each recipe generates a dataset given a path
+        "constant": partial(generate_artificial_dataset, dataset=ConstantDataset()),
         "exchange_rate": partial(generate_lstnet_dataset, dataset_name="exchange_rate"),
         "solar-energy": partial(generate_lstnet_dataset, dataset_name="solar-energy"),
         "electricity": partial(generate_lstnet_dataset, dataset_name="electricity"),
