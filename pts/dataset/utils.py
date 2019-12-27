@@ -1,4 +1,20 @@
+from pathlib import Path
+import shutil
+
+import numpy as np
 import pandas as pd
+import rapidjson as json
+
+from .common import TrainDatasets, MetaData
+from .file_dataset import FileDataset
+
+
+def frequency_add(ts: pd.Timestamp, amount: int) -> pd.Timestamp:
+    return ts + ts.freq * amount
+
+
+def forecast_start(entry):
+    return frequency_add(entry["start"], len(entry["target"]))
 
 
 def to_pandas(instance: dict, freq: str = None) -> pd.Series:
@@ -24,3 +40,93 @@ def to_pandas(instance: dict, freq: str = None) -> pd.Series:
         freq = start.freqstr
     index = pd.date_range(start=start, periods=len(target), freq=freq)
     return pd.Series(target, index=index)
+
+
+def load_datasets(metadata, train, test) -> TrainDatasets:
+    """
+    Loads a dataset given metadata, train and test path.
+    Parameters
+    ----------
+    metadata
+        Path to the metadata file
+    train
+        Path to the training dataset files.
+    test
+        Path to the test dataset files.
+    Returns
+    -------
+    TrainDatasets
+        An object collecting metadata, training data, test data.
+    """
+    meta = MetaData.parse_file(metadata)
+    train_ds = FileDataset(train, meta.freq)
+    test_ds = FileDataset(test, meta.freq) if test else None
+
+    return TrainDatasets(metadata=meta, train=train_ds, test=test_ds)
+
+
+def save_datasets(dataset: TrainDatasets, path_str: str, overwrite=True) -> None:
+    """
+    Saves an TrainDatasets object to a JSON Lines file.
+
+    Parameters
+    ----------
+    dataset
+        The training datasets.
+    path_str
+        Where to save the dataset.
+    overwrite
+        Whether to delete previous version in this folder.
+    """
+    path = Path(path_str)
+
+    if overwrite:
+        shutil.rmtree(path, ignore_errors=True)
+
+    def dump_line(f, line):
+        f.write(json.dumps(line).encode("utf-8"))
+        f.write("\n".encode("utf-8"))
+
+    (path / "metadata").mkdir(parents=True)
+    with open(path / "metadata/metadata.json", "wb") as f:
+        dump_line(f, dataset.metadata.dict())
+
+    (path / "train").mkdir(parents=True)
+    with open(path / "train/data.json", "wb") as f:
+        for entry in dataset.train:
+            dump_line(f, serialize_data_entry(entry))
+
+    if dataset.test is not None:
+        (path / "test").mkdir(parents=True)
+        with open(path / "test/data.json", "wb") as f:
+            for entry in dataset.test:
+                dump_line(f, serialize_data_entry(entry))
+
+
+def serialize_data_entry(data):
+    """
+    Encode the numpy values in the a DataEntry dictionary into lists so the
+    dictionary can be JSON serialized.
+
+    Parameters
+    ----------
+    data
+        The dictionary to be transformed.
+
+    Returns
+    -------
+    Dict
+        The transformed dictionary, where all fields where transformed into
+        strings.
+    """
+
+    def serialize_field(field):
+        if isinstance(field, np.ndarray):
+            # circumvent https://github.com/micropython/micropython/issues/3511
+            nan_ix = np.isnan(field)
+            field = field.astype(np.object_)
+            field[nan_ix] = "NaN"
+            return field.tolist()
+        return str(field)
+
+    return {k: serialize_field(v) for k, v in data.items() if v is not None}

@@ -101,4 +101,4 @@ class FileDataset(Dataset):
         List[Path]
             List of the paths of all files composing the dataset.
         """
-        return glob.glob(self.path)
+        return glob.glob(str(self.path))
