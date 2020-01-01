@@ -10,6 +10,7 @@ from torch.distributions import (
     Beta,
     NegativeBinomial,
     StudentT,
+    LowRankMultivariateNormal,
     TransformedDistribution,
     AffineTransform,
 )
@@ -139,3 +140,36 @@ class StudentTOutput(DistributionOutput):
     @property
     def event_shape(self) -> Tuple:
         return ()
+
+
+class LowRankMultivariateNormalOutput(DistributionOutput):
+    def __init__(
+        self, dim: int, rank: int, sigma_init: float = 1.0, sigma_minimum: float = 1e-3,
+    ) -> None:
+        self.distr_cls = LowRankMultivariateNormal
+        self.dim = dim
+        self.rank = rank
+        self.sigma_init = sigma_init
+        self.sigma_minimum = sigma_minimum
+        self.args_dim = {"loc": dim, "cov_factor": dim * rank, "cov_diag": dim}
+
+    def domain_map(self, loc, cov_factor, cov_diag):
+        diag_bias = (
+            self.inv_softplus(self.sigma_init ** 2) if self.sigma_init > 0.0 else 0.0
+        )
+
+        shape = cov_factor.shape[:-1] + (self.dim, self.rank)
+        cov_factor = cov_factor.reshape(shape)
+        cov_diag = F.softplus(cov_diag + diag_bias) + self.sigma_minimum ** 2
+
+        return loc, cov_factor, cov_diag
+
+    def inv_softplus(self, y):
+        if y < 20.0:
+            return np.log(np.exp(y) - 1.0)
+        else:
+            return y
+
+    @property
+    def event_shape(self) -> Tuple:
+        return (self.dim,)
