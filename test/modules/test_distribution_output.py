@@ -183,7 +183,7 @@ def test_studentT_likelihood(df: float, loc: float, scale: float):
 def test_lowrank_multivariate_normal() -> None:
     num_samples = 2000
     dim = 4
-    rank = 2
+    rank = 3
 
     loc = np.arange(0, dim) / float(dim)
     cov_diag = np.eye(dim) * (np.arange(dim) / dim + 0.5)

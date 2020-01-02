@@ -102,7 +102,6 @@ class WeekOfYear(TimeFeature):
 
 
 class FourierDateFeatures(TimeFeature):
-    @validated()
     def __init__(self, freq: str) -> None:
         super().__init__()
         # reoccurring freq
