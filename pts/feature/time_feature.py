@@ -3,6 +3,7 @@ from typing import List
 
 import numpy as np
 import pandas as pd
+from pandas.tseries.frequencies import to_offset
 
 from .utils import get_granularity
 
@@ -100,6 +101,33 @@ class WeekOfYear(TimeFeature):
             return index.weekofyear.map(float)
 
 
+class FourierDateFeatures(TimeFeature):
+    @validated()
+    def __init__(self, freq: str) -> None:
+        super().__init__()
+        # reoccurring freq
+        freqs = [
+            "month",
+            "day",
+            "hour",
+            "minute",
+            "weekofyear",
+            "weekday",
+            "dayofweek",
+            "dayofyear",
+            "daysinmonth",
+        ]
+
+        assert freq in freqs
+        self.freq = freq
+
+    def __call__(self, index: pd.DatetimeIndex) -> np.ndarray:
+        values = getattr(index, self.freq)
+        num_values = max(values) + 1
+        steps = [x * 2.0 * np.pi / num_values for x in values]
+        return np.vstack([np.cos(steps), np.sin(steps)])
+
+
 def time_features_from_frequency_str(freq_str: str) -> List[TimeFeature]:
     """
     Returns a list of time features that will be appropriate for the given frequency string.
@@ -137,3 +165,25 @@ def time_features_from_frequency_str(freq_str: str) -> List[TimeFeature]:
         raise RuntimeError(supported_freq_msg)
 
     return [cls() for cls in feature_classes]
+
+
+def fourier_time_features_from_frequency_str(freq_str: str) -> List[TimeFeature]:
+    offset = to_offset(freq_str)
+    granularity = offset.name
+
+    features = {
+        "M": ["weekofyear"],
+        "W": ["daysinmonth", "weekofyear"],
+        "D": ["dayofweek"],
+        "B": ["dayofweek", "dayofyear"],
+        "H": ["hour", "dayofweek"],
+        "min": ["minute", "hour", "dayofweek"],
+        "T": ["minute", "hour", "dayofweek"],
+    }
+
+    assert granularity in features, f"freq {granularity} not supported"
+
+    feature_classes: List[TimeFeature] = [
+        FourierDateFeatures(freq=freq) for freq in features[granularity]
+    ]
+    return feature_classes

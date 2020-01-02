@@ -3,7 +3,6 @@ from typing import List, Optional
 
 import numpy as np
 import pandas as pd
-from pandas.tseries.frequencies import to_offset
 import torch
 import torch.nn as nn
 
@@ -27,78 +26,12 @@ from pts.transform import (
     SetFieldIfNotPresent,
     TargetDimIndicator,
 )
+from pts.feature import (
+    fourier_time_features_from_frequency_str,
+    get_fourier_lags_for_frequency,
+)
 
-
-def get_lags_for_frequency(freq_str: str, num_lags: Optional[int] = None) -> List[int]:
-    offset = to_offset(freq_str)
-    multiple, granularity = offset.n, offset.name
-
-    if granularity == "M":
-        lags = [[1, 12]]
-    elif granularity == "D":
-        lags = [[1, 7, 14]]
-    elif granularity == "B":
-        lags = [[1, 2]]
-    elif granularity == "H":
-        lags = [[1, 24, 168]]
-    elif granularity == "min":
-        lags = [[1, 4, 12, 24, 48]]
-    else:
-        lags = [[1]]
-
-    # use less lags
-    output_lags = list([int(lag) for sub_list in lags for lag in sub_list])
-    output_lags = sorted(list(set(output_lags)))
-    return output_lags[:num_lags]
-
-
-class FourierDateFeatures(TimeFeature):
-    @validated()
-    def __init__(self, freq: str) -> None:
-        super().__init__()
-        # reoccurring freq
-        freqs = [
-            "month",
-            "day",
-            "hour",
-            "minute",
-            "weekofyear",
-            "weekday",
-            "dayofweek",
-            "dayofyear",
-            "daysinmonth",
-        ]
-
-        assert freq in freqs
-        self.freq = freq
-
-    def __call__(self, index: pd.DatetimeIndex) -> np.ndarray:
-        values = getattr(index, self.freq)
-        num_values = max(values) + 1
-        steps = [x * 2.0 * np.pi / num_values for x in values]
-        return np.vstack([np.cos(steps), np.sin(steps)])
-
-
-def time_features_from_frequency_str(freq_str: str) -> List[TimeFeature]:
-    offset = to_offset(freq_str)
-    multiple, granularity = offset.n, offset.name
-
-    features = {
-        "M": ["weekofyear"],
-        "W": ["daysinmonth", "weekofyear"],
-        "D": ["dayofweek"],
-        "B": ["dayofweek", "dayofyear"],
-        "H": ["hour", "dayofweek"],
-        "min": ["minute", "hour", "dayofweek"],
-        "T": ["minute", "hour", "dayofweek"],
-    }
-
-    assert granularity in features, f"freq {granularity} not supported"
-
-    feature_classes: List[TimeFeature] = [
-        FourierDateFeatures(freq=freq) for freq in features[granularity]
-    ]
-    return feature_classes
+from .deepvar_network import DeepVARTrainingNetwork, DeepVARPredictionNetwork
 
 
 class DeepVAREstimator(PTSEstimator):
@@ -153,13 +86,15 @@ class DeepVAREstimator(PTSEstimator):
         self.use_marginal_t
 
         self.lags_seq = (
-            lags_seq if lags_seq is not None else get_lags_for_frequency(freq_str=freq)
+            lags_seq
+            if lags_seq is not None
+            else get_fourier_lags_for_frequency(freq_str=freq)
         )
 
         self.time_features = (
             time_features
             if time_features is not None
-            else time_features_from_frequency_str(self.freq)
+            else fourier_time_features_from_frequency_str(self.freq)
         )
 
         self.history_length = self.context_length + max(self.lags_seq)
@@ -175,7 +110,7 @@ class DeepVAREstimator(PTSEstimator):
 
     def create_transformation(self) -> Transformation:
         def use_marginal_transformation(
-            marginal_transformation: bool
+            marginal_transformation: bool,
         ) -> Transformation:
             if marginal_transformation:
                 return CDFtoGaussianTransform(
@@ -219,9 +154,7 @@ class DeepVAREstimator(PTSEstimator):
                     output_field=FieldName.FEAT_TIME,
                     input_fields=[FieldName.FEAT_TIME],
                 ),
-                SetFieldIfNotPresent(
-                    field=FieldName.FEAT_STATIC_CAT, value=[0.0]
-                ),
+                SetFieldIfNotPresent(field=FieldName.FEAT_STATIC_CAT, value=[0]),
                 TargetDimIndicator(
                     field_name="target_dimension_indicator",
                     target_field=FieldName.TARGET,
@@ -245,4 +178,56 @@ class DeepVAREstimator(PTSEstimator):
             ]
         )
 
-    
+    def create_training_network(self, device: torch.device) -> DeepVARTrainingNetwork:
+        return DeepVARTrainingNetwork(
+            target_dim=self.target_dim,
+            num_layers=self.num_layers,
+            num_cells=self.num_cells,
+            cell_type=self.cell_type,
+            history_length=self.history_length,
+            context_length=self.context_length,
+            prediction_length=self.prediction_length,
+            distr_output=self.distr_output,
+            dropout_rate=self.dropout_rate,
+            cardinality=self.cardinality,
+            embedding_dimension=self.embedding_dimension,
+            lags_seq=self.lags_seq,
+            scaling=self.scaling,
+            conditioning_length=self.conditioning_length,
+        ).to(device)
+
+    def create_predictor(
+        self,
+        transformation: Transformation,
+        trained_network: nn.Module,
+        device: torch.device,
+    ) -> Predictor:
+        prediction_network = DeepVARPredictionNetwork(
+            target_dim=self.target_dim,
+            num_parallel_samples=self.num_parallel_samples,
+            num_layers=self.num_layers,
+            num_cells=self.num_cells,
+            cell_type=self.cell_type,
+            history_length=self.history_length,
+            context_length=self.context_length,
+            prediction_length=self.prediction_length,
+            distr_output=self.distr_output,
+            dropout_rate=self.dropout_rate,
+            cardinality=self.cardinality,
+            embedding_dimension=self.embedding_dimension,
+            lags_seq=self.lags_seq,
+            scaling=self.scaling,
+            conditioning_length=self.conditioning_length,
+        ).to(device)
+
+        copy_parameters(trained_network, prediction_network)
+
+        return PTSPredictor(
+            input_transform=transformation,
+            prediction_net=prediction_network,
+            batch_size=self.trainer.batch_size,
+            freq=self.freq,
+            prediction_length=self.prediction_length,
+            device=device,
+            output_transform=self.output_transform,
+        )
