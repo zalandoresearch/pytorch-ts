@@ -55,6 +55,9 @@ class Forecast(ABC):
         """
         pass
 
+    def quantile_ts(self, q):
+        return pd.Series(index=self.index, data=self.quantile(q))
+
     @property
     def median(self) -> np.ndarray:
         return self.quantile(0.5)
@@ -263,7 +266,7 @@ class SampleForecast(Forecast):
         """
         Forecast mean, as a pandas.Series object.
         """
-        return pd.Series(self.index, self.mean)
+        return pd.Series(index=self.index, data=self.mean)
 
     def quantile(self, q):
         q = Quantile.parse(q).value
@@ -518,7 +521,7 @@ class DistributionForecast(Forecast):
         """
         Forecast mean, as a pandas.Series object.
         """
-        return pd.Series(self.index, self.mean)
+        return pd.Series(index=self.index, data=self.mean)
 
     def quantile(self, level):
         level = Quantile.parse(level).value
