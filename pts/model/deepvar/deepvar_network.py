@@ -64,7 +64,7 @@ class DeepVARTrainingNetwork(nn.Module):
             batch_first=True,
         )
 
-        self.proj_dist_args = distr_output.get_args_proj()
+        self.proj_dist_args = distr_output.get_args_proj(num_cells)
 
         self.embed_dim = 1
         self.embed = nn.Embedding(
@@ -72,9 +72,9 @@ class DeepVARTrainingNetwork(nn.Module):
         )
 
         if scaling:
-            self.scaler = MeanScaler(keepdims=True)
+            self.scaler = MeanScaler(keepdim=True)
         else:
-            self.scaler = NOPScaler(keepdims=True)
+            self.scaler = NOPScaler(keepdim=True)
 
     @staticmethod
     def get_lagged_subsequences(
@@ -118,7 +118,7 @@ class DeepVARTrainingNetwork(nn.Module):
             begin_index = -lag_index - subsequences_length
             end_index = -lag_index if lag_index > 0 else None
             lagged_values.append(sequence[:, begin_index:end_index, ...].unsqueeze(1))
-        return torch.cat(*lagged_values, dim=1).permute(0, 2, 3, 1)
+        return torch.cat(lagged_values, dim=1).permute(0, 2, 3, 1)
 
     def unroll(
         self,
@@ -156,23 +156,12 @@ class DeepVARTrainingNetwork(nn.Module):
             .expand(-1, unroll_length, -1)
             .reshape((-1, unroll_length, self.target_dim * self.embed_dim))
         )
-        # repeated_index_embeddings = (
-        #     index_embeddings.expand_dims(axis=1)
-        #     .repeat(axis=1, repeats=unroll_length)
-        #     .reshape((-1, unroll_length, self.target_dim * self.embed_dim))
-        # )
 
         # (batch_size, sub_seq_len, input_dim)
         inputs = torch.cat((input_lags, repeated_index_embeddings, time_feat), dim=-1)
 
         # unroll encoder
         outputs, state = self.rnn(inputs, begin_state)
-        #     inputs=inputs,
-        #     length=unroll_length,
-        #     layout="NTC",
-        #     merge_outputs=True,
-        #     begin_state=begin_state,
-        # )
 
         # assert_shape(outputs, (-1, unroll_length, self.num_cells))
         # for s in state:
@@ -412,7 +401,7 @@ class DeepVARTrainingNetwork(nn.Module):
 
         # mask the loss at one time step if one or more observations is missing
         # in the target dimensions (batch_size, subseq_length, 1)
-        loss_weights = observed_values.min(dim=-1, keepdims=True)
+        loss_weights = observed_values.min(dim=-1, keepdim=True)
 
         # assert_shape(loss_weights, (-1, seq_len, 1))
 

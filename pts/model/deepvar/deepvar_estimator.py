@@ -1,6 +1,5 @@
 from typing import List, Optional
 
-
 import numpy as np
 import pandas as pd
 import torch
@@ -27,6 +26,7 @@ from pts.transform import (
     TargetDimIndicator,
 )
 from pts.feature import (
+    TimeFeature,
     fourier_time_features_from_frequency_str,
     get_fourier_lags_for_frequency,
 )
@@ -85,7 +85,7 @@ class DeepVAREstimator(PTSEstimator):
         self.cardinality = cardinality
         self.embedding_dimension = embedding_dimension
         self.conditioning_length = conditioning_length
-        self.use_marginal_t
+        self.use_marginal_transformation = use_marginal_transformation
 
         self.lags_seq = (
             lags_seq
@@ -204,7 +204,7 @@ class DeepVAREstimator(PTSEstimator):
         transformation: Transformation,
         trained_network: DeepVARTrainingNetwork,
         device: torch.device,
-    ) -> Predictor:
+    ) -> PTSPredictor:
         prediction_network = DeepVARPredictionNetwork(
             input_size=self.input_size,
             target_dim=self.target_dim,
