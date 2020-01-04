@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Iterable, NamedTuple, Sized, List, Optional, Iterator
 
+import pandas as pd
 from pydantic import BaseModel
 
 DataEntry = Dict[str, Any]
@@ -76,3 +77,11 @@ class TrainDatasets(NamedTuple):
     metadata: MetaData
     train: Dataset
     test: Optional[Dataset] = None
+
+class DateConstants:
+    """
+    Default constants for specific dates.
+    """
+
+    OLDEST_SUPPORTED_TIMESTAMP = pd.Timestamp(1800, 1, 1, 12)
+    LATEST_SUPPORTED_TIMESTAMP = pd.Timestamp(2200, 1, 1, 12)
