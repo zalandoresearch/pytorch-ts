@@ -153,7 +153,7 @@ class DeepVARTrainingNetwork(nn.Module):
         # (batch_size, seq_len, target_dim * embed_dim)
         repeated_index_embeddings = (
             index_embeddings.unsqueeze(1)
-            .expand(-1, unroll_length, -1)
+            .expand(-1, unroll_length, -1, -1)
             .reshape((-1, unroll_length, self.target_dim * self.embed_dim))
         )
 
@@ -263,7 +263,7 @@ class DeepVARTrainingNetwork(nn.Module):
         # scale shape is (batch_size, 1, target_dim)
         _, scale = self.scaler(
             past_target_cdf[:, -self.context_length :, ...],
-            past_observed_values[:, -self.context_length : ...,],
+            past_observed_values[:, -self.context_length :, ...],
         )
 
         outputs, states, lags_scaled, inputs = self.unroll(
@@ -401,17 +401,17 @@ class DeepVARTrainingNetwork(nn.Module):
 
         # mask the loss at one time step if one or more observations is missing
         # in the target dimensions (batch_size, subseq_length, 1)
-        loss_weights = observed_values.min(dim=-1, keepdim=True)
+        loss_weights,_ = observed_values.min(dim=-1, keepdim=True)
 
         # assert_shape(loss_weights, (-1, seq_len, 1))
 
-        loss = weighted_average(x=likelihoods, weights=loss_weights, dim=1)
+        loss = weighted_average(likelihoods, weights=loss_weights, dim=1)
 
         # assert_shape(loss, (-1, -1, 1))
 
         self.distribution = distr
 
-        return (loss, likelihoods) + distr_args
+        return (loss.sum(), likelihoods) + distr_args
 
 
 class DeepVARPredictionNetwork(DeepVARTrainingNetwork):

@@ -87,7 +87,7 @@ def test_deepvar(
 ):
 
     estimator = Estimator(
-        input_size=10,
+        input_size=44,
         num_cells=20,
         num_layers=1,
         pick_incomplete=True,

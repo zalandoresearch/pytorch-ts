@@ -283,7 +283,7 @@ class DeepARTrainingNetwork(DeepARNetwork):
             else observed_values.min(dim=-1, keepdim=False)
         )
 
-        weighted_loss = weighted_average(loss, loss_weights)
+        weighted_loss = weighted_average(loss, weights=loss_weights)
 
         return weighted_loss, loss
 
