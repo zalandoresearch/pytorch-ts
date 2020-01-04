@@ -7,7 +7,7 @@ from torch.distributions import Distribution
 import numpy as np
 
 from pts.modules import DistributionOutput, MeanScaler, NOPScaler, FeatureEmbedder
-
+from pts.model import weighted_average
 
 def prod(xs):
     p = 1
@@ -35,7 +35,6 @@ class DeepARNetwork(nn.Module):
         dtype: np.dtype = np.float32,
     ) -> None:
         super().__init__()
-        self.input_size = input_size
         self.num_layers = num_layers
         self.num_cells = num_cells
         self.cell_type = cell_type
@@ -114,28 +113,6 @@ class DeepARNetwork(nn.Module):
             lagged_values.append(sequence[:, begin_index:end_index, ...])
         return torch.stack(lagged_values, dim=-1)
 
-    @staticmethod
-    def weighted_average(
-        tensor: torch.Tensor, weights: Optional[torch.Tensor] = None, dim=None
-    ):
-        if weights is not None:
-            weighted_tensor = tensor * weights
-            if dim is not None:
-                sum_weights = torch.sum(weights, dim)
-                sum_weighted_tensor = torch.sum(weighted_tensor, dim)
-            else:
-                sum_weights = weights.sum()
-                sum_weighted_tensor = weighted_tensor.sum()
-
-            sum_weights = torch.max(torch.ones_like(sum_weights), sum_weights)
-
-            return sum_weighted_tensor / sum_weights
-        else:
-            if dim is not None:
-                return torch.mean(tensor, dim=dim)
-            else:
-                return tensor.mean()
-
     def unroll_encoder(
         self,
         feat_static_cat: torch.Tensor,  # (batch_size, num_features)
@@ -164,7 +141,7 @@ class DeepARNetwork(nn.Module):
                     past_time_feat[:, self.history_length - self.context_length :, ...],
                     future_time_feat,
                 ),
-                dim=1,
+                dim=1
             )
             sequence = torch.cat((past_target, future_target), dim=1)
             sequence_length = self.history_length + self.prediction_length
@@ -174,7 +151,7 @@ class DeepARNetwork(nn.Module):
             sequence=sequence,
             sequence_length=sequence_length,
             indices=self.lags_seq,
-            subsequences_length=subsequences_length,
+            subsequences_length=subsequences_length
         )
 
         # scale is computed on the context length last units of the past target
@@ -306,7 +283,7 @@ class DeepARTrainingNetwork(DeepARNetwork):
             else observed_values.min(dim=-1, keepdim=False)
         )
 
-        weighted_loss = self.weighted_average(loss, loss_weights)
+        weighted_loss = weighted_average(loss, loss_weights)
 
         return weighted_loss, loss
 
@@ -326,10 +303,10 @@ class DeepARPredictionNetwork(DeepARNetwork):
         past_target: torch.Tensor,
         time_feat: torch.Tensor,
         scale: torch.Tensor,
-        begin_states: Union[torch.Tensor, List],
+        begin_states: Union[torch.Tensor, List[torch.Tensor]],
     ) -> torch.Tensor:
         """
-        Computes sample paths by unrolling the LSTM starting with a initial
+        Computes sample paths by unrolling the RNN starting with a initial
         input and state.
 
         Parameters
