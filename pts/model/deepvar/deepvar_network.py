@@ -457,8 +457,8 @@ class DeepVARPredictionNetwork(DeepVARTrainingNetwork):
             prediction_length, target_dim).
         """
 
-        def repeat(tensor):
-            return tensor.repeat_interleave(repeats=self.num_parallel_samples, dim=0)
+        def repeat(tensor, dim=0):
+            return tensor.repeat_interleave(repeats=self.num_parallel_samples, dim=dim)
 
         # blows-up the dimension of each tensor to
         # batch_size * self.num_sample_paths for increasing parallelism
@@ -469,9 +469,9 @@ class DeepVARPredictionNetwork(DeepVARTrainingNetwork):
 
         # slight difference for GPVAR and DeepVAR, in GPVAR, its a list
         if self.cell_type == "LSTM":
-            repeated_states = [repeat(s) for s in begin_states]
+            repeated_states = [repeat(s, dim=1) for s in begin_states]
         else:
-            repeated_states = repeat(begin_states)
+            repeated_states = repeat(begin_states, dim=1)
 
         future_samples = []
 
