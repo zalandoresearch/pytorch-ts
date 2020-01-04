@@ -37,6 +37,7 @@ from .deepvar_network import DeepVARTrainingNetwork, DeepVARPredictionNetwork
 class DeepVAREstimator(PTSEstimator):
     def __init__(
         self,
+        input_size: int,
         freq: str,
         prediction_length: int,
         target_dim: int,
@@ -44,7 +45,7 @@ class DeepVAREstimator(PTSEstimator):
         context_length: Optional[int] = None,
         num_layers: int = 2,
         num_cells: int = 40,
-        cell_type: str = "lstm",
+        cell_type: str = "LSTM",
         num_parallel_samples: int = 100,
         dropout_rate: float = 0.1,
         cardinality: List[int] = [1],
@@ -73,6 +74,7 @@ class DeepVAREstimator(PTSEstimator):
                 dim=target_dim, rank=rank
             )
 
+        self.input_size = input_size
         self.prediction_length = prediction_length
         self.target_dim = target_dim
         self.num_layers = num_layers
@@ -180,6 +182,7 @@ class DeepVAREstimator(PTSEstimator):
 
     def create_training_network(self, device: torch.device) -> DeepVARTrainingNetwork:
         return DeepVARTrainingNetwork(
+            input_size=self.input_size,
             target_dim=self.target_dim,
             num_layers=self.num_layers,
             num_cells=self.num_cells,
@@ -199,10 +202,11 @@ class DeepVAREstimator(PTSEstimator):
     def create_predictor(
         self,
         transformation: Transformation,
-        trained_network: nn.Module,
+        trained_network: DeepVARTrainingNetwork,
         device: torch.device,
     ) -> Predictor:
         prediction_network = DeepVARPredictionNetwork(
+            input_size=self.input_size,
             target_dim=self.target_dim,
             num_parallel_samples=self.num_parallel_samples,
             num_layers=self.num_layers,
