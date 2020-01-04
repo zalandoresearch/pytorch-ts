@@ -5,6 +5,7 @@ from .distribution_output import (
     StudentTOutput,
     BetaOutput,
     NegativeBinomialOutput,
+    IndependentNormalOutput,
     LowRankMultivariateNormalOutput,
 )
 from .lambda_layer import LambdaLayer

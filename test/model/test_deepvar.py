@@ -16,8 +16,9 @@ import pytest
 
 from pts.dataset.artificial import constant_dataset
 from pts.modules import (
-    # MultivariateGaussianOutput,
+    IndependentNormalOutput,
     LowRankMultivariateNormalOutput,
+    # MultivariateNormalOutput,
 )
 from pts.evaluation import backtest_metrics
 from pts.model.deepvar import DeepVAREstimator
@@ -45,21 +46,27 @@ metadata = dataset.metadata
 estimator = DeepVAREstimator
 
 
-@pytest.mark.timeout(10)
+#@pytest.mark.timeout(10)
 @pytest.mark.parametrize(
-    "distr_output, num_batches_per_epoch, Estimator, " "use_marginal_transformation",
+    "distr_output, num_batches_per_epoch, Estimator, use_marginal_transformation",
     [
         (
-            LowRankMultivariateNormalOutput(dim=target_dim, rank=2),
+            IndependentNormalOutput(dim=target_dim),
             10,
             estimator,
             True,
         ),
         (
-            LowRankMultivariateNormalOutput(dim=target_dim, rank=2),
+            IndependentNormalOutput(dim=target_dim),
             10,
             estimator,
             False,
+        ),
+        (
+            LowRankMultivariateNormalOutput(dim=target_dim, rank=2),
+            10,
+            estimator,
+            True,
         ),
         (
             LowRankMultivariateNormalOutput(dim=target_dim, rank=2),
@@ -78,7 +85,7 @@ estimator = DeepVAREstimator
         #     MultivariateGaussianOutput(dim=target_dim),
         #     10,
         #     estimator,
-        #     True,
+        #     False,
         # ),
     ],
 )
@@ -90,10 +97,10 @@ def test_deepvar(
         input_size=44,
         num_cells=20,
         num_layers=1,
+        dropout_rate=0.0,
         pick_incomplete=True,
         target_dim=target_dim,
         prediction_length=metadata.prediction_length,
-        # target_dim=target_dim,
         freq=metadata.freq,
         distr_output=distr_output,
         scaling=False,

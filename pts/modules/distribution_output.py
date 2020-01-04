@@ -10,7 +10,10 @@ from torch.distributions import (
     Beta,
     NegativeBinomial,
     StudentT,
+    Normal,
+    Independent,
     LowRankMultivariateNormal,
+    MultivariateNormal,
     TransformedDistribution,
     AffineTransform,
 )
@@ -85,7 +88,7 @@ class DistributionOutput(Output, ABC):
 
 class BetaOutput(DistributionOutput):
     args_dim: Dict[str, int] = {"concentration1": 1, "concentration0": 1}
-    distr_cls: type = Beta
+    distr_cls: Distribution = Beta
 
     @classmethod
     def domain_map(cls, concentration1, concentration0):
@@ -100,7 +103,6 @@ class BetaOutput(DistributionOutput):
 
 class NegativeBinomialOutput(DistributionOutput):
     args_dim: Dict[str, int] = {"mu": 1, "alpha": 1}
-    distr_cls: Distribution = NegativeBinomial
 
     @classmethod
     def domain_map(cls, mu, alpha):
@@ -173,3 +175,26 @@ class LowRankMultivariateNormalOutput(DistributionOutput):
     @property
     def event_shape(self) -> Tuple:
         return (self.dim,)
+
+
+class IndependentNormalOutput(DistributionOutput):
+    def __init__(self, dim: int) -> None:
+        self.dim = dim
+        self.args_dim = {"loc": self.dim, "scale": self.dim}
+
+    def domain_map(self, loc, scale):
+        return loc, F.softplus(scale)
+
+    @property
+    def event_shape(self) -> Tuple:
+        return (self.dim,)
+
+    def distribution(
+        self, distr_args, scale: Optional[torch.Tensor] = None
+    ) -> Distribution:
+        distr = Independent(Normal(*distr_args), 1)
+
+        if scale is None:
+            return distr
+        else:
+            return TransformedDistribution(distr, [AffineTransform(loc=0, scale=scale)])
