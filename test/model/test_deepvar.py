@@ -18,7 +18,7 @@ from pts.dataset.artificial import constant_dataset
 from pts.modules import (
     IndependentNormalOutput,
     LowRankMultivariateNormalOutput,
-    # MultivariateNormalOutput,
+    MultivariateNormalOutput,
 )
 from pts.evaluation import backtest_metrics
 from pts.model.deepvar import DeepVAREstimator
@@ -75,18 +75,18 @@ estimator = DeepVAREstimator
             False,
         ),
         (None, 10, estimator, True),
-        # (
-        #     MultivariateGaussianOutput(dim=target_dim),
-        #     10,
-        #     estimator,
-        #     True,
-        # ),
-        # (
-        #     MultivariateGaussianOutput(dim=target_dim),
-        #     10,
-        #     estimator,
-        #     False,
-        # ),
+        (
+            MultivariateNormalOutput(dim=target_dim),
+            10,
+            estimator,
+            True,
+        ),
+        (
+            MultivariateNormalOutput(dim=target_dim),
+            10,
+            estimator,
+            False,
+        ),
     ],
 )
 def test_deepvar(
