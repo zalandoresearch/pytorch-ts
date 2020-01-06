@@ -13,6 +13,7 @@ from torch.distributions import (
     Beta,
     NegativeBinomial,
     LowRankMultivariateNormal,
+    MultivariateNormal,
 )
 
 from pts.modules import (
@@ -21,6 +22,7 @@ from pts.modules import (
     BetaOutput,
     NegativeBinomialOutput,
     LowRankMultivariateNormalOutput,
+    MultivariateNormalOutput,
 )
 
 NUM_SAMPLES = 2000
@@ -226,3 +228,40 @@ def test_lowrank_multivariate_normal() -> None:
     assert np.allclose(
         Sigma_hat, Sigma, atol=0.1, rtol=0.1
     ), f"sigma did not match: sigma = {Sigma}, sigma_hat = {Sigma_hat}"
+
+
+def test_multivariate_normal() -> None:
+    num_samples = 2000
+    dim = 2
+
+    mu = np.arange(0, dim) / float(dim)
+
+    L_diag = np.ones((dim,))
+    L_low = 0.1 * np.ones((dim, dim)) * np.tri(dim, k=-1)
+    L = np.diag(L_diag) + L_low
+    Sigma = L.dot(L.transpose())
+
+    distr = MultivariateNormal(loc=torch.Tensor(mu), scale_tril=torch.Tensor(L))
+
+    samples = distr.sample((num_samples,))
+
+    mu_hat, L_hat = maximum_likelihood_estimate_sgd(
+        MultivariateNormalOutput(dim=dim),
+        samples,
+        init_biases=None,  # todo we would need to rework biases a bit to use it in the multivariate case
+        learning_rate=0.01,
+        num_epochs=10,
+    )
+
+    distr = MultivariateNormal(
+        loc=torch.tensor(mu_hat), scale_tril=torch.tensor(L_hat)
+    )
+
+    Sigma_hat = distr.covariance_matrix.numpy()
+
+    assert np.allclose(
+        mu_hat, mu, atol=0.1, rtol=0.1
+    ), f"mu did not match: mu = {mu}, mu_hat = {mu_hat}"
+    assert np.allclose(
+        Sigma_hat, Sigma, atol=0.1, rtol=0.1
+    ), f"Sigma did not match: sigma = {Sigma}, sigma_hat = {Sigma_hat}"

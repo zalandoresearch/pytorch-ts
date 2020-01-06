@@ -198,3 +198,30 @@ class IndependentNormalOutput(DistributionOutput):
             return distr
         else:
             return TransformedDistribution(distr, [AffineTransform(loc=0, scale=scale)])
+
+
+class MultivariateNormalOutput(DistributionOutput):
+    def __init__(self, dim: int) -> None:
+        self.args_dim = {"loc": dim, "scale_tril": dim * dim}
+        self.distr_cls = MultivariateNormal
+        self.dim = dim
+
+    def domain_map(self, loc, scale):
+        d = self.dim
+        device = scale.device
+
+        shape = scale.shape[:-1] + (d, d)
+        scale = scale.reshape(shape)
+
+        scale_diag = F.softplus(scale * torch.eye(d, device=device)) * torch.eye(
+            d, device=device
+        )
+
+        mask = torch.tril(torch.ones_like(scale), diagonal=-1)
+        scale_tril = (scale * mask) + scale_diag
+
+        return loc, scale_tril
+
+    @property
+    def event_shape(self) -> Tuple:
+        return (self.dim,)
