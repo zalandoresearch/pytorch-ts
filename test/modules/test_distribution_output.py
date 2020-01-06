@@ -14,6 +14,8 @@ from torch.distributions import (
     NegativeBinomial,
     LowRankMultivariateNormal,
     MultivariateNormal,
+    Independent,
+    Normal,
 )
 
 from pts.modules import (
@@ -23,6 +25,7 @@ from pts.modules import (
     NegativeBinomialOutput,
     LowRankMultivariateNormalOutput,
     MultivariateNormalOutput,
+    IndependentNormalOutput,
 )
 
 NUM_SAMPLES = 2000
@@ -182,6 +185,41 @@ def test_studentT_likelihood(df: float, loc: float, scale: float):
     ), f"scale did not match: scale = {scale}, scale_hat = {scale_hat}"
 
 
+def test_independent_normal() -> None:
+    num_samples = 2000
+    dim = 4
+
+    loc = np.arange(0, dim) / float(dim)
+    diag = np.arange(dim) / dim + 0.5
+    Sigma = diag**2
+
+    distr = Independent(Normal(loc=torch.Tensor(loc), scale=torch.Tensor(diag)), 1)
+
+    assert np.allclose(
+        distr.variance.numpy(), Sigma, atol=0.1, rtol=0.1
+    ), f"did not match: sigma = {Sigma}, sigma_hat = {distr.variance.numpy()}"
+
+    samples = distr.sample((num_samples,))
+
+    loc_hat, diag_hat = maximum_likelihood_estimate_sgd(
+        IndependentNormalOutput(dim=dim), samples, learning_rate=0.01, num_epochs=10,
+    )
+
+    distr = Independent(
+        Normal(loc=torch.Tensor(loc_hat), scale=torch.Tensor(diag_hat)), 1
+    )
+
+    Sigma_hat = distr.variance.numpy()
+
+    assert np.allclose(
+        loc_hat, loc, atol=0.2, rtol=0.1
+    ), f"mu did not match: loc = {loc}, loc_hat = {loc_hat}"
+
+    assert np.allclose(
+        Sigma_hat, Sigma, atol=0.1, rtol=0.1
+    ), f"sigma did not match: sigma = {Sigma}, sigma_hat = {Sigma_hat}"
+
+
 def test_lowrank_multivariate_normal() -> None:
     num_samples = 2000
     dim = 4
@@ -193,14 +231,14 @@ def test_lowrank_multivariate_normal() -> None:
     Sigma = cov_factor @ cov_factor.T + cov_diag
 
     distr = LowRankMultivariateNormal(
-        loc=torch.Tensor([loc]),
-        cov_diag=torch.Tensor([np.diag(cov_diag)]),
-        cov_factor=torch.Tensor([cov_factor]),
+        loc=torch.Tensor(loc),
+        cov_diag=torch.Tensor(np.diag(cov_diag)),
+        cov_factor=torch.Tensor(cov_factor),
     )
 
     assert np.allclose(
         distr.covariance_matrix.numpy(), Sigma, atol=0.1, rtol=0.1
-    ), f"did not match: sigma = {Sigma}, sigma_hat = {distr.variance[0]}"
+    ), f"did not match: sigma = {Sigma}, sigma_hat = {distr.covariance_matrix.numpy()}"
 
     samples = distr.sample((num_samples,))
 
@@ -210,7 +248,7 @@ def test_lowrank_multivariate_normal() -> None:
         ),
         samples,
         learning_rate=0.01,
-        num_epochs=25,
+        num_epochs=10,
     )
 
     distr = LowRankMultivariateNormal(
@@ -253,9 +291,7 @@ def test_multivariate_normal() -> None:
         num_epochs=10,
     )
 
-    distr = MultivariateNormal(
-        loc=torch.tensor(mu_hat), scale_tril=torch.tensor(L_hat)
-    )
+    distr = MultivariateNormal(loc=torch.tensor(mu_hat), scale_tril=torch.tensor(L_hat))
 
     Sigma_hat = distr.covariance_matrix.numpy()
 
