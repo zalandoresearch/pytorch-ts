@@ -222,6 +222,18 @@ class MultivariateNormalOutput(DistributionOutput):
 
         return loc, scale_tril
 
+    def distribution(
+        self, distr_args, scale: Optional[torch.Tensor] = None
+    ) -> Distribution:
+        loc, scale_tri = distr_args
+        distr = MultivariateNormal(loc=loc, scale_tril=scale_tri)
+
+        if scale is None:
+            return distr
+        else:
+            return TransformedDistribution(distr, [AffineTransform(loc=0, scale=scale)])
+
+
     @property
     def event_shape(self) -> Tuple:
         return (self.dim,)
