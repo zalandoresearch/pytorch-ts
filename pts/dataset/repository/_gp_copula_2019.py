@@ -96,7 +96,7 @@ datasets_info = {
     "taxi_30min": GPCopulaDataset(
         name="taxi_30min",
         url=root + "taxi_30min.tar.gz",
-        num_series=130,
+        num_series=1214,
         prediction_length=24,
         freq="30min",
         rolling_evaluations=57,
@@ -111,7 +111,7 @@ def generate_gp_copula_dataset(dataset_path: Path, dataset_name: str):
 
     download_dataset(dataset_path.parent, ds_info)
     save_metadata(dataset_path, ds_info)
-    save_dataset(dataset_path / "train", ds_info)
+    save_dataset(dataset_path / "train" , ds_info)
     save_dataset(dataset_path / "test", ds_info)
     clean_up_dataset(dataset_path, ds_info)
 
@@ -137,7 +137,7 @@ def save_metadata(dataset_path: Path, ds_info: GPCopulaDataset):
 
 
 def save_dataset(dataset_path: Path, ds_info: GPCopulaDataset):
-    dataset = list(FileDataset(dataset_path, freq=ds_info.freq))
+    dataset = list(FileDataset(dataset_path / "*.json", freq=ds_info.freq))
     shutil.rmtree(dataset_path)
     train_file = dataset_path / "data.json"
     save_to_file(
