@@ -203,7 +203,6 @@ class IndependentNormalOutput(DistributionOutput):
 class MultivariateNormalOutput(DistributionOutput):
     def __init__(self, dim: int) -> None:
         self.args_dim = {"loc": dim, "scale_tril": dim * dim}
-        self.distr_cls = MultivariateNormal
         self.dim = dim
 
     def domain_map(self, loc, scale):

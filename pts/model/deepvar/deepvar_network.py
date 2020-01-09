@@ -234,7 +234,7 @@ class DeepVARTrainingNetwork(nn.Module):
         """
 
         past_observed_values = torch.min(
-            past_observed_values, past_is_pad.unsqueeze(-1)
+            past_observed_values, 1 - past_is_pad.unsqueeze(-1)
         )
 
         if future_time_feat is None or future_target_cdf is None:
