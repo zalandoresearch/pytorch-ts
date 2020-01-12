@@ -242,9 +242,10 @@ class MultivariateNormalOutput(DistributionOutput):
 
 class RealNVPOutput(DistributionOutput):
     def __init__(self, input_size, cond_size, n_blocks=3, n_hidden=1, hidden_size=100):
-        self.args_dim = {"cond": cond_label_size}
+        self.args_dim = {"cond": cond_size}
         self.dim = input_size
-        self.flow = RealNVP(nblocks=nblocks,
+        self.flow = RealNVP(
+            n_blocks=n_blocks,
             input_size=input_size,
             hidden_size=hidden_size,
             n_hidden=n_hidden,
@@ -252,7 +253,7 @@ class RealNVPOutput(DistributionOutput):
         )
     
     def domain_map(self, cond):
-        return cond
+        return (cond,)
 
     def distribution(self, distr_args, scale=None):
         cond, = distr_args

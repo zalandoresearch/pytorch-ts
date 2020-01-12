@@ -176,12 +176,11 @@ class RealNVP(nn.Module):
         return self.net.inverse(u, self.cond)
 
     def log_prob(self, x):
-        u, sum_log_abs_det_jacobians = self.forward(x, self.cond)
+        u, sum_log_abs_det_jacobians = self.forward(x)
         return torch.sum(self.base_dist.log_prob(u) + sum_log_abs_det_jacobians, dim=-1)
 
     def sample(sample_shape=None):
-
-        u = self.base_dist.sample(sample_shape)
-        sample, _ = self.net.inverse(u, self.cond)
+        u = self.base_dist.sample(self.cond.shape)
+        sample, _ = self.inverse(u, self.cond)
 
         return sample
