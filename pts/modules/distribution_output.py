@@ -19,6 +19,7 @@ from torch.distributions import (
 )
 
 from .lambda_layer import LambdaLayer
+from .flows import RealNVP
 
 
 class ArgProj(nn.Module):
@@ -88,7 +89,7 @@ class DistributionOutput(Output, ABC):
 
 class BetaOutput(DistributionOutput):
     args_dim: Dict[str, int] = {"concentration1": 1, "concentration0": 1}
-    distr_cls: Distribution = Beta
+    distr_cls: type = Beta
 
     @classmethod
     def domain_map(cls, concentration1, concentration0):
@@ -232,6 +233,32 @@ class MultivariateNormalOutput(DistributionOutput):
         else:
             return TransformedDistribution(distr, [AffineTransform(loc=0, scale=scale)])
 
+
+    @property
+    def event_shape(self) -> Tuple:
+        return (self.dim,)
+
+
+
+class RealNVPOutput(DistributionOutput):
+    def __init__(self, input_size, cond_size, n_blocks=3, n_hidden=1, hidden_size=100):
+        self.args_dim = {"cond": cond_label_size}
+        self.dim = input_size
+        self.flow = RealNVP(nblocks=nblocks,
+            input_size=input_size,
+            hidden_size=hidden_size,
+            n_hidden=n_hidden,
+            cond_label_size=cond_size 
+        )
+    
+    def domain_map(self, cond):
+        return cond
+
+    def distribution(self, distr_args, scale=None):
+        cond, = distr_args
+        self.flow.cond = cond
+    
+        return self.flow
 
     @property
     def event_shape(self) -> Tuple:
