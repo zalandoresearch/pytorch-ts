@@ -530,7 +530,7 @@ class DistributionForecast(Forecast):
 
     def to_sample_forecast(self, num_samples: int = 200) -> SampleForecast:
         return SampleForecast(
-            samples=self.distribution.sample(num_samples),
+            samples=self.distribution.sample((num_samples,)),
             start_date=self.start_date,
             freq=self.freq,
             item_id=self.item_id,
