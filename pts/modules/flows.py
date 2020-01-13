@@ -143,6 +143,8 @@ class RealNVP(nn.Module):
         self.register_buffer('base_dist_var', torch.ones(input_size))
 
         self.__cond = None
+        self.__scale = None
+        self.input_size = input_size
 
         # construct model
         modules = []
@@ -169,18 +171,35 @@ class RealNVP(nn.Module):
     def cond(self, cond):
         self.__cond = cond
 
+    @property
+    def scale(self):
+        return self.__scale
+
+    @scale.setter
+    def scale(self, scale):
+        self.__scale = scale
+
     def forward(self, x):
+        if self.scale:
+            x /= self.scale
         return self.net(x, self.cond)
 
     def inverse(self, u):
-        return self.net.inverse(u, self.cond)
+        x, log_abs_det_jacobian = self.net.inverse(u, self.cond)
+        if self.scale:
+            x *= scale
+        return x, log_abs_det_jacobian
 
     def log_prob(self, x):
         u, sum_log_abs_det_jacobians = self.forward(x)
         return torch.sum(self.base_dist.log_prob(u) + sum_log_abs_det_jacobians, dim=-1)
 
-    def sample(sample_shape=None):
-        u = self.base_dist.sample(self.cond.shape)
-        sample, _ = self.inverse(u, self.cond)
+    def sample(self, sample_shape=torch.Size()):
+        if self.cond:
+            shape = self.cond.shape[:-1] + (self.input_size)
+        if sample_shape is not None:
+            shape = sample_shape + (self.input_size)
 
+        u = self.base_dist.sample(shape)
+        sample, _ = self.inverse(u)
         return sample

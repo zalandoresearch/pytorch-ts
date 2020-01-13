@@ -251,6 +251,8 @@ class FlowOutput(DistributionOutput):
 
     def distribution(self, distr_args, scale=None):
         cond, = distr_args
+        if scale is not None:
+            self.flow.scale = scale
         self.flow.cond = cond
     
         return self.flow
