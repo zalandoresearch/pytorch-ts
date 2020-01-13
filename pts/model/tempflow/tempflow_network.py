@@ -38,7 +38,8 @@ class TempFlowTrainingNetwork(nn.Module):
         lags_seq.sort()
         self.lags_seq = lags_seq
 
-        rnn_cls = {"LSTM": nn.LSTM, "GRU": nn.GRU}[self.cell_type]
+        self.cell_type = cell_type
+        rnn_cls = {"LSTM": nn.LSTM, "GRU": nn.GRU}[cell_type]
         self.rnn = rnn_cls(
             input_size=input_size,
             hidden_size=num_cells,
@@ -47,7 +48,7 @@ class TempFlowTrainingNetwork(nn.Module):
             batch_first=True,
         )
 
-        flow_cls = {"RealNVP": RealNVP}[self.flow_type]
+        flow_cls = {"RealNVP": RealNVP}[flow_type]
         self.flow = flow_cls(
             input_size=input_size,
             n_blocks=n_blocks,
