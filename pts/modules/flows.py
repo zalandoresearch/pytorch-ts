@@ -144,7 +144,6 @@ class RealNVP(nn.Module):
 
         self.__cond = None
         self.__scale = None
-        self.input_size = input_size
 
         # construct model
         modules = []
@@ -199,8 +198,6 @@ class RealNVP(nn.Module):
             shape = self.cond.shape[:-1] 
         else:
             shape = sample_shape
-        # if len(sample_shape) > 0:
-        #     shape = sample_shape + (self.input_size)
 
         u = self.base_dist.sample(shape)
         sample, _ = self.inverse(u)
