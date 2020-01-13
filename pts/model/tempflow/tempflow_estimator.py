@@ -105,7 +105,7 @@ class TempFlowEstimator(PTSEstimator):
         self.pick_incomplete = pick_incomplete
         self.scaling = scaling
 
-     def create_transformation(self) -> Transformation:
+    def create_transformation(self) -> Transformation:
         return Chain(
             [
                 AsNumpyArray(
