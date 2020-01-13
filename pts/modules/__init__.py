@@ -8,6 +8,7 @@ from .distribution_output import (
     IndependentNormalOutput,
     LowRankMultivariateNormalOutput,
     MultivariateNormalOutput,
+    FlowOutput,
 )
 from .lambda_layer import LambdaLayer
 from .feature import FeatureEmbedder, FeatureAssembler
