@@ -160,7 +160,6 @@ class TempFlowEstimator(PTSEstimator):
         return TempFlowTrainingNetwork(
             input_size=self.input_size,
             target_dim=self.target_dim,
-            num_parallel_samples=self.num_parallel_samples,
             num_layers=self.num_layers,
             num_cells=self.num_cells,
             cell_type=self.cell_type,
