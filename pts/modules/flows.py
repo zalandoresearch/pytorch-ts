@@ -187,7 +187,7 @@ class RealNVP(nn.Module):
     def inverse(self, u):
         x, log_abs_det_jacobian = self.net.inverse(u, self.cond)
         if self.scale is not None:
-            x *= scale
+            x *= self.scale
         return x, log_abs_det_jacobian
 
     def log_prob(self, x):
