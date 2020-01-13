@@ -59,6 +59,9 @@ class PTSPredictor(Predictor):
             device=self.device,
             dtype=self.dtype,
         )
+
+        self.prediction_net.eval()
+        
         with torch.no_grad():
             yield from self.forecast_generator(
                 inference_data_loader=inference_data_loader,
