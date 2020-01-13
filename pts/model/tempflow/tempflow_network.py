@@ -19,7 +19,6 @@ class TempFlowTrainingNetwork(nn.Module):
         history_length: int,
         context_length: int,
         prediction_length: int,
-        distr_output: DistributionOutput,
         dropout_rate: float,
         lags_seq: List[int],
         target_dim: int,
