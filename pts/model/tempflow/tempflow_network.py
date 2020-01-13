@@ -54,7 +54,7 @@ class TempFlowTrainingNetwork(nn.Module):
 
         flow_cls = {"RealNVP": RealNVP}[flow_type]
         self.flow = flow_cls(
-            input_size=input_size,
+            input_size=target_dim,
             n_blocks=n_blocks,
             n_hidden=n_hidden,
             hidden_size=hidden_size,
