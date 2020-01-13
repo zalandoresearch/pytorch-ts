@@ -222,5 +222,5 @@ class TempFlowEstimator(PTSEstimator):
             freq=self.freq,
             prediction_length=self.prediction_length,
             device=device,
-            output_transform=self.output_transform,
+            output_transform=None,
         )
