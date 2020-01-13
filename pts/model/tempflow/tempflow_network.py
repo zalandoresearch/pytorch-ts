@@ -33,6 +33,10 @@ class TempFlowTrainingNetwork(nn.Module):
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
+        self.target_dim = target_dim
+        self.prediction_length = prediction_length
+        self.context_length = context_length
+        self.history_length = history_length
 
         assert len(set(lags_seq)) == len(lags_seq), "no duplicated lags allowed!"
         lags_seq.sort()
