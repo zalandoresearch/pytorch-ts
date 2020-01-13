@@ -61,7 +61,7 @@ class TempFlowTrainingNetwork(nn.Module):
             self.flow, input_size=input_size, cond_size=conditioning_length
         )
 
-        self.proj_dist_args = distr_output.get_args_proj(num_cells)
+        self.proj_dist_args = self.distr_output.get_args_proj(num_cells)
 
         self.embed_dim = 1
         self.embed = nn.Embedding(
