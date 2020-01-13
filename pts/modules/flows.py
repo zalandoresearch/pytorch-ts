@@ -196,9 +196,9 @@ class RealNVP(nn.Module):
 
     def sample(self, sample_shape=torch.Size()):
         if self.cond is not None:
-            shape = self.cond.shape[:-1] + (self.input_size,)
+            shape = self.cond.shape[:-1] 
         else:
-            shape = sample_shape + (self.input_size,)
+            shape = sample_shape
         # if len(sample_shape) > 0:
         #     shape = sample_shape + (self.input_size)
 
