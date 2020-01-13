@@ -110,13 +110,13 @@ class TempFlowEstimator(PTSEstimator):
             [
                 AsNumpyArray(
                     field=FieldName.TARGET,
-                    expected_ndim=1 + len(self.distr_output.event_shape),
+                    expected_ndim=2,
                 ),
                 # maps the target to (1, T)
                 # if the target data is uni dimensional
                 ExpandDimArray(
                     field=FieldName.TARGET,
-                    axis=0 if self.distr_output.event_shape[0] == 1 else None,
+                    axis=None,
                 ),
                 AddObservedValuesIndicator(
                     target_field=FieldName.TARGET,
