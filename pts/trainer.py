@@ -15,12 +15,14 @@ class Trainer:
         batch_size: int = 32,
         num_batches_per_epoch: int = 50,
         learning_rate: float = 1e-3,
+        weight_decay: float = 1e-6,
         device: Optional[torch.device] = None,
     ) -> None:
         self.epochs = epochs
         self.batch_size = batch_size
         self.num_batches_per_epoch = num_batches_per_epoch
         self.learning_rate = learning_rate
+        self.weight_decay = weight_decay
         self.device = device
 
     def __call__(
@@ -29,7 +31,9 @@ class Trainer:
 
         net.to(self.device)
 
-        optimizer = torch.optim.Adam(net.parameters(), lr=self.learning_rate)
+        optimizer = torch.optim.Adam(
+            net.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay
+        )
 
         for epoch_no in range(self.epochs):
             # mark epoch start time
