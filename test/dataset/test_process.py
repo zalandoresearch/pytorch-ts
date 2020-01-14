@@ -1,7 +1,7 @@
 import pytest
 import pandas as pd
 
-from pts.dataset import ProcessStartField, ProcessDataEntry
+from pts.dataset import ProcessStartField
 
 
 @pytest.mark.parametrize(
