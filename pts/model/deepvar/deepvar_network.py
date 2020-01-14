@@ -360,7 +360,7 @@ class DeepVARTrainingNetwork(nn.Module):
 
         # unroll the decoder in "training mode", i.e. by providing future data
         # as well
-        rnn_outputs, _, scale, lags_scaled, inputs = self.unroll_encoder(
+        rnn_outputs, _, scale, _, inputs = self.unroll_encoder(
             past_time_feat=past_time_feat,
             past_target_cdf=past_target_cdf,
             past_observed_values=past_observed_values,
@@ -378,7 +378,7 @@ class DeepVARTrainingNetwork(nn.Module):
 
         # assert_shape(target, (-1, seq_len, self.target_dim))
 
-        distr, distr_args = self.distr(rnn_outputs=rnn_outputs, scale=scale,)
+        distr, distr_args = self.distr(rnn_outputs=rnn_outputs, scale=scale)
 
         # we sum the last axis to have the same shape for all likelihoods
         # (batch_size, subseq_length, 1)
@@ -411,7 +411,7 @@ class DeepVARTrainingNetwork(nn.Module):
 
         self.distribution = distr
 
-        return (loss.sum(), likelihoods) + distr_args
+        return (loss.mean(), likelihoods) + distr_args
 
 
 class DeepVARPredictionNetwork(DeepVARTrainingNetwork):
@@ -430,7 +430,7 @@ class DeepVARPredictionNetwork(DeepVARTrainingNetwork):
         target_dimension_indicator: torch.Tensor,
         time_feat: torch.Tensor,
         scale: torch.Tensor,
-        begin_states: Union[List[torch.Tensor], torch.Tensor],
+        begin_states: Union[List[torch.Tensor], torch.Tensor]
     ) -> torch.Tensor:
         """
         Computes sample paths by unrolling the RNN starting with a initial
@@ -485,7 +485,7 @@ class DeepVARPredictionNetwork(DeepVARTrainingNetwork):
                 subsequences_length=1,
             )
 
-            rnn_outputs, repeated_states, lags_scaled, inputs = self.unroll(
+            rnn_outputs, repeated_states, _, _ = self.unroll(
                 begin_state=repeated_states,
                 lags=lags,
                 scale=repeated_scale,
@@ -561,7 +561,7 @@ class DeepVARPredictionNetwork(DeepVARTrainingNetwork):
         )
 
         # unroll the decoder in "prediction mode", i.e. with past data only
-        _, state, scale, _, inputs = self.unroll_encoder(
+        _, state, scale, _, _ = self.unroll_encoder(
             past_time_feat=past_time_feat,
             past_target_cdf=past_target_cdf,
             past_observed_values=past_observed_values,
