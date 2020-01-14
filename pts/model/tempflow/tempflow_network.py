@@ -267,8 +267,6 @@ class TempFlowTrainingNetwork(nn.Module):
             past_observed_values[:, -self.context_length :, ...],
         )
 
-        # import pdb; pdb.set_trace()
-
         outputs, states, lags_scaled, inputs = self.unroll(
             lags=lags,
             scale=scale,
@@ -363,7 +361,7 @@ class TempFlowTrainingNetwork(nn.Module):
 
         # unroll the decoder in "training mode", i.e. by providing future data
         # as well
-        rnn_outputs, _, scale, _, inputs = self.unroll_encoder(
+        rnn_outputs, _, scale, _, _ = self.unroll_encoder(
             past_time_feat=past_time_feat,
             past_target_cdf=past_target_cdf,
             past_observed_values=past_observed_values,
@@ -386,8 +384,6 @@ class TempFlowTrainingNetwork(nn.Module):
         # we sum the last axis to have the same shape for all likelihoods
         # (batch_size, subseq_length, 1)
         likelihoods = -distr.log_prob(target).unsqueeze(-1)
-
-        # import pdb; pdb.set_trace()
 
         # assert_shape(likelihoods, (-1, seq_len, 1))
 
