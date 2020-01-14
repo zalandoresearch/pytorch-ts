@@ -48,21 +48,18 @@ class TempFlowEstimator(PTSEstimator):
         cell_type: str = "LSTM",
         num_parallel_samples: int = 100,
         dropout_rate: float = 0.1,
-
         cardinality: List[int] = [1],
         embedding_dimension: int = 5,
-
-        flow_type = "RealNVP",
-        n_blocks = 3,
-        hidden_size = 100,
-        n_hidden = 2,
+        flow_type="RealNVP",
+        n_blocks=3,
+        hidden_size=100,
+        n_hidden=2,
         conditioning_length: int = 200,
 
         scaling: bool = True,
         pick_incomplete: bool = False,
         lags_seq: Optional[List[int]] = None,
         time_features: Optional[List[TimeFeature]] = None,
-        
         **kwargs,
     ) -> None:
         super().__init__(trainer=trainer, **kwargs)
@@ -108,16 +105,10 @@ class TempFlowEstimator(PTSEstimator):
     def create_transformation(self) -> Transformation:
         return Chain(
             [
-                AsNumpyArray(
-                    field=FieldName.TARGET,
-                    expected_ndim=2,
-                ),
+                AsNumpyArray(field=FieldName.TARGET, expected_ndim=2,),
                 # maps the target to (1, T)
                 # if the target data is uni dimensional
-                ExpandDimArray(
-                    field=FieldName.TARGET,
-                    axis=None,
-                ),
+                ExpandDimArray(field=FieldName.TARGET, axis=None,),
                 AddObservedValuesIndicator(
                     target_field=FieldName.TARGET,
                     output_field=FieldName.OBSERVED_VALUES,
@@ -158,8 +149,7 @@ class TempFlowEstimator(PTSEstimator):
                         f"past_{FieldName.TARGET}": f"past_{FieldName.TARGET}_cdf",
                         f"future_{FieldName.TARGET}": f"future_{FieldName.TARGET}_cdf",
                     }
-                )
-
+                ),
             ]
         )
 
@@ -180,8 +170,8 @@ class TempFlowEstimator(PTSEstimator):
             scaling=self.scaling,
             flow_type=self.flow_type,
             n_blocks=self.n_blocks,
-            hidden_size = self.hidden_size,
-            n_hidden = self.n_hidden,
+            hidden_size=self.hidden_size,
+            n_hidden=self.n_hidden,
             conditioning_length=self.conditioning_length,
         ).to(device)
 
@@ -207,10 +197,10 @@ class TempFlowEstimator(PTSEstimator):
             scaling=self.scaling,
             flow_type=self.flow_type,
             n_blocks=self.n_blocks,
-            hidden_size = self.hidden_size,
-            n_hidden = self.n_hidden,
+            hidden_size=self.hidden_size,
+            n_hidden=self.n_hidden,
             conditioning_length=self.conditioning_length,
-            num_parallel_samples=self.num_parallel_samples
+            num_parallel_samples=self.num_parallel_samples,
         ).to(device)
 
         copy_parameters(trained_network, prediction_network)
