@@ -494,7 +494,7 @@ class TempFlowPredictionNetwork(TempFlowTrainingNetwork):
                 unroll_length=1,
             )
 
-            distr, distr_args = self.distr(
+            distr, _ = self.distr(
                 rnn_outputs=rnn_outputs, scale=repeated_scale,
             )
 
@@ -561,7 +561,7 @@ class TempFlowPredictionNetwork(TempFlowTrainingNetwork):
         )
 
         # unroll the decoder in "prediction mode", i.e. with past data only
-        _, state, scale, _, _ = self.unroll_encoder(
+        _, begin_states, scale, _, _ = self.unroll_encoder(
             past_time_feat=past_time_feat,
             past_target_cdf=past_target_cdf,
             past_observed_values=past_observed_values,
@@ -576,5 +576,5 @@ class TempFlowPredictionNetwork(TempFlowTrainingNetwork):
             target_dimension_indicator=target_dimension_indicator,
             time_feat=future_time_feat,
             scale=scale,
-            begin_states=state,
+            begin_states=begin_states,
         )
