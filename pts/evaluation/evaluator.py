@@ -197,6 +197,7 @@ class Evaluator:
             "abs_target_sum": self.abs_target_sum(pred_target),
             "abs_target_mean": self.abs_target_mean(pred_target),
             "seasonal_error": seasonal_error,
+            "relative_bias": self.relative_bias(pred_target, median_fcst),
             "MASE": self.mase(pred_target, median_fcst, seasonal_error),
             "sMAPE": self.smape(pred_target, median_fcst),
             "MSIS": self.msis(
@@ -229,6 +230,7 @@ class Evaluator:
             "abs_target_sum": "sum",
             "abs_target_mean": "mean",
             "seasonal_error": "mean",
+            "relative_bias": "mean",
             "MASE": "mean",
             "sMAPE": "mean",
             "MSIS": "mean",
@@ -291,6 +293,10 @@ class Evaluator:
     @staticmethod
     def coverage(target, quantile_forecast):
         return np.mean((target < quantile_forecast))
+
+    @staticmethod
+    def relative_bias(target, forecast):
+        return np.mean(forecast - target) / np.mean(target)
 
     @staticmethod
     def mase(target, forecast, seasonal_error):
