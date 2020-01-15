@@ -73,10 +73,7 @@ class TempFlowTrainingNetwork(nn.Module):
             num_embeddings=self.target_dim, embedding_dim=self.embed_dim
         )
 
-        if scaling:
-            self.scaler = MeanScaler(keepdim=True)
-        else:
-            self.scaler = NOPScaler(keepdim=True)
+        self.scaler = MeanScaler(keepdim=True)
 
     @staticmethod
     def get_lagged_subsequences(
@@ -468,6 +465,8 @@ class TempFlowPredictionNetwork(TempFlowTrainingNetwork):
         repeated_past_target_cdf = repeat(past_target_cdf)
         repeated_time_feat = repeat(time_feat)
         repeated_scale = repeat(scale)
+        if self.scaling:
+            self.flow.scale = repeated_scale
         repeated_target_dimension_indicator = repeat(target_dimension_indicator)
 
         if self.cell_type == "LSTM":
@@ -496,9 +495,7 @@ class TempFlowPredictionNetwork(TempFlowTrainingNetwork):
                 unroll_length=1,
             )
 
-            distr_args = self.distr_args(rnn_outputs=rnn_outputs,)
-            if self.scaling:
-                self.flow.scale = repeated_scale
+            distr_args = self.distr_args(rnn_outputs=rnn_outputs)
 
             # (batch_size, 1, target_dim)
             new_samples = self.flow.sample(cond=distr_args)
