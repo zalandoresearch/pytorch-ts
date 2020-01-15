@@ -278,9 +278,7 @@ class TempFlowTrainingNetwork(nn.Module):
 
         return outputs, states, scale, lags_scaled, inputs
 
-    def distr_args(
-        self, rnn_outputs: torch.Tensor, scale: torch.Tensor,
-    ):
+    def distr_args(self, rnn_outputs: torch.Tensor):
         """
         Returns the distribution of DeepVAR with respect to the RNN outputs.
 
@@ -298,7 +296,7 @@ class TempFlowTrainingNetwork(nn.Module):
         distr_args
             Distribution arguments
         """
-        distr_args, = self.proj_dist_args(rnn_outputs)
+        (distr_args,) = self.proj_dist_args(rnn_outputs)
 
         # # compute likelihood of target given the predicted parameters
         # distr = self.distr_output.distribution(distr_args, scale=scale)
@@ -380,7 +378,8 @@ class TempFlowTrainingNetwork(nn.Module):
 
         # assert_shape(target, (-1, seq_len, self.target_dim))
 
-        distr_args = self.distr_args(rnn_outputs=rnn_outputs, scale=scale)
+        distr_args = self.distr_args(rnn_outputs=rnn_outputs)
+        self.flow.scale = scale
 
         # we sum the last axis to have the same shape for all likelihoods
         # (batch_size, subseq_length, 1)
@@ -432,7 +431,7 @@ class TempFlowPredictionNetwork(TempFlowTrainingNetwork):
         target_dimension_indicator: torch.Tensor,
         time_feat: torch.Tensor,
         scale: torch.Tensor,
-        begin_states: Union[List[torch.Tensor], torch.Tensor]
+        begin_states: Union[List[torch.Tensor], torch.Tensor],
     ) -> torch.Tensor:
         """
         Computes sample paths by unrolling the RNN starting with a initial
@@ -495,9 +494,8 @@ class TempFlowPredictionNetwork(TempFlowTrainingNetwork):
                 unroll_length=1,
             )
 
-            distr_args = self.distr_args(
-                rnn_outputs=rnn_outputs, scale=repeated_scale,
-            )
+            distr_args = self.distr_args(rnn_outputs=rnn_outputs,)
+            self.flow.scale = repeated_scale
 
             # (batch_size, 1, target_dim)
             new_samples = self.flow.sample(cond=distr_args)
