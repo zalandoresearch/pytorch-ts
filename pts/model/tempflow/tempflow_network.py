@@ -278,7 +278,7 @@ class TempFlowTrainingNetwork(nn.Module):
 
         return outputs, states, scale, lags_scaled, inputs
 
-    def distr(
+    def distr_args(
         self, rnn_outputs: torch.Tensor, scale: torch.Tensor,
     ):
         """
@@ -298,12 +298,13 @@ class TempFlowTrainingNetwork(nn.Module):
         distr_args
             Distribution arguments
         """
-        distr_args = self.proj_dist_args(rnn_outputs)
+        distr_args, = self.proj_dist_args(rnn_outputs)
 
-        # compute likelihood of target given the predicted parameters
-        distr = self.distr_output.distribution(distr_args, scale=scale)
+        # # compute likelihood of target given the predicted parameters
+        # distr = self.distr_output.distribution(distr_args, scale=scale)
 
-        return distr, distr_args
+        # return distr, distr_args
+        return distr_args
 
     def forward(
         self,
@@ -379,11 +380,11 @@ class TempFlowTrainingNetwork(nn.Module):
 
         # assert_shape(target, (-1, seq_len, self.target_dim))
 
-        distr, distr_args = self.distr(rnn_outputs=rnn_outputs, scale=scale)
+        distr_args = self.distr_args(rnn_outputs=rnn_outputs, scale=scale)
 
         # we sum the last axis to have the same shape for all likelihoods
         # (batch_size, subseq_length, 1)
-        likelihoods = -distr.log_prob(target).unsqueeze(-1)
+        likelihoods = -self.flow.log_prob(target, distr_args).unsqueeze(-1)
 
         # assert_shape(likelihoods, (-1, seq_len, 1))
 
@@ -412,7 +413,7 @@ class TempFlowTrainingNetwork(nn.Module):
 
         # self.distribution = distr
 
-        return (loss.mean(), likelihoods) + distr_args
+        return (loss.mean(), likelihoods, distr_args)
 
 
 class TempFlowPredictionNetwork(TempFlowTrainingNetwork):
@@ -494,12 +495,12 @@ class TempFlowPredictionNetwork(TempFlowTrainingNetwork):
                 unroll_length=1,
             )
 
-            distr, _ = self.distr(
+            distr_args = self.distr_args(
                 rnn_outputs=rnn_outputs, scale=repeated_scale,
             )
 
             # (batch_size, 1, target_dim)
-            new_samples = distr.sample()
+            new_samples = self.flow.sample(cond=distr_args)
 
             # (batch_size, seq_len, target_dim)
             future_samples.append(new_samples)
