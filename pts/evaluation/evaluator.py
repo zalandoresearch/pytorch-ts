@@ -10,6 +10,7 @@ from typing import (
     Union,
     Callable,
 )
+from tqdm import tqdm
 
 # Third-party imports
 import numpy as np
@@ -550,7 +551,7 @@ class MultivariateEvaluator(Evaluator):
             fcst_iterator, target_dimensionality + len(self.target_agg_funcs)
         )
 
-        for dim in eval_dims:
+        for dim in tqdm(eval_dims):
             agg_metrics, metrics_per_ts = super(MultivariateEvaluator, self).__call__(
                 self.extract_target_by_dim(ts_iterator_set[dim], dim),
                 self.extract_forecast_by_dim(fcst_iterator_set[dim], dim),
