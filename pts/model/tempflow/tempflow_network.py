@@ -37,6 +37,7 @@ class TempFlowTrainingNetwork(nn.Module):
         self.prediction_length = prediction_length
         self.context_length = context_length
         self.history_length = history_length
+        self.scaling = scaling
 
         assert len(set(lags_seq)) == len(lags_seq), "no duplicated lags allowed!"
         lags_seq.sort()
@@ -379,7 +380,8 @@ class TempFlowTrainingNetwork(nn.Module):
         # assert_shape(target, (-1, seq_len, self.target_dim))
 
         distr_args = self.distr_args(rnn_outputs=rnn_outputs)
-        self.flow.scale = scale
+        if self.scaling:
+            self.flow.scale = scale
 
         # we sum the last axis to have the same shape for all likelihoods
         # (batch_size, subseq_length, 1)
@@ -495,7 +497,8 @@ class TempFlowPredictionNetwork(TempFlowTrainingNetwork):
             )
 
             distr_args = self.distr_args(rnn_outputs=rnn_outputs,)
-            self.flow.scale = repeated_scale
+            if self.scaling:
+                self.flow.scale = repeated_scale
 
             # (batch_size, 1, target_dim)
             new_samples = self.flow.sample(cond=distr_args)
