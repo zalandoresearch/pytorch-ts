@@ -171,13 +171,13 @@ class RealNVP(nn.Module):
 
     def forward(self, x, cond):
         if self.scale is not None:
-            x *= self.scale
+            x /= self.scale
         return self.net(x, cond)
 
     def inverse(self, u, cond):
         x, log_abs_det_jacobian = self.net.inverse(u, cond)
         if self.scale is not None:
-            x /= self.scale
+            x *= self.scale
         return x, log_abs_det_jacobian
 
     def log_prob(self, x, cond):
