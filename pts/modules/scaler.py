@@ -90,7 +90,7 @@ class MeanScaler(Scaler):
             default_scale * torch.ones_like(num_observed),
         )
 
-        return torch.max(scale, self.minimum_scale)
+        return torch.max(scale, self.minimum_scale).detach()
 
 
 class NOPScaler(Scaler):
