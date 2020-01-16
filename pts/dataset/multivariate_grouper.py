@@ -204,3 +204,4 @@ class MultivariateGrouper:
                 freq=data[FieldName.START].freq,
             ),
         )
+ 
