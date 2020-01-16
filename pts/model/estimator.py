@@ -111,7 +111,7 @@ class PTSEstimator(Estimator):
             training_iter_dataset,
             batch_size=self.trainer.batch_size,
             num_workers=self.trainer.num_workers,
-            pip_memory=self.trainer.pip_memory
+            pin_memory=self.trainer.pin_memory
         )
 
         # ensure that the training network is created on the same device
