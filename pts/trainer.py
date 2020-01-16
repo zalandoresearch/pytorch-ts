@@ -3,6 +3,7 @@ from typing import Any, List, NamedTuple, Optional, Union
 
 import torch
 import torch.nn as nn
+from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 from torch.utils.data import DataLoader
@@ -35,6 +36,11 @@ class Trainer:
             net.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay
         )
 
+        writer = SummaryWriter()
+
+        writer.add_graph(net)
+
+
         for epoch_no in range(self.epochs):
             # mark epoch start time
             tic = time.time()
@@ -59,6 +65,10 @@ class Trainer:
                         },
                         refresh=False,
                     )
+                    n_iter = epoch_no*self.num_batches_per_epoch + batch_no
+                    writer.add_scalar('Loss/train', loss.item(), n_iter)
+                    for name, param in net.named_parameters():
+                        writer.add_histogram(name, param.clone().cpu().data.numpy(), n_iter)
 
                     loss.backward()
                     optimizer.step()
