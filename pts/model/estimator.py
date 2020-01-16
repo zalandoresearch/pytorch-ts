@@ -110,7 +110,7 @@ class PTSEstimator(Estimator):
         training_data_loader = DataLoader(
             training_iter_dataset,
             batch_size=self.trainer.batch_size,
-            num_workers=self.train.num_workers,
+            num_workers=self.trainer.num_workers,
             pip_memory=self.trainer.pip_memory
         )
 
