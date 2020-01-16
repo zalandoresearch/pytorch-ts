@@ -37,9 +37,7 @@ class Trainer:
         )
 
         writer = SummaryWriter()
-
-        writer.add_graph(net)
-
+        #writer.add_graph(net)
 
         for epoch_no in range(self.epochs):
             # mark epoch start time
@@ -78,3 +76,5 @@ class Trainer:
 
             # mark epoch end time and log time cost of current epoch
             toc = time.time()
+        
+        writer.close()
