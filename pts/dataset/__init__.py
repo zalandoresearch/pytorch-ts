@@ -29,3 +29,4 @@ from .artificial import (
     generate_sf2,
 )
 from .multivariate_grouper import MultivariateGrouper
+from .transformed_iterable_dataset import TransformedIterableDataset

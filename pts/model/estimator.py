@@ -4,8 +4,9 @@ from typing import NamedTuple
 import numpy as np
 import torch
 import torch.nn as nn
+from torch.utils.data import DataLoader
 
-from pts.dataset import Dataset, TrainDataLoader
+from pts.dataset import Dataset, TransformedIterableDataset
 from pts.transform import Transformation
 from pts import Trainer
 
@@ -98,16 +99,19 @@ class PTSEstimator(Estimator):
 
     def train_model(self, training_data: Dataset) -> TrainOutput:
         transformation = self.create_transformation()
-
         transformation.estimate(iter(training_data))
 
-        training_data_loader = TrainDataLoader(
+        training_iter_dataset = TransformedIterableDataset(
             dataset=training_data,
-            transform=transformation,
+            is_train=True,
+            transform=transformation
+        )
+
+        training_data_loader = DataLoader(
+            traning_iter_dataset,
             batch_size=self.trainer.batch_size,
-            num_batches_per_epoch=self.trainer.num_batches_per_epoch,
-            device=self.trainer.device,
-            dtype=self.dtype,
+            num_workers=self.train.num_workers,
+            pip_memory=self.trainer.pip_memory
         )
 
         # ensure that the training network is created on the same device
@@ -116,7 +120,7 @@ class PTSEstimator(Estimator):
         self.trainer(
             net=trained_net,
             input_names=get_module_forward_input_names(trained_net),
-            train_iter=training_data_loader,
+            data_loader=training_data_loader,
         )
 
         return TrainOutput(

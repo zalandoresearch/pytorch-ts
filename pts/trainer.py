@@ -5,8 +5,7 @@ import torch
 import torch.nn as nn
 from tqdm import tqdm
 
-from pts.dataset import TrainDataLoader
-
+from torch.utils.data import DataLoader
 
 class Trainer:
     def __init__(
@@ -14,6 +13,8 @@ class Trainer:
         epochs: int = 100,
         batch_size: int = 32,
         num_batches_per_epoch: int = 50,
+        num_workers: int = 4,
+        pin_memory: bool = True,
         learning_rate: float = 1e-3,
         weight_decay: float = 1e-6,
         device: Optional[torch.device] = None,
@@ -24,13 +25,12 @@ class Trainer:
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
         self.device = device
+        self.num_workers = num_workers
+        self.pin_memory = pin_memory
 
     def __call__(
-        self, net: nn.Module, input_names: List[str], train_iter: TrainDataLoader
+        self, net: nn.Module, input_names: List[str], data_loader: DataLoader
     ) -> None:
-
-        net.to(self.device)
-
         optimizer = torch.optim.Adam(
             net.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay
         )
@@ -40,10 +40,10 @@ class Trainer:
             tic = time.time()
             avg_epoch_loss = 0.0
 
-            with tqdm(train_iter) as it:
+            with tqdm(data_loader) as it:
                 for batch_no, data_entry in enumerate(it, start=1):
                     optimizer.zero_grad()
-                    inputs = [data_entry[k] for k in input_names]
+                    inputs = [data_entry[k].to(self.device) for k in input_names]
 
                     output = net(*inputs)
                     if isinstance(output, (list, tuple)):
@@ -62,6 +62,9 @@ class Trainer:
 
                     loss.backward()
                     optimizer.step()
+
+                    if self.num_batches_per_epoch == batch_no:
+                        break()
 
             # mark epoch end time and log time cost of current epoch
             toc = time.time()
