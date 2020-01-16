@@ -14,7 +14,7 @@ class Trainer:
         batch_size: int = 32,
         num_batches_per_epoch: int = 50,
         num_workers: int = 4,
-        pin_memory: bool = True,
+        pin_memory: bool = False,
         learning_rate: float = 1e-3,
         weight_decay: float = 1e-6,
         device: Optional[torch.device] = None,
