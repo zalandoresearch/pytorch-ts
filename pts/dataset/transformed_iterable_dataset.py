@@ -42,5 +42,5 @@ class TransformedIterableDataset(torch.utils.data.IterableDataset):
                 if isinstance(v, np.ndarray) == True
             }
 
-    def __len__(self) -> int:
-        return len(self.dataset)
+    # def __len__(self) -> int:
+    #     return len(self.dataset)
