@@ -64,7 +64,7 @@ class Trainer:
                     optimizer.step()
 
                     if self.num_batches_per_epoch == batch_no:
-                        break()
+                        break
 
             # mark epoch end time and log time cost of current epoch
             toc = time.time()
