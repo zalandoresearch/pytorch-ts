@@ -371,7 +371,8 @@ class MAF(nn.Module):
         # base distribution for calculation of log prob under the model
         self.register_buffer("base_dist_mean", torch.zeros(input_size))
         self.register_buffer("base_dist_var", torch.ones(input_size))
-
+        self.__scale = None
+        
         # construct model
         modules = []
         self.input_degrees = None
