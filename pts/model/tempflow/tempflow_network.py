@@ -5,7 +5,7 @@ import torch.nn as nn
 
 import numpy as np
 
-from pts.modules import RealNVP, FlowOutput, MeanScaler, NOPScaler
+from pts.modules import RealNVP, MAF, FlowOutput, MeanScaler, NOPScaler
 from pts.model import weighted_average
 
 
@@ -54,7 +54,7 @@ class TempFlowTrainingNetwork(nn.Module):
             batch_first=True,
         )
 
-        flow_cls = {"RealNVP": RealNVP}[flow_type]
+        flow_cls = {"RealNVP": RealNVP, "MAF": MAF,}[flow_type]
         self.flow = flow_cls(
             input_size=target_dim,
             n_blocks=n_blocks,
