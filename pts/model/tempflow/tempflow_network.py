@@ -27,6 +27,7 @@ class TempFlowTrainingNetwork(nn.Module):
         n_blocks: int,
         hidden_size: int,
         n_hidden: int,
+        quantize: bool,
         cardinality: List[int] = [1],
         embedding_dimension: int = 1,
         scaling: bool = True,
@@ -61,6 +62,7 @@ class TempFlowTrainingNetwork(nn.Module):
             hidden_size=hidden_size,
             cond_label_size=conditioning_length,
         )
+        self.quantize = quantize
 
         self.distr_output = FlowOutput(
             self.flow, input_size=input_size, cond_size=conditioning_length
@@ -382,6 +384,8 @@ class TempFlowTrainingNetwork(nn.Module):
 
         # we sum the last axis to have the same shape for all likelihoods
         # (batch_size, subseq_length, 1)
+        if self.quantize:
+            target += torch.rand_like(target)
         likelihoods = -self.flow.log_prob(target, distr_args).unsqueeze(-1)
 
         # assert_shape(likelihoods, (-1, seq_len, 1))

@@ -55,6 +55,7 @@ class TempFlowEstimator(PTSEstimator):
         hidden_size=100,
         n_hidden=2,
         conditioning_length: int = 200,
+        quantize: bool = False,
 
         scaling: bool = True,
         pick_incomplete: bool = False,
@@ -85,6 +86,7 @@ class TempFlowEstimator(PTSEstimator):
         self.hidden_size = hidden_size
         self.n_hidden = n_hidden
         self.conditioning_length = conditioning_length
+        self.quantize = quantize
 
         self.lags_seq = (
             lags_seq
@@ -173,6 +175,7 @@ class TempFlowEstimator(PTSEstimator):
             hidden_size=self.hidden_size,
             n_hidden=self.n_hidden,
             conditioning_length=self.conditioning_length,
+            quantize=self.quantize,
         ).to(device)
 
     def create_predictor(
@@ -200,6 +203,7 @@ class TempFlowEstimator(PTSEstimator):
             hidden_size=self.hidden_size,
             n_hidden=self.n_hidden,
             conditioning_length=self.conditioning_length,
+            quantize=self.quantize,
             num_parallel_samples=self.num_parallel_samples,
         ).to(device)
 
