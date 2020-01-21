@@ -14,12 +14,17 @@
 import json
 import os
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 
 import numpy as np
 
 
-def to_dict(target_values: np.ndarray, start: str, cat: Optional[List[int]] = None):
+def to_dict(
+    target_values: np.ndarray,
+    start: str,
+    cat: Optional[List[int]] = None,
+    item_id: Optional[Any] = None,
+):
     def serialize(x):
         if np.isnan(x):
             return "NaN"
@@ -34,6 +39,9 @@ def to_dict(target_values: np.ndarray, start: str, cat: Optional[List[int]] = No
 
     if cat is not None:
         res["feat_static_cat"] = cat
+    
+    if item_id is not None:
+        res["item_id"] = item_id
 
     return res
 

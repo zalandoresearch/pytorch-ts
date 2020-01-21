@@ -162,7 +162,10 @@ def generate_lstnet_dataset(dataset_path: Path, dataset_name: str):
         if len(sliced_ts) > 0:
             train_ts.append(
                 to_dict(
-                    target_values=sliced_ts.values, start=sliced_ts.index[0], cat=[cat],
+                    target_values=sliced_ts.values,
+                    start=sliced_ts.index[0],
+                    cat=[cat],
+                    item_id=cat,
                 )
             )
 
