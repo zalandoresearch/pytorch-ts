@@ -99,7 +99,7 @@ datasets_info = {
         num_series=1214,
         prediction_length=24,
         freq="30min",
-        rolling_evaluations=57,
+        rolling_evaluations=56,
         max_target_dim=None,
     ),
 }
