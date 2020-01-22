@@ -1,5 +1,6 @@
 import copy
 import math
+from abc import ABC, abstractmethod
 
 import torch
 import torch.nn as nn
@@ -57,14 +58,14 @@ class FlowSequential(nn.Sequential):
         sum_log_abs_det_jacobians = 0
         for module in self:
             x, log_abs_det_jacobian = module(x, y)
-            sum_log_abs_det_jacobians = sum_log_abs_det_jacobians + log_abs_det_jacobian
+            sum_log_abs_det_jacobians += log_abs_det_jacobian
         return x, sum_log_abs_det_jacobians
 
     def inverse(self, u, y):
         sum_log_abs_det_jacobians = 0
         for module in reversed(self):
             u, log_abs_det_jacobian = module.inverse(u, y)
-            sum_log_abs_det_jacobians = sum_log_abs_det_jacobians + log_abs_det_jacobian
+            sum_log_abs_det_jacobians += log_abs_det_jacobian
         return u, sum_log_abs_det_jacobians
 
 
@@ -165,12 +166,14 @@ class LinearMaskedCoupling(nn.Module):
         
         # cf RealNVP eq 8 where u corresponds to x (here we're modeling u)
         log_s = torch.tanh(s) * (1 - self.mask)
-        u = (x - t) * torch.exp(-log_s)
+        u = x * torch.exp(log_s) + t
+        # u = (x - t) * torch.exp(log_s)
         # u = mx + (1 - self.mask) * (x - t) * torch.exp(-s)
 
         # log det du/dx; cf RealNVP 8 and 6; note, sum over input_size done at model log_prob
-        #log_abs_det_jacobian = -(1 - self.mask) * s
-        log_abs_det_jacobian = -log_s #.sum(-1, keepdim=True)
+        # log_abs_det_jacobian = -(1 - self.mask) * s
+        # log_abs_det_jacobian = -log_s #.sum(-1, keepdim=True)
+        log_abs_det_jacobian = log_s
 
         return u, log_abs_det_jacobian
 
@@ -183,11 +186,13 @@ class LinearMaskedCoupling(nn.Module):
         t = self.t_net(mu if y is None else torch.cat([y, mu], dim=-1)) * (1 - self.mask)
 
         log_s = torch.tanh(s) * (1 - self.mask)
-        x = u * torch.exp(log_s) + t
-        #x = mu + (1 - self.mask) * (u * s.exp() + t)  # cf RealNVP eq 7
+        x = (u - t) * torch.exp(-log_s)
+        # x = u * torch.exp(log_s) + t
+        # x = mu + (1 - self.mask) * (u * s.exp() + t)  # cf RealNVP eq 7
 
-        #log_abs_det_jacobian = (1 - self.mask) * s  # log det dx/du
-        log_abs_det_jacobian = log_s #.sum(-1, keepdim=True)
+        # log_abs_det_jacobian = (1 - self.mask) * s  # log det dx/du
+        # log_abs_det_jacobian = log_s #.sum(-1, keepdim=True)
+        log_abs_det_jacobian = -log_s
 
         return x, log_abs_det_jacobian
 
@@ -361,6 +366,7 @@ class RealNVP(nn.Module):
         u = self.base_dist.sample(shape)
         sample, _ = self.inverse(u, cond)
         return sample
+
 
 
 class MAF(nn.Module):
