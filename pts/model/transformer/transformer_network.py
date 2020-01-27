@@ -213,10 +213,7 @@ class TransformerNetwork(nn.Module):
 
     @staticmethod
     def upper_triangular_mask(d):
-        mask = torch.zeros_like(torch.eye(d))
-        for k in range(d - 1):
-            mask = mask + torch.eye(d, d, k + 1)
-        return mask
+        return torch.triu(torch.ones((d,d)))
 
 
 class TransformerTrainingNetwork(TransformerNetwork):
