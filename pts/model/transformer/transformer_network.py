@@ -70,13 +70,13 @@ class TransformerNetwork(nn.Module):
 
         self.embedder = FeatureEmbedder(
             cardinalities=cardinality,
-            embedding_dims=[embedding_dimension for _ in cardinality],
+            embedding_dims=embedding_dimension,
         )
 
         if scaling:
-            self.scaler = MeanScaler(keepdims=True)
+            self.scaler = MeanScaler(keepdim=True)
         else:
-            self.scaler = NOPScaler(keepdims=True)
+            self.scaler = NOPScaler(keepdim=True)
 
     @staticmethod
     def get_lagged_subsequences(
@@ -255,10 +255,10 @@ class TransformerTrainingNetwork(TransformerNetwork):
             future_target=future_target,
         )
 
-        enc_input = input[:, :self.context_length, ...]  # F.slice_axis(
+        enc_input = inputs[:, :self.context_length, ...]  # F.slice_axis(
         #     inputs, axis=1, begin=0, end=self.context_length
         # )
-        dec_input = input[:, self.context_length:, ...]  # F.slice_axis(
+        dec_input = inputs[:, self.context_length:, ...]  # F.slice_axis(
         #     inputs, axis=1, begin=self.context_length, end=None
         # )
 

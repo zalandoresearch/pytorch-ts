@@ -105,12 +105,13 @@ class TransformerEstimator(PTSEstimator):
         return Chain(
             [RemoveFields(field_names=remove_field_names)]
             + (
-                [SetField(output_field=FieldName.FEAT_STATIC_CAT, value=[0.0])]
+                [SetField(output_field=FieldName.FEAT_STATIC_CAT, value=[0])]
                 if not self.use_feat_static_cat
                 else []
             )
             + [
-                AsNumpyArray(field=FieldName.FEAT_STATIC_CAT, expected_ndim=1),
+                AsNumpyArray(field=FieldName.FEAT_STATIC_CAT,
+                             expected_ndim=1, dtype=np.long),
                 AsNumpyArray(
                     field=FieldName.TARGET,
                     # in the following line, we add 1 for the time dimension
