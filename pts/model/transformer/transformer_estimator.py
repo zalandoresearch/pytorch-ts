@@ -31,7 +31,7 @@ from pts.feature import (
     get_fourier_lags_for_frequency,
 )
 
-from .transfomer_network import TransformerTrainingNetwork, TransformerPredictionNetwork
+from .transformer_network import TransformerTrainingNetwork, TransformerPredictionNetwork
 
 
 class TransformerEstimator(PTSEstimator):
@@ -46,11 +46,11 @@ class TransformerEstimator(PTSEstimator):
         cardinality: Optional[List[int]] = None,
         embedding_dimension: int = 20,
         distr_output: DistributionOutput = StudentTOutput(),
-        dim_feedforward: int = 256,
+        dim_feedforward: int = 128,
         act_type: str = "gelu",
         num_heads: int = 8,
-        num_encoder_layers: int 3,
-        num_decoder_layers: int 3,
+        num_encoder_layers: int = 3,
+        num_decoder_layers: int = 3,
         scaling: bool = True,
         lags_seq: Optional[List[int]] = None,
         time_features: Optional[List[TimeFeature]] = None,

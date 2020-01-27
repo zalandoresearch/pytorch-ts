@@ -159,7 +159,7 @@ class TransformerNetwork(nn.Module):
                 sequence_length = self.history_length + self.prediction_length
                 subsequences_length = self.context_length + self.prediction_length
 
-            # (batch_size, sub_seq_len, *target_shape, num_lags)
+        # (batch_size, sub_seq_len, *target_shape, num_lags)
         lags = self.get_lagged_subsequences(
             sequence=sequence,
             sequence_length=sequence_length,
