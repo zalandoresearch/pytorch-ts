@@ -33,7 +33,7 @@ class TransformerNetwork(nn.Module):
     ) -> None:
         super().__init__(**kwargs)
 
-         self.history_length = history_length
+        self.history_length = history_length
         self.context_length = context_length
         self.prediction_length = prediction_length
         self.scaling = scaling
@@ -252,7 +252,7 @@ class TransformerTrainingNetwork(TransformerNetwork):
         dec_output = self.decoder(
             dec_input,
             enc_out,
-            self.upper_triangular_mask(F, self.prediction_length),
+            self.upper_triangular_mask(self.prediction_length),
         )
 
         # compute loss
@@ -352,7 +352,7 @@ class TransformerPredictionNetwork(TransformerNetwork):
                 dim=-1,
             )
 
-            dec_output = self.decoder(dec_input, repeated_enc_out, None, False)
+            dec_output = self.decoder(dec_input, repeated_enc_out, None, False) # TODO check False argument
 
             distr_args = self.proj_dist_args(dec_output)
 
