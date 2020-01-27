@@ -6,8 +6,8 @@ import torch
 import torch.nn as nn
 
 from pts import Trainer
-from pts.model import PTSEstimator, PTSPredictor, copy_parameters
-from pts.modules import RealNVP
+from pts.model import PTSEstimator, Predictor, PTSPredictor, copy_parameters
+from pts.modules import DistributionOutput, StudentTOutput
 from pts.dataset import FieldName
 from pts.transform import (
     Transformation,
@@ -17,6 +17,8 @@ from pts.transform import (
     CDFtoGaussianTransform,
     cdf_to_gaussian_forward_transform,
     RenameFields,
+    RemoveFields,
+    AddAgeFeature,
     AsNumpyArray,
     ExpandDimArray,
     AddObservedValuesIndicator,
@@ -27,8 +29,8 @@ from pts.transform import (
 )
 from pts.feature import (
     TimeFeature,
-    fourier_time_features_from_frequency_str,
-    get_fourier_lags_for_frequency,
+    time_features_from_frequency_str,
+    get_lags_for_frequency,
 )
 
 from .transformer_network import TransformerTrainingNetwork, TransformerPredictionNetwork

@@ -10,8 +10,11 @@ from pts.modules import DistributionOutput, MeanScaler, NOPScaler, FeatureEmbedd
 from pts.model import weighted_average
 
 
-from .trans_encoder import TransformerEncoder
-from .trans_decoder import TransformerDecoder
+def prod(xs):
+    p = 1
+    for x in xs:
+        p *= x
+    return p
 
 
 class TransformerNetwork(nn.Module):
