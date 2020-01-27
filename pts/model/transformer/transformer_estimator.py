@@ -26,6 +26,7 @@ from pts.transform import (
     VstackFeatures,
     SetFieldIfNotPresent,
     TargetDimIndicator,
+    SetField,
 )
 from pts.feature import (
     TimeFeature,
