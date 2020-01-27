@@ -17,8 +17,13 @@ from .trans_decoder import TransformerDecoder
 class TransformerNetwork(nn.Module):
     def __init__(
         self,
-        encoder: TransformerEncoder,
-        decoder: TransformerDecoder,
+        input_size: int,
+        num_heads: int,
+        act_type: str,
+        dropout_rate: float,
+        dim_feedforward: int,
+        num_encoder_layers: int,
+        num_decoder_layers: int,
         history_length: int,
         context_length: int,
         prediction_length: int,
@@ -47,19 +52,19 @@ class TransformerNetwork(nn.Module):
         self.lags_seq = lags_seq
 
         self.target_shape = distr_output.event_shape
-        
+
         self.transformer = nn.Transformer(
-            d_model=input_size, 
-            nhead=8, 
-            num_encoder_layers=6, 
-            num_decoder_layers=6, 
-            dim_feedforward=2048, 
-            dropout=0.1, 
-            activation='relu',
+            d_model=input_size,
+            nhead=num_heads,
+            num_encoder_layers=num_encoder_layers,
+            num_decoder_layers=num_decoder_layers,
+            dim_feedforward=dim_feedforward,
+            dropout=dropout_rate,
+            activation=act_type,
         )
 
         self.proj_dist_args = distr_output.get_args_proj(input_size)
-    
+
         self.embedder = FeatureEmbedder(
             cardinalities=cardinality,
             embedding_dims=[embedding_dimension for _ in cardinality],
@@ -69,7 +74,6 @@ class TransformerNetwork(nn.Module):
             self.scaler = MeanScaler(keepdims=True)
         else:
             self.scaler = NOPScaler(keepdims=True)
-
 
     @staticmethod
     def get_lagged_subsequences(
@@ -114,13 +118,15 @@ class TransformerNetwork(nn.Module):
     def create_network_input(
         self,
         feat_static_cat: torch.Tensor,  # (batch_size, num_features)
-        past_time_feat: torch.Tensor,  # (batch_size, num_features, history_length)
+        # (batch_size, num_features, history_length)
+        past_time_feat: torch.Tensor,
         past_target: torch.Tensor,  # (batch_size, history_length, 1)
         past_observed_values: torch.Tensor,  # (batch_size, history_length)
         future_time_feat: Optional[
             torch.Tensor
         ],  # (batch_size, num_features, prediction_length)
-        future_target: Optional[torch.Tensor],  # (batch_size, prediction_length)
+        # (batch_size, prediction_length)
+        future_target: Optional[torch.Tensor],
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Creates inputs for the transformer network.
@@ -128,29 +134,32 @@ class TransformerNetwork(nn.Module):
         """
 
         if future_time_feat is None or future_target is None:
-            time_feat = past_time_feat[:, self.history_length - self.context_length:, ...] #.slice_axis(
+            # .slice_axis(
+            time_feat = past_time_feat[:,
+                                       self.history_length - self.context_length:, ...]
             #     axis=1,
             #     begin=self.history_length - self.context_length,
             #     end=None,
             )
-            sequence = past_target
-            sequence_length = self.history_length
-            subsequences_length = self.context_length
-        else:
-            time_feat = torch.cat((
-                past_time_feat[:, self.history_length - self.context_length:,...], #.slice_axis(
-                #     axis=1,
-                #     begin=self.history_length - self.context_length,
-                #     end=None,
-                # ),
-                future_time_feat,
-                dim=1,
-            )
-            sequence = torch.cat((past_target, future_target), dim=1)
-            sequence_length = self.history_length + self.prediction_length
-            subsequences_length = self.context_length + self.prediction_length
+                sequence=past_target
+                sequence_length=self.history_length
+                subsequences_length=self.context_length
+            else:
+                time_feat=torch.cat((
+                    past_time_feat[:, self.history_length -
+                                   self.context_length:, ...],  # .slice_axis(
+                    #     axis=1,
+                    #     begin=self.history_length - self.context_length,
+                    #     end=None,
+                    # ),
+                    future_time_feat),
+                    dim=1,
+                )
+                sequence = torch.cat((past_target, future_target), dim=1)
+                sequence_length = self.history_length + self.prediction_length
+                subsequences_length = self.context_length + self.prediction_length
 
-        # (batch_size, sub_seq_len, *target_shape, num_lags)
+            # (batch_size, sub_seq_len, *target_shape, num_lags)
         lags = self.get_lagged_subsequences(
             sequence=sequence,
             sequence_length=sequence_length,
@@ -161,10 +170,10 @@ class TransformerNetwork(nn.Module):
         # scale is computed on the context length last units of the past target
         # scale shape is (batch_size, 1, *target_shape)
         _, scale = self.scaler(
-            past_target[:,-self.context_length:,...], #.slice_axis(
+            past_target[:, -self.context_length:, ...],  # .slice_axis(
             #     axis=1, begin=-self.context_length, end=None
             # ),
-            past_observed_values[:,-self.context_length:,...] #.slice_axis(
+            past_observed_values[:, -self.context_length:, ...]  # .slice_axis(
             #     axis=1, begin=-self.context_length, end=None
             # ),
         )
@@ -194,10 +203,10 @@ class TransformerNetwork(nn.Module):
         )
 
         # (batch_size, sub_seq_len, input_dim)
-        inputs = torch.cat((input_lags, time_feat, repeated_static_feat), dim=-1)
+        inputs = torch.cat(
+            (input_lags, time_feat, repeated_static_feat), dim=-1)
 
         return inputs, scale, static_feat
-
 
     @staticmethod
     def upper_triangular_mask(d):
@@ -206,7 +215,6 @@ class TransformerNetwork(nn.Module):
             mask = mask + torch.eye(d, d, k + 1)
         return mask
 
-    
 
 class TransformerTrainingNetwork(TransformerNetwork):
     # noinspection PyMethodOverriding,PyPep8Naming
@@ -244,10 +252,10 @@ class TransformerTrainingNetwork(TransformerNetwork):
             future_target=future_target,
         )
 
-        enc_input = input[:, :self.context_length, ...] # F.slice_axis(
+        enc_input = input[:, :self.context_length, ...]  # F.slice_axis(
         #     inputs, axis=1, begin=0, end=self.context_length
         # )
-        dec_input = input[:,self.context_length:,...]  #F.slice_axis(
+        dec_input = input[:, self.context_length:, ...]  # F.slice_axis(
         #     inputs, axis=1, begin=self.context_length, end=None
         # )
 
@@ -257,8 +265,8 @@ class TransformerTrainingNetwork(TransformerNetwork):
         # input to decoder
         dec_output = self.transformer.decoder(
             dec_input,
-            enc_out, #memory
-            self.upper_triangular_mask(self.prediction_length), #mask
+            enc_out,  # memory
+            self.upper_triangular_mask(self.prediction_length),  # mask
         )
 
         # compute loss
@@ -267,7 +275,7 @@ class TransformerTrainingNetwork(TransformerNetwork):
         loss = distr.loss(future_target)
 
         return loss.mean()
-    
+
 
 class TransformerPredictionNetwork(TransformerNetwork):
     def __init__(self, num_parallel_samples: int = 100, **kwargs) -> None:
@@ -353,13 +361,14 @@ class TransformerPredictionNetwork(TransformerNetwork):
             # (batch_size * num_samples, 1, prod(target_shape) * num_lags + num_time_features + num_static_features)
             dec_input = torch.cat((
                 input_lags,
-                repeated_time_feat[:,k:k+1,:],
+                repeated_time_feat[:, k:k+1, :],
                 repeated_static_feat),
                 dim=-1,
             )
 
-            dec_output = self.transformer.decoder(dec_input, repeated_enc_out, None)
-            
+            dec_output = self.transformer.decoder(
+                dec_input, repeated_enc_out, None)
+
             distr_args = self.proj_dist_args(dec_output)
 
             # compute likelihood of target given the predicted parameters

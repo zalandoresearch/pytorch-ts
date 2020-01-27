@@ -33,9 +33,11 @@ from pts.feature import (
 
 from .transfomer_network import TransformerTrainingNetwork, TransformerPredictionNetwork
 
+
 class TransformerEstimator(PTSEstimator):
     def __init__(
         self,
+        input_size: int,
         freq: str,
         prediction_length: int,
         context_length: Optional[int] = None,
@@ -44,12 +46,11 @@ class TransformerEstimator(PTSEstimator):
         cardinality: Optional[List[int]] = None,
         embedding_dimension: int = 20,
         distr_output: DistributionOutput = StudentTOutput(),
-        model_dim: int = 32,
-        inner_ff_dim_scale: int = 4,
-        pre_seq: str = "dn",
-        post_seq: str = "drn",
-        act_type: str = "softrelu",
+        dim_feedforward: int = 256,
+        act_type: str = "gelu",
         num_heads: int = 8,
+        num_encoder_layers: int 3,
+        num_decoder_layers: int 3,
         scaling: bool = True,
         lags_seq: Optional[List[int]] = None,
         time_features: Optional[List[TimeFeature]] = None,
@@ -59,6 +60,7 @@ class TransformerEstimator(PTSEstimator):
     ) -> None:
         super().__init__(trainer=trainer)
 
+        self.input_size = input_size
         self.freq = freq
         self.prediction_length = prediction_length
         self.context_length = (
@@ -72,7 +74,8 @@ class TransformerEstimator(PTSEstimator):
         self.embedding_dimension = embedding_dimension
         self.num_parallel_samples = num_parallel_samples
         self.lags_seq = (
-            lags_seq if lags_seq is not None else get_lags_for_frequency(freq_str=freq)
+            lags_seq if lags_seq is not None else get_lags_for_frequency(
+                freq_str=freq)
         )
         self.time_features = (
             time_features
@@ -82,22 +85,11 @@ class TransformerEstimator(PTSEstimator):
         self.history_length = self.context_length + max(self.lags_seq)
         self.scaling = scaling
 
-        self.config = {
-            "model_dim": model_dim,
-            "pre_seq": pre_seq,
-            "post_seq": post_seq,
-            "dropout_rate": dropout_rate,
-            "inner_ff_dim_scale": inner_ff_dim_scale,
-            "act_type": act_type,
-            "num_heads": num_heads,
-        }
-
-        # self.encoder = TransformerEncoder(
-        #     self.context_length, self.config, prefix="enc_"
-        # )
-        # self.decoder = TransformerDecoder(
-        #     self.prediction_length, self.config, prefix="dec_"
-        # )
+        self.num_heads = num_heads
+        self.act_type = act_type
+        self.dim_feedforward = dim_feedforward
+        self.num_encoder_layers = num_encoder_layers
+        self.num_decoder_layers = num_decoder_layers
 
     def create_transformation(self) -> Transformation:
         remove_field_names = [
@@ -166,8 +158,13 @@ class TransformerEstimator(PTSEstimator):
     def create_training_network(self, device: torch.device) -> TransformerTrainingNetwork:
 
         training_network = TransformerTrainingNetwork(
-            encoder=self.encoder,
-            decoder=self.decoder,
+            input_size=self.input_size,
+            num_heads=self.num_heads,
+            act_type=self.act_type,
+            dropout_rate=self.dropout_rate,
+            dim_feedforward=self.dim_feedforward,
+            num_encoder_layers=self.num_encoder_layers,
+            num_decoder_layers=self.num_decoder_layers,
             history_length=self.history_length,
             context_length=self.context_length,
             prediction_length=self.prediction_length,
@@ -175,7 +172,7 @@ class TransformerEstimator(PTSEstimator):
             cardinality=self.cardinality,
             embedding_dimension=self.embedding_dimension,
             lags_seq=self.lags_seq,
-            scaling=True,
+            scaling=self.scaling,
         ).to(device)
 
         return training_network
@@ -185,8 +182,13 @@ class TransformerEstimator(PTSEstimator):
     ) -> Predictor:
 
         prediction_network = TransformerPredictionNetwork(
-            encoder=self.encoder,
-            decoder=self.decoder,
+            input_size=self.input_size,
+            num_heads=self.num_heads,
+            act_type=self.act_type,
+            dropout_rate=self.dropout_rate,
+            dim_feedforward=self.dim_feedforward,
+            num_encoder_layers=self.num_encoder_layers,
+            num_decoder_layers=self.num_decoder_layers,
             history_length=self.history_length,
             context_length=self.context_length,
             prediction_length=self.prediction_length,
@@ -194,7 +196,7 @@ class TransformerEstimator(PTSEstimator):
             cardinality=self.cardinality,
             embedding_dimension=self.embedding_dimension,
             lags_seq=self.lags_seq,
-            scaling=True,
+            scaling=self.scaling,
             num_parallel_samples=self.num_parallel_samples,
         )
 
