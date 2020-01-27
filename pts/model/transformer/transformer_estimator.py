@@ -59,6 +59,7 @@ class TransformerEstimator(PTSEstimator):
         time_features: Optional[List[TimeFeature]] = None,
         use_feat_dynamic_real: bool = False,
         use_feat_static_cat: bool = False,
+        use_feat_static_real: bool = False,
         num_parallel_samples: int = 100,
     ) -> None:
         super().__init__(trainer=trainer)
@@ -73,6 +74,7 @@ class TransformerEstimator(PTSEstimator):
         self.dropout_rate = dropout_rate
         self.use_feat_dynamic_real = use_feat_dynamic_real
         self.use_feat_static_cat = use_feat_static_cat
+        self.use_feat_static_real = use_feat_static_real
         self.cardinality = cardinality if use_feat_static_cat else [1]
         self.embedding_dimension = embedding_dimension
         self.num_parallel_samples = num_parallel_samples
@@ -97,21 +99,28 @@ class TransformerEstimator(PTSEstimator):
     def create_transformation(self) -> Transformation:
         remove_field_names = [
             FieldName.FEAT_DYNAMIC_CAT,
-            FieldName.FEAT_STATIC_REAL,
         ]
         if not self.use_feat_dynamic_real:
             remove_field_names.append(FieldName.FEAT_DYNAMIC_REAL)
-
+        if not self.use_feat_static_real:
+            remove_field_names.append(FieldName.FEAT_STATIC_REAL)
         return Chain(
             [RemoveFields(field_names=remove_field_names)]
             + (
                 [SetField(output_field=FieldName.FEAT_STATIC_CAT, value=[0])]
                 if not self.use_feat_static_cat
                 else []
+            ) + (
+                [SetField(output_field=FieldName.FEAT_STATIC_REAL, value=[0.0])]
+                if not self.use_feat_static_real
+                else []
             )
             + [
                 AsNumpyArray(field=FieldName.FEAT_STATIC_CAT,
                              expected_ndim=1, dtype=np.long),
+                AsNumpyArray(
+                    field=FieldName.FEAT_STATIC_REAL, expected_ndim=1, dtype=self.dtype,
+                ),
                 AsNumpyArray(
                     field=FieldName.TARGET,
                     # in the following line, we add 1 for the time dimension

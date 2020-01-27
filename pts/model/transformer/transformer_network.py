@@ -121,6 +121,7 @@ class TransformerNetwork(nn.Module):
     def create_network_input(
         self,
         feat_static_cat: torch.Tensor,  # (batch_size, num_features)
+        feat_static_real: torch.Tensor,
         # (batch_size, num_features, history_length)
         past_time_feat: torch.Tensor,
         past_target: torch.Tensor,  # (batch_size, history_length, 1)
@@ -186,6 +187,7 @@ class TransformerNetwork(nn.Module):
         # (batch_size, num_features + prod(target_shape))
         static_feat = torch.cat((
             embedded_cat,
+            feat_static_real,
             torch.log(scale)
             if len(self.target_shape) == 0
             else torch.log(scale.squeeze(1))),
@@ -214,6 +216,10 @@ class TransformerNetwork(nn.Module):
     @staticmethod
     def upper_triangular_mask(d):
         return torch.triu(torch.ones((d,d)))
+        # mask = torch.zeros_like(torch.eye(d))
+        # for k in range(d - 1):
+        #     mask = mask + torch.eye(d, d, k + 1)
+        # return mask
 
 
 class TransformerTrainingNetwork(TransformerNetwork):
@@ -221,6 +227,7 @@ class TransformerTrainingNetwork(TransformerNetwork):
     def forward(
         self,
         feat_static_cat: torch.Tensor,
+        feat_static_real: torch.Tensor,
         past_time_feat: torch.Tensor,
         past_target: torch.Tensor,
         past_observed_values: torch.Tensor,
@@ -232,6 +239,7 @@ class TransformerTrainingNetwork(TransformerNetwork):
         Parameters
         ----------
         feat_static_cat : (batch_size, num_features)
+        feat_static_real: torch.Tensor,  # (batch_size, num_features)
         past_time_feat : (batch_size, history_length, num_features)
         past_target : (batch_size, history_length, *target_shape)
         past_observed_values : (batch_size, history_length, *target_shape, seq_len)
@@ -245,6 +253,7 @@ class TransformerTrainingNetwork(TransformerNetwork):
         # create the inputs for the encoder
         inputs, scale, _ = self.create_network_input(
             feat_static_cat=feat_static_cat,
+            feat_static_real=feat_static_real,
             past_time_feat=past_time_feat,
             past_target=past_target,
             past_observed_values=past_observed_values,
@@ -403,6 +412,8 @@ class TransformerPredictionNetwork(TransformerNetwork):
     def forward(
         self,
         feat_static_cat: torch.Tensor,
+        feat_static_real: torch.Tensor,
+        feature_static_real: torch.Tensor,
         past_time_feat: torch.Tensor,
         past_target: torch.Tensor,
         past_observed_values: torch.Tensor,
@@ -413,6 +424,7 @@ class TransformerPredictionNetwork(TransformerNetwork):
         Parameters
         ----------
         feat_static_cat : (batch_size, num_features)
+        feat_static_real : (batch_size, num_features)
         past_time_feat : (batch_size, history_length, num_features)
         past_target : (batch_size, history_length, *target_shape)
         past_observed_values : (batch_size, history_length, *target_shape)
@@ -424,6 +436,7 @@ class TransformerPredictionNetwork(TransformerNetwork):
         # create the inputs for the encoder
         inputs, scale, static_feat = self.create_network_input(
             feat_static_cat=feat_static_cat,
+            feature_static_real=feat_static_real,
             past_time_feat=past_time_feat,
             past_target=past_target,
             past_observed_values=past_observed_values,
