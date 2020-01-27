@@ -13,8 +13,6 @@ from pts.model import weighted_average
 from .trans_encoder import TransformerEncoder
 from .trans_decoder import TransformerDecoder
 
-LARGE_NEGATIVE_VALUE = -99999999
-
 
 class TransformerNetwork(nn.Module):
     def __init__(
@@ -49,10 +47,19 @@ class TransformerNetwork(nn.Module):
         self.lags_seq = lags_seq
 
         self.target_shape = distr_output.event_shape
+        
+        self.transformer = nn.Transformer(
+            d_model=input_size, 
+            nhead=8, 
+            num_encoder_layers=6, 
+            num_decoder_layers=6, 
+            dim_feedforward=2048, 
+            dropout=0.1, 
+            activation='relu',
+        )
 
-        self.proj_dist_args = distr_output.get_args_proj(input_size) #TODO figure it out
-        self.encoder = encoder
-        self.decoder = decoder
+        self.proj_dist_args = distr_output.get_args_proj(input_size)
+    
         self.embedder = FeatureEmbedder(
             cardinalities=cardinality,
             embedding_dims=[embedding_dimension for _ in cardinality],
@@ -197,7 +204,7 @@ class TransformerNetwork(nn.Module):
         mask = torch.zeros_like(torch.eye(d))
         for k in range(d - 1):
             mask = mask + torch.eye(d, d, k + 1)
-        return mask * LARGE_NEGATIVE_VALUE
+        return mask
 
     
 
@@ -216,7 +223,6 @@ class TransformerTrainingNetwork(TransformerNetwork):
         Computes the loss for training Transformer, all inputs tensors representing time series have NTC layout.
         Parameters
         ----------
-        F
         feat_static_cat : (batch_size, num_features)
         past_time_feat : (batch_size, history_length, num_features)
         past_target : (batch_size, history_length, *target_shape)
@@ -246,13 +252,13 @@ class TransformerTrainingNetwork(TransformerNetwork):
         # )
 
         # pass through encoder
-        enc_out = self.encoder(enc_input)
+        enc_out = self.transformer.encoder(enc_input)
 
         # input to decoder
-        dec_output = self.decoder(
+        dec_output = self.transformer.decoder(
             dec_input,
-            enc_out,
-            self.upper_triangular_mask(self.prediction_length),
+            enc_out, #memory
+            self.upper_triangular_mask(self.prediction_length), #mask
         )
 
         # compute loss
@@ -352,8 +358,8 @@ class TransformerPredictionNetwork(TransformerNetwork):
                 dim=-1,
             )
 
-            dec_output = self.decoder(dec_input, repeated_enc_out, None, False) # TODO check False argument
-
+            dec_output = self.transformer.decoder(dec_input, repeated_enc_out, None)
+            
             distr_args = self.proj_dist_args(dec_output)
 
             # compute likelihood of target given the predicted parameters
@@ -417,7 +423,7 @@ class TransformerPredictionNetwork(TransformerNetwork):
         )
 
         # pass through encoder
-        enc_out = self.encoder(inputs)
+        enc_out = self.transformer.encoder(inputs)
 
         return self.sampling_decoder(
             past_target=past_target,

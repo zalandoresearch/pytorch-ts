@@ -31,8 +31,6 @@ from pts.feature import (
     get_fourier_lags_for_frequency,
 )
 
-from .transformer_decoder import TransformerDecoder
-from .transfomer_encoder import TransformerEncoder
 from .transfomer_network import TransformerTrainingNetwork, TransformerPredictionNetwork
 
 class TransformerEstimator(PTSEstimator):
@@ -94,12 +92,12 @@ class TransformerEstimator(PTSEstimator):
             "num_heads": num_heads,
         }
 
-        self.encoder = TransformerEncoder(
-            self.context_length, self.config, prefix="enc_"
-        )
-        self.decoder = TransformerDecoder(
-            self.prediction_length, self.config, prefix="dec_"
-        )
+        # self.encoder = TransformerEncoder(
+        #     self.context_length, self.config, prefix="enc_"
+        # )
+        # self.decoder = TransformerDecoder(
+        #     self.prediction_length, self.config, prefix="dec_"
+        # )
 
     def create_transformation(self) -> Transformation:
         remove_field_names = [
