@@ -140,24 +140,24 @@ class TransformerNetwork(nn.Module):
             #     axis=1,
             #     begin=self.history_length - self.context_length,
             #     end=None,
+            # )
+            sequence = past_target
+            sequence_length = self.history_length
+            subsequences_length = self.context_length
+        else:
+            time_feat = torch.cat((
+                past_time_feat[:, self.history_length -
+                               self.context_length:, ...],  # .slice_axis(
+                #     axis=1,
+                #     begin=self.history_length - self.context_length,
+                #     end=None,
+                # ),
+                future_time_feat),
+                dim=1,
             )
-                sequence=past_target
-                sequence_length=self.history_length
-                subsequences_length=self.context_length
-            else:
-                time_feat=torch.cat((
-                    past_time_feat[:, self.history_length -
-                                   self.context_length:, ...],  # .slice_axis(
-                    #     axis=1,
-                    #     begin=self.history_length - self.context_length,
-                    #     end=None,
-                    # ),
-                    future_time_feat),
-                    dim=1,
-                )
-                sequence = torch.cat((past_target, future_target), dim=1)
-                sequence_length = self.history_length + self.prediction_length
-                subsequences_length = self.context_length + self.prediction_length
+            sequence = torch.cat((past_target, future_target), dim=1)
+            sequence_length = self.history_length + self.prediction_length
+            subsequences_length = self.context_length + self.prediction_length
 
         # (batch_size, sub_seq_len, *target_shape, num_lags)
         lags = self.get_lagged_subsequences(
