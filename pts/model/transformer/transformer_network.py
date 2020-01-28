@@ -418,7 +418,6 @@ class TransformerPredictionNetwork(TransformerNetwork):
         self,
         feat_static_cat: torch.Tensor,
         feat_static_real: torch.Tensor,
-        feat_static_real: torch.Tensor,
         past_time_feat: torch.Tensor,
         past_target: torch.Tensor,
         past_observed_values: torch.Tensor,
