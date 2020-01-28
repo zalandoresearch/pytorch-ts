@@ -146,14 +146,9 @@ class TransformerNetwork(nn.Module):
         """
 
         if future_time_feat is None or future_target is None:
-            # .slice_axis(
             time_feat = past_time_feat[
                 :, self.history_length - self.context_length :, ...
             ]
-            #     axis=1,
-            #     begin=self.history_length - self.context_length,
-            #     end=None,
-            # )
             sequence = past_target
             sequence_length = self.history_length
             subsequences_length = self.context_length
@@ -162,11 +157,7 @@ class TransformerNetwork(nn.Module):
                 (
                     past_time_feat[
                         :, self.history_length - self.context_length :, ...
-                    ],  # .slice_axis(
-                    #     axis=1,
-                    #     begin=self.history_length - self.context_length,
-                    #     end=None,
-                    # ),
+                    ],
                     future_time_feat,
                 ),
                 dim=1,
@@ -186,12 +177,8 @@ class TransformerNetwork(nn.Module):
         # scale is computed on the context length last units of the past target
         # scale shape is (batch_size, 1, *target_shape)
         _, scale = self.scaler(
-            past_target[:, -self.context_length :, ...],  # .slice_axis(
-            #     axis=1, begin=-self.context_length, end=None
-            # ),
-            past_observed_values[:, -self.context_length :, ...]  # .slice_axis(
-            #     axis=1, begin=-self.context_length, end=None
-            # ),
+            past_target[:, -self.context_length :, ...],
+            past_observed_values[:, -self.context_length :, ...]
         )
         embedded_cat = self.embedder(feat_static_cat)
 
