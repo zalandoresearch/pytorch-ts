@@ -215,7 +215,7 @@ class TransformerEstimator(PTSEstimator):
             lags_seq=self.lags_seq,
             scaling=self.scaling,
             num_parallel_samples=self.num_parallel_samples,
-        )
+        ).to(device)
 
         copy_parameters(trained_network, prediction_network)
 
