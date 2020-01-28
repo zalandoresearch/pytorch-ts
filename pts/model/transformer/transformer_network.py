@@ -83,7 +83,7 @@ class TransformerNetwork(nn.Module):
 
         # mask
         self.register_buffer(
-            "tgt_mask", torch.triu(torch.ones((prediction_length, prediction_length)), diagonal=1)
+            "tgt_mask", self.transformer.generate_square_subsequent_mask(prediction_length)
         )
 
     @staticmethod
