@@ -25,6 +25,7 @@ setup(
         'pydantic',
         'matplotlib',
         'python-rapidjson',
+        'tensorboard',
     ],
 
     test_suite='tests',
