@@ -48,30 +48,30 @@ class TransformerNetwork(nn.Module):
         self.embedding_dimension = embedding_dimension
         self.distr_output = distr_output
 
-        assert len(set(lags_seq)) == len(
-            lags_seq
-        ), "no duplicated lags allowed!"
+        assert len(set(lags_seq)) == len(lags_seq), "no duplicated lags allowed!"
         lags_seq.sort()
 
         self.lags_seq = lags_seq
 
         self.target_shape = distr_output.event_shape
 
+        self.encoder_input = nn.Dense(input_size, d_model)
+        self.decoder_input = nn.Dense(input_size, d_model)
+
         self.transformer = nn.Transformer(
             d_model=d_model,
             nhead=num_heads,
             num_encoder_layers=num_encoder_layers,
             num_decoder_layers=num_decoder_layers,
-            dim_feedforward=dim_feedforward_scale*d_model,
+            dim_feedforward=dim_feedforward_scale * d_model,
             dropout=dropout_rate,
             activation=act_type,
         )
 
-        self.proj_dist_args = distr_output.get_args_proj(input_size)
+        self.proj_dist_args = distr_output.get_args_proj(d_model)
 
         self.embedder = FeatureEmbedder(
-            cardinalities=cardinality,
-            embedding_dims=embedding_dimension,
+            cardinalities=cardinality, embedding_dims=embedding_dimension,
         )
 
         if scaling:
@@ -140,8 +140,9 @@ class TransformerNetwork(nn.Module):
 
         if future_time_feat is None or future_target is None:
             # .slice_axis(
-            time_feat = past_time_feat[:,
-                                       self.history_length - self.context_length:, ...]
+            time_feat = past_time_feat[
+                :, self.history_length - self.context_length :, ...
+            ]
             #     axis=1,
             #     begin=self.history_length - self.context_length,
             #     end=None,
@@ -150,14 +151,17 @@ class TransformerNetwork(nn.Module):
             sequence_length = self.history_length
             subsequences_length = self.context_length
         else:
-            time_feat = torch.cat((
-                past_time_feat[:, self.history_length -
-                               self.context_length:, ...],  # .slice_axis(
-                #     axis=1,
-                #     begin=self.history_length - self.context_length,
-                #     end=None,
-                # ),
-                future_time_feat),
+            time_feat = torch.cat(
+                (
+                    past_time_feat[
+                        :, self.history_length - self.context_length :, ...
+                    ],  # .slice_axis(
+                    #     axis=1,
+                    #     begin=self.history_length - self.context_length,
+                    #     end=None,
+                    # ),
+                    future_time_feat,
+                ),
                 dim=1,
             )
             sequence = torch.cat((past_target, future_target), dim=1)
@@ -175,10 +179,10 @@ class TransformerNetwork(nn.Module):
         # scale is computed on the context length last units of the past target
         # scale shape is (batch_size, 1, *target_shape)
         _, scale = self.scaler(
-            past_target[:, -self.context_length:, ...],  # .slice_axis(
+            past_target[:, -self.context_length :, ...],  # .slice_axis(
             #     axis=1, begin=-self.context_length, end=None
             # ),
-            past_observed_values[:, -self.context_length:, ...]  # .slice_axis(
+            past_observed_values[:, -self.context_length :, ...]  # .slice_axis(
             #     axis=1, begin=-self.context_length, end=None
             # ),
         )
@@ -186,12 +190,14 @@ class TransformerNetwork(nn.Module):
 
         # in addition to embedding features, use the log scale as it can help prediction too
         # (batch_size, num_features + prod(target_shape))
-        static_feat = torch.cat((
-            embedded_cat,
-            feat_static_real,
-            torch.log(scale)
-            if len(self.target_shape) == 0
-            else torch.log(scale.squeeze(1))),
+        static_feat = torch.cat(
+            (
+                embedded_cat,
+                feat_static_real,
+                torch.log(scale)
+                if len(self.target_shape) == 0
+                else torch.log(scale.squeeze(1)),
+            ),
             dim=1,
         )
 
@@ -200,7 +206,7 @@ class TransformerNetwork(nn.Module):
         )
 
         # (batch_size, sub_seq_len, *target_shape, num_lags)
-        lags_scaled = lags/scale.unsqueeze(-1)
+        lags_scaled = lags / scale.unsqueeze(-1)
 
         # from (batch_size, sub_seq_len, *target_shape, num_lags)
         # to (batch_size, sub_seq_len, prod(target_shape) * num_lags)
@@ -209,14 +215,13 @@ class TransformerNetwork(nn.Module):
         )
 
         # (batch_size, sub_seq_len, input_dim)
-        inputs = torch.cat(
-            (input_lags, time_feat, repeated_static_feat), dim=-1)
+        inputs = torch.cat((input_lags, time_feat, repeated_static_feat), dim=-1)
 
         return inputs, scale, static_feat
 
     @staticmethod
     def upper_triangular_mask(d):
-        return torch.triu(torch.ones((d,d)))
+        return torch.triu(torch.ones((d, d)))
         # mask = torch.zeros_like(torch.eye(d))
         # for k in range(d - 1):
         #     mask = mask + torch.eye(d, d, k + 1)
@@ -262,21 +267,23 @@ class TransformerTrainingNetwork(TransformerNetwork):
             future_target=future_target,
         )
 
-        enc_input = inputs[:, :self.context_length, ...]  # F.slice_axis(
+        enc_input = inputs[:, : self.context_length, ...]  # F.slice_axis(
         #     inputs, axis=1, begin=0, end=self.context_length
         # )
-        dec_input = inputs[:, self.context_length:, ...]  # F.slice_axis(
+        dec_input = inputs[:, self.context_length :, ...]  # F.slice_axis(
         #     inputs, axis=1, begin=self.context_length, end=None
         # )
 
         # pass through encoder
-        enc_out = self.transformer.encoder(enc_input)
+        enc_out = self.transformer.encoder(self.encoder_input(enc_input))
 
         # input to decoder
         dec_output = self.transformer.decoder(
-            dec_input,
+            self.decoder_input(dec_input),
             enc_out,  # memory
-            memory_mask=self.upper_triangular_mask(self.prediction_length),  # target mask or memory mask?
+            memory_mask=self.upper_triangular_mask(
+                self.prediction_length
+            ),  # target mask or memory mask?
         )
 
         # compute loss
@@ -357,7 +364,7 @@ class TransformerPredictionNetwork(TransformerNetwork):
             )
 
             # (batch_size * num_samples, 1, *target_shape, num_lags)
-            lags_scaled = lags/repeated_scale.unsqueeze(1)
+            lags_scaled = lags / repeated_scale.unsqueeze(1)
             # lags_scaled = F.broadcast_div(
             #     lags, repeated_scale.expand_dims(axis=-1)
             # )
@@ -369,30 +376,25 @@ class TransformerPredictionNetwork(TransformerNetwork):
             )
 
             # (batch_size * num_samples, 1, prod(target_shape) * num_lags + num_time_features + num_static_features)
-            dec_input = torch.cat((
-                input_lags,
-                repeated_time_feat[:, k:k+1, :],
-                repeated_static_feat),
+            dec_input = torch.cat(
+                (input_lags, repeated_time_feat[:, k : k + 1, :], repeated_static_feat),
                 dim=-1,
             )
 
             dec_output = self.transformer.decoder(
-                dec_input, repeated_enc_out, None)
+                self.decoder_input(dec_input), repeated_enc_out, None
+            )
 
             distr_args = self.proj_dist_args(dec_output)
 
             # compute likelihood of target given the predicted parameters
-            distr = self.distr_output.distribution(
-                distr_args, scale=repeated_scale
-            )
+            distr = self.distr_output.distribution(distr_args, scale=repeated_scale)
 
             # (batch_size * num_samples, 1, *target_shape)
             new_samples = distr.sample()
 
             # (batch_size * num_samples, seq_len, *target_shape)
-            repeated_past_target = torch.cat((
-                repeated_past_target, new_samples), dim=1
-            )
+            repeated_past_target = torch.cat((repeated_past_target, new_samples), dim=1)
             future_samples.append(new_samples)
 
         # reset cache of the decoder
@@ -446,7 +448,7 @@ class TransformerPredictionNetwork(TransformerNetwork):
         )
 
         # pass through encoder
-        enc_out = self.transformer.encoder(inputs)
+        enc_out = self.transformer.encoder(self.encoder_input(inputs))
 
         return self.sampling_decoder(
             past_target=past_target,
