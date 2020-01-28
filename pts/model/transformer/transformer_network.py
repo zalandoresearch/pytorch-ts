@@ -55,9 +55,11 @@ class TransformerNetwork(nn.Module):
 
         self.target_shape = distr_output.event_shape
 
+        # [B, T, input_size] -> [B, T, d_model]
         self.encoder_input = nn.Linear(input_size, d_model)
         self.decoder_input = nn.Linear(input_size, d_model)
 
+        # [B, T, d_model] where d_model / num_heads...
         self.transformer = nn.Transformer(
             d_model=d_model,
             nhead=num_heads,
@@ -289,7 +291,7 @@ class TransformerTrainingNetwork(TransformerNetwork):
         # compute loss
         distr_args = self.proj_dist_args(dec_output)
         distr = self.distr_output.distribution(distr_args, scale=scale)
-        loss = distr.loss(future_target)
+        loss = - distr.log_prob(future_target)
 
         return loss.mean()
 
