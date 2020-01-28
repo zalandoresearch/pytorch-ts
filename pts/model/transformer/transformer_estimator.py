@@ -47,7 +47,7 @@ class TransformerEstimator(PTSEstimator):
         trainer: Trainer = Trainer(),
         dropout_rate: float = 0.1,
         cardinality: Optional[List[int]] = None,
-        embedding_dimension: int = 20,
+        embedding_dimension: List[int] = [20],
         distr_output: DistributionOutput = StudentTOutput(),
         d_model: int = 32,
         dim_feedforward_scale: int = 4,

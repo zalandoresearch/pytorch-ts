@@ -33,7 +33,7 @@ class TransformerNetwork(nn.Module):
         prediction_length: int,
         distr_output: DistributionOutput,
         cardinality: List[int],
-        embedding_dimension: int,
+        embedding_dimension: List[int],
         lags_seq: List[int],
         scaling: bool = True,
         **kwargs,
@@ -55,8 +55,8 @@ class TransformerNetwork(nn.Module):
 
         self.target_shape = distr_output.event_shape
 
-        self.encoder_input = nn.Dense(input_size, d_model)
-        self.decoder_input = nn.Dense(input_size, d_model)
+        self.encoder_input = nn.Linear(input_size, d_model)
+        self.decoder_input = nn.Linear(input_size, d_model)
 
         self.transformer = nn.Transformer(
             d_model=d_model,
@@ -281,7 +281,7 @@ class TransformerTrainingNetwork(TransformerNetwork):
         dec_output = self.transformer.decoder(
             self.decoder_input(dec_input),
             enc_out,  # memory
-            memory_mask=self.upper_triangular_mask(
+            tgt_mask=self.upper_triangular_mask(
                 self.prediction_length
             ),  # target mask or memory mask?
         )
