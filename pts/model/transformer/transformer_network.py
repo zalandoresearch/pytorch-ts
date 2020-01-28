@@ -81,6 +81,11 @@ class TransformerNetwork(nn.Module):
         else:
             self.scaler = NOPScaler(keepdim=True)
 
+        # mask
+        self.register_buffer(
+            "tgt_mask", torch.triu(torch.ones((prediction_length, prediction_length)))
+        )
+
     @staticmethod
     def get_lagged_subsequences(
         sequence: torch.Tensor,
@@ -221,14 +226,6 @@ class TransformerNetwork(nn.Module):
 
         return inputs, scale, static_feat
 
-    @staticmethod
-    def upper_triangular_mask(d):
-        return torch.triu(torch.ones((d, d)))
-        # mask = torch.zeros_like(torch.eye(d))
-        # for k in range(d - 1):
-        #     mask = mask + torch.eye(d, d, k + 1)
-        # return mask
-
 
 class TransformerTrainingNetwork(TransformerNetwork):
     # noinspection PyMethodOverriding,PyPep8Naming
@@ -277,21 +274,21 @@ class TransformerTrainingNetwork(TransformerNetwork):
         # )
 
         # pass through encoder [T, B, b_model]
-        enc_out = self.transformer.encoder(self.encoder_input(enc_input).permute(1,0,2))
+        enc_out = self.transformer.encoder(
+            self.encoder_input(enc_input).permute(1, 0, 2)
+        )
 
         # input to decoder
         dec_output = self.transformer.decoder(
-            self.decoder_input(dec_input).permute(1,0,2),
+            self.decoder_input(dec_input).permute(1, 0, 2),
             enc_out,  # memory
-            tgt_mask=self.upper_triangular_mask(
-                self.prediction_length
-            ),  # target mask
+            tgt_mask=self.tgt_mask,
         )
 
         # compute loss
-        distr_args = self.proj_dist_args(dec_output.permute(1,0,2))
+        distr_args = self.proj_dist_args(dec_output.permute(1, 0, 2))
         distr = self.distr_output.distribution(distr_args, scale=scale)
-        loss = - distr.log_prob(future_target)
+        loss = -distr.log_prob(future_target)
 
         return loss.mean()
 
@@ -384,10 +381,10 @@ class TransformerPredictionNetwork(TransformerNetwork):
             )
 
             dec_output = self.transformer.decoder(
-                self.decoder_input(dec_input).permute(1,0,2), repeated_enc_out, None
+                self.decoder_input(dec_input).permute(1, 0, 2), repeated_enc_out
             )
 
-            distr_args = self.proj_dist_args(dec_output.permute(1,0,2))
+            distr_args = self.proj_dist_args(dec_output.permute(1, 0, 2))
 
             # compute likelihood of target given the predicted parameters
             distr = self.distr_output.distribution(distr_args, scale=repeated_scale)
@@ -449,7 +446,7 @@ class TransformerPredictionNetwork(TransformerNetwork):
         )
 
         # pass through encoder
-        enc_out = self.transformer.encoder(self.encoder_input(inputs).permute(1,0,2))
+        enc_out = self.transformer.encoder(self.encoder_input(inputs).permute(1, 0, 2))
 
         return self.sampling_decoder(
             past_target=past_target,
