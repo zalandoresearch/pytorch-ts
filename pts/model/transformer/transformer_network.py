@@ -344,8 +344,8 @@ class TransformerPredictionNetwork(TransformerNetwork):
         ).unsqueeze(1)
 
         repeated_enc_out = enc_out.repeat_interleave(
-            repeats=self.num_parallel_samples, dim=0
-        ).unsqueeze(1)
+            repeats=self.num_parallel_samples, dim=1
+        )
 
         repeated_scale = scale.repeat_interleave(
             repeats=self.num_parallel_samples, dim=0
