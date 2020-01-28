@@ -441,7 +441,7 @@ class TransformerPredictionNetwork(TransformerNetwork):
         # create the inputs for the encoder
         inputs, scale, static_feat = self.create_network_input(
             feat_static_cat=feat_static_cat,
-            feat_static_cat=feat_static_real,
+            feat_static_real=feat_static_real,
             past_time_feat=past_time_feat,
             past_target=past_target,
             past_observed_values=past_observed_values,
