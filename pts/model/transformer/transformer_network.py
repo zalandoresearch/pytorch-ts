@@ -21,10 +21,11 @@ class TransformerNetwork(nn.Module):
     def __init__(
         self,
         input_size: int,
+        d_model: int,
         num_heads: int,
         act_type: str,
         dropout_rate: float,
-        dim_feedforward: int,
+        dim_feedforward_scale: int,
         num_encoder_layers: int,
         num_decoder_layers: int,
         history_length: int,
@@ -57,11 +58,11 @@ class TransformerNetwork(nn.Module):
         self.target_shape = distr_output.event_shape
 
         self.transformer = nn.Transformer(
-            d_model=input_size,
+            d_model=d_model,
             nhead=num_heads,
             num_encoder_layers=num_encoder_layers,
             num_decoder_layers=num_decoder_layers,
-            dim_feedforward=dim_feedforward,
+            dim_feedforward=dim_feedforward_scale*d_model,
             dropout=dropout_rate,
             activation=act_type,
         )
@@ -275,7 +276,7 @@ class TransformerTrainingNetwork(TransformerNetwork):
         dec_output = self.transformer.decoder(
             dec_input,
             enc_out,  # memory
-            self.upper_triangular_mask(self.prediction_length),  # mask
+            memory_mask=self.upper_triangular_mask(self.prediction_length),  # target mask or memory mask?
         )
 
         # compute loss

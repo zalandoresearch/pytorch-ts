@@ -49,7 +49,8 @@ class TransformerEstimator(PTSEstimator):
         cardinality: Optional[List[int]] = None,
         embedding_dimension: int = 20,
         distr_output: DistributionOutput = StudentTOutput(),
-        dim_feedforward: int = 128,
+        d_model: int = 32,
+        dim_feedforward_scale: int = 4,
         act_type: str = "gelu",
         num_heads: int = 8,
         num_encoder_layers: int = 3,
@@ -90,9 +91,10 @@ class TransformerEstimator(PTSEstimator):
         self.history_length = self.context_length + max(self.lags_seq)
         self.scaling = scaling
 
+        self.d_model = d_model
         self.num_heads = num_heads
         self.act_type = act_type
-        self.dim_feedforward = dim_feedforward
+        self.dim_feedforward_scale = dim_feedforward_scale
         self.num_encoder_layers = num_encoder_layers
         self.num_decoder_layers = num_decoder_layers
 
@@ -175,7 +177,8 @@ class TransformerEstimator(PTSEstimator):
             num_heads=self.num_heads,
             act_type=self.act_type,
             dropout_rate=self.dropout_rate,
-            dim_feedforward=self.dim_feedforward,
+            d_model=self.d_model,
+            dim_feedforward_scale=self.dim_feedforward_scale,
             num_encoder_layers=self.num_encoder_layers,
             num_decoder_layers=self.num_decoder_layers,
             history_length=self.history_length,
@@ -199,7 +202,8 @@ class TransformerEstimator(PTSEstimator):
             num_heads=self.num_heads,
             act_type=self.act_type,
             dropout_rate=self.dropout_rate,
-            dim_feedforward=self.dim_feedforward,
+            d_model=self.d_model,
+            dim_feedforward_scale=self.dim_feedforward_scale,
             num_encoder_layers=self.num_encoder_layers,
             num_decoder_layers=self.num_decoder_layers,
             history_length=self.history_length,
