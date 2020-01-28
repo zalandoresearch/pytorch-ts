@@ -285,7 +285,7 @@ class TransformerTrainingNetwork(TransformerNetwork):
             enc_out,  # memory
             tgt_mask=self.upper_triangular_mask(
                 self.prediction_length
-            ),  # target mask or memory mask?
+            ),  # target mask
         )
 
         # compute loss
@@ -400,7 +400,7 @@ class TransformerPredictionNetwork(TransformerNetwork):
             future_samples.append(new_samples)
 
         # reset cache of the decoder
-        self.decoder.cache_reset()
+        # self.transformer.decoder.cache_reset()
 
         # (batch_size * num_samples, prediction_length, *target_shape)
         samples = torch.cat(future_samples, dim=1)
