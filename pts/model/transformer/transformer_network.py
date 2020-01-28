@@ -59,7 +59,7 @@ class TransformerNetwork(nn.Module):
         self.encoder_input = nn.Linear(input_size, d_model)
         self.decoder_input = nn.Linear(input_size, d_model)
 
-        # [B, T, d_model] where d_model / num_heads...
+        # [B, T, d_model] where d_model / num_heads is int
         self.transformer = nn.Transformer(
             d_model=d_model,
             nhead=num_heads,
@@ -276,12 +276,12 @@ class TransformerTrainingNetwork(TransformerNetwork):
         #     inputs, axis=1, begin=self.context_length, end=None
         # )
 
-        # pass through encoder
-        enc_out = self.transformer.encoder(self.encoder_input(enc_input))
+        # pass through encoder [T, B, b_model]
+        enc_out = self.transformer.encoder(self.encoder_input(enc_input).permute(1,0,2))
 
         # input to decoder
         dec_output = self.transformer.decoder(
-            self.decoder_input(dec_input),
+            self.decoder_input(dec_input).permute(1,0,2),
             enc_out,  # memory
             tgt_mask=self.upper_triangular_mask(
                 self.prediction_length
@@ -289,7 +289,7 @@ class TransformerTrainingNetwork(TransformerNetwork):
         )
 
         # compute loss
-        distr_args = self.proj_dist_args(dec_output)
+        distr_args = self.proj_dist_args(dec_output.permute(1,0,2))
         distr = self.distr_output.distribution(distr_args, scale=scale)
         loss = - distr.log_prob(future_target)
 
@@ -384,10 +384,10 @@ class TransformerPredictionNetwork(TransformerNetwork):
             )
 
             dec_output = self.transformer.decoder(
-                self.decoder_input(dec_input), repeated_enc_out, None
+                self.decoder_input(dec_input).permute(1,0,2), repeated_enc_out, None
             )
 
-            distr_args = self.proj_dist_args(dec_output)
+            distr_args = self.proj_dist_args(dec_output.permute(1,0,2))
 
             # compute likelihood of target given the predicted parameters
             distr = self.distr_output.distribution(distr_args, scale=repeated_scale)
@@ -450,7 +450,7 @@ class TransformerPredictionNetwork(TransformerNetwork):
         )
 
         # pass through encoder
-        enc_out = self.transformer.encoder(self.encoder_input(inputs))
+        enc_out = self.transformer.encoder(self.encoder_input(inputs).permute(1,0,2))
 
         return self.sampling_decoder(
             past_target=past_target,
