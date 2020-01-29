@@ -546,7 +546,7 @@ class TransformerTempFlowPredictionNetwork(TransformerTempFlowTrainingNetwork):
                 subsequences_length=1,
             )
 
-            lags_scaled = lags / repeated_scale.unsqueeze(1)
+            lags_scaled = lags / repeated_scale.unsqueeze(-1)
 
             input_lags = lags_scaled.reshape(
                 shape=(-1, 1, prod(self.target_shape) * len(self.lags_seq))
