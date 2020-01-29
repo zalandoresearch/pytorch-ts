@@ -583,7 +583,7 @@ class TransformerTempFlowPredictionNetwork(TransformerTempFlowTrainingNetwork):
             #     unroll_length=1,
             # )
 
-            distr_args = self.distr_args(decoder_output=dec_output)
+            distr_args = self.distr_args(decoder_output=dec_output.permute(1,0,2))
 
             # (batch_size, 1, target_dim)
             new_samples = self.flow.sample(cond=distr_args)
