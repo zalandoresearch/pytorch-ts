@@ -163,8 +163,8 @@ class TransformerTempFlowEstimator(PTSEstimator):
             ]
         )
 
-    def create_training_network(self, device: torch.device) -> TempFlowTrainingNetwork:
-        return TempFlowTrainingNetwork(
+    def create_training_network(self, device: torch.device) -> TransformerTempFlowTrainingNetwork:
+        return TransformerTempFlowTrainingNetwork(
             input_size=self.input_size,
             target_dim=self.target_dim,
             num_heads=self.num_heads,
@@ -192,10 +192,10 @@ class TransformerTempFlowEstimator(PTSEstimator):
     def create_predictor(
         self,
         transformation: Transformation,
-        trained_network: TempFlowTrainingNetwork,
+        trained_network: TransformerTempFlowTrainingNetwork,
         device: torch.device,
     ) -> PTSPredictor:
-        prediction_network = TempFlowPredictionNetwork(
+        prediction_network = TransformerTempFlowPredictionNetwork(
             input_size=self.input_size,
             target_dim=self.target_dim,
             num_heads=self.num_heads,
