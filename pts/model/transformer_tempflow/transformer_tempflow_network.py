@@ -84,6 +84,11 @@ class TransformerTempFlowTrainingNetwork(nn.Module):
 
         self.scaler = MeanScaler(keepdim=True)
 
+        # mask
+        self.register_buffer(
+            "tgt_mask", self.transformer.generate_square_subsequent_mask(prediction_length)
+        )
+
     @staticmethod
     def get_lagged_subsequences(
         sequence: torch.Tensor,
