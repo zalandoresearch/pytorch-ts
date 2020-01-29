@@ -72,10 +72,10 @@ class TransformerTempFlowTrainingNetwork(nn.Module):
         self.dequantize = dequantize
 
         self.distr_output = FlowOutput(
-            self.flow, input_size=d_model, cond_size=conditioning_length
+            self.flow, input_size=target_dim, cond_size=conditioning_length
         )
 
-        self.proj_dist_args = self.distr_output.get_args_proj(num_cells)
+        self.proj_dist_args = self.distr_output.get_args_proj(d_model)
 
         self.embed_dim = 1
         self.embed = nn.Embedding(
@@ -280,7 +280,7 @@ class TransformerTempFlowTrainingNetwork(nn.Module):
         # )
 
         input_lags = lags_scaled.reshape(
-            (-1, unroll_length, len(self.lags_seq) * self.target_dim)
+            (-1, subsequences_length, len(self.lags_seq) * self.target_dim)
         )
 
         # (batch_size, target_dim, embed_dim)
@@ -290,8 +290,8 @@ class TransformerTempFlowTrainingNetwork(nn.Module):
         # (batch_size, seq_len, target_dim * embed_dim)
         repeated_index_embeddings = (
             index_embeddings.unsqueeze(1)
-            .expand(-1, unroll_length, -1, -1)
-            .reshape((-1, unroll_length, self.target_dim * self.embed_dim))
+            .expand(-1, subsequences_length, -1, -1)
+            .reshape((-1, subsequences_length, self.target_dim * self.embed_dim))
         )
 
         # (batch_size, sub_seq_len, input_dim)
