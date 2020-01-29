@@ -65,7 +65,7 @@ class TempFlowTrainingNetwork(nn.Module):
         self.dequantize = dequantize
 
         self.distr_output = FlowOutput(
-            self.flow, input_size=input_size, cond_size=conditioning_length
+            self.flow, input_size=target_dim, cond_size=conditioning_length
         )
 
         self.proj_dist_args = self.distr_output.get_args_proj(num_cells)
