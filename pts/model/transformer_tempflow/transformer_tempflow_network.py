@@ -442,7 +442,7 @@ class TransformerTempFlowTrainingNetwork(nn.Module):
         # we sum the last axis to have the same shape for all likelihoods
         # (batch_size, subseq_length, 1)
         if self.dequantize:
-            target += torch.rand_like(target)
+            future_target_cdf += torch.rand_like(future_target_cdf)
 
         distr_args = self.distr_args(decoder_output=dec_output.permute(1,0,2))
         #likelihoods = -self.flow.log_prob(target, distr_args).unsqueeze(-1)
