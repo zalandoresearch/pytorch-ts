@@ -4,7 +4,7 @@ from typing import Any, List, NamedTuple, Optional, Union
 import torch
 import torch.nn as nn
 from torch.utils.tensorboard import SummaryWriter
-from tqdm.auto import tqdm
+from tqdm import tqdm
 
 from torch.utils.data import DataLoader
 

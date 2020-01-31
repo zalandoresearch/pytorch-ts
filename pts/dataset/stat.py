@@ -3,7 +3,7 @@ from collections import defaultdict
 from typing import Any, List, NamedTuple, Optional, Set
 
 import numpy as np
-from tqdm.auto import tqdm
+from tqdm import tqdm
 
 from .common import FieldName
 from pts.exception import assert_pts
