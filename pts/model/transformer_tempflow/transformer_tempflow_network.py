@@ -82,7 +82,10 @@ class TransformerTempFlowTrainingNetwork(nn.Module):
             num_embeddings=self.target_dim, embedding_dim=self.embed_dim
         )
 
-        self.scaler = MeanScaler(keepdim=True)
+        if self.scaling:
+            self.scaler = MeanScaler(keepdim=True)
+        else:
+            self.scaler = NOPScaler(keepdim=True)
 
         # mask
         self.register_buffer(
