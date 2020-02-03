@@ -198,18 +198,13 @@ class TransformerTempFlowTrainingNetwork(nn.Module):
         )
 
         if future_time_feat is None or future_target_cdf is None:
-            time_feat = past_time_feat[
-                :, - self.context_length :, ...
-            ]
+            time_feat = past_time_feat[:, -self.context_length :, ...]
             sequence = past_target_cdf
             sequence_length = self.history_length
             subsequences_length = self.context_length
         else:
             time_feat = torch.cat(
-                (
-                    past_time_feat[:, - self.context_length :, ...],
-                    future_time_feat,
-                ),
+                (past_time_feat[:, -self.context_length :, ...], future_time_feat,),
                 dim=1,
             )
             sequence = torch.cat((past_target_cdf, future_target_cdf), dim=1)
@@ -257,16 +252,6 @@ class TransformerTempFlowTrainingNetwork(nn.Module):
         inputs = torch.cat((input_lags, repeated_index_embeddings, time_feat), dim=-1)
 
         return inputs, scale, index_embeddings
-        # outputs, states, lags_scaled, inputs = self.unroll(
-        #     lags=lags,
-        #     scale=scale,
-        #     time_feat=time_feat,
-        #     target_dimension_indicator=target_dimension_indicator,
-        #     unroll_length=subsequences_length,
-        #     begin_state=None,
-        # )
-
-        # return outputs, states, scale, lags_scaled, inputs
 
     def distr_args(self, decoder_output: torch.Tensor):
         """
@@ -350,15 +335,6 @@ class TransformerTempFlowTrainingNetwork(nn.Module):
 
         # unroll the decoder in "training mode", i.e. by providing future data
         # as well
-        # rnn_outputs, _, scale, _, _ = self.unroll_encoder(
-        #     past_time_feat=past_time_feat,
-        #     past_target_cdf=past_target_cdf,
-        #     past_observed_values=past_observed_values,
-        #     past_is_pad=past_is_pad,
-        #     future_time_feat=future_time_feat,
-        #     future_target_cdf=future_target_cdf,
-        #     target_dimension_indicator=target_dimension_indicator,
-        # )
         inputs, scale, _ = self.create_network_input(
             past_time_feat=past_time_feat,
             past_target_cdf=past_target_cdf,
@@ -381,14 +357,6 @@ class TransformerTempFlowTrainingNetwork(nn.Module):
             enc_out,
             tgt_mask=self.tgt_mask,
         )
-
-        # # put together target sequence
-        # # (batch_size, seq_len, target_dim)
-        # target = torch.cat(
-        #     (past_target_cdf[:, -self.context_length :, ...], future_target_cdf), dim=1,
-        # )
-
-        # # assert_shape(target, (-1, seq_len, self.target_dim))
 
         if self.scaling:
             self.flow.scale = scale
@@ -532,15 +500,6 @@ class TransformerTempFlowPredictionNetwork(TransformerTempFlowTrainingNetwork):
                 self.decoder_input(dec_input).permute(1, 0, 2), repeated_enc_out
             )
 
-            # rnn_outputs, repeated_states, _, _ = self.unroll(
-            #     begin_state=repeated_states,
-            #     lags=lags,
-            #     scale=repeated_scale,
-            #     time_feat=repeated_time_feat[:, k : k + 1, ...],
-            #     target_dimension_indicator=repeated_target_dimension_indicator,
-            #     unroll_length=1,
-            # )
-
             distr_args = self.distr_args(decoder_output=dec_output.permute(1, 0, 2))
 
             # (batch_size, 1, target_dim)
@@ -614,16 +573,6 @@ class TransformerTempFlowPredictionNetwork(TransformerTempFlowTrainingNetwork):
             future_target_cdf=None,
             target_dimension_indicator=target_dimension_indicator,
         )
-        # unroll the decoder in "prediction mode", i.e. with past data only
-        # _, begin_states, scale, _, _ = self.unroll_encoder(
-        #     past_time_feat=past_time_feat,
-        #     past_target_cdf=past_target_cdf,
-        #     past_observed_values=past_observed_values,
-        #     past_is_pad=past_is_pad,
-        #     future_time_feat=None,
-        #     future_target_cdf=None,
-        #     target_dimension_indicator=target_dimension_indicator,
-        # )
 
         enc_out = self.transformer.encoder(self.encoder_input(inputs).permute(1, 0, 2))
 
