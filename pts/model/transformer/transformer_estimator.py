@@ -30,8 +30,8 @@ from pts.transform import (
 )
 from pts.feature import (
     TimeFeature,
-    time_features_from_frequency_str,
-    get_lags_for_frequency,
+    fourier_time_features_from_frequency_str,
+    get_fourier_lags_for_frequency,
 )
 
 from .transformer_network import (
@@ -83,12 +83,12 @@ class TransformerEstimator(PTSEstimator):
         self.embedding_dimension = embedding_dimension
         self.num_parallel_samples = num_parallel_samples
         self.lags_seq = (
-            lags_seq if lags_seq is not None else get_lags_for_frequency(freq_str=freq)
+            lags_seq if lags_seq is not None else get_fourier_lags_for_frequency(freq_str=freq)
         )
         self.time_features = (
             time_features
             if time_features is not None
-            else time_features_from_frequency_str(self.freq)
+            else fourier_time_features_from_frequency_str(self.freq)
         )
         self.history_length = self.context_length + max(self.lags_seq)
         self.scaling = scaling
