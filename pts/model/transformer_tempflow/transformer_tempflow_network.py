@@ -252,13 +252,13 @@ class TransformerTempFlowTrainingNetwork(nn.Module):
         )
 
         if future_time_feat is None or future_target_cdf is None:
-            time_feat = past_time_feat[:, -self.context_length :, ...]
+            time_feat = past_time_feat[:, self.history_length - self.context_length :, ...]
             sequence = past_target_cdf
             sequence_length = self.history_length
             subsequences_length = self.context_length
         else:
             time_feat = torch.cat(
-                (past_time_feat[:, -self.context_length :, ...], future_time_feat),
+                (past_time_feat[:, self.history_length - self.context_length :, ...], future_time_feat),
                 dim=1,
             )
             sequence = torch.cat((past_target_cdf, future_target_cdf), dim=1)
