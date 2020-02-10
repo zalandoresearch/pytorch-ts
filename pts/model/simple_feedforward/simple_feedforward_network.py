@@ -38,7 +38,6 @@ class SimpleFeedForwardNetworkBase(nn.Module):
 
     def __init__(
         self,
-        input_size: int,
         num_hidden_dimensions: List[int],
         prediction_length: int,
         context_length: int,
@@ -48,7 +47,6 @@ class SimpleFeedForwardNetworkBase(nn.Module):
     ) -> None:
         super().__init__()
 
-        self.input_size = input_size
         self.num_hidden_dimensions = num_hidden_dimensions
         self.prediction_length = prediction_length
         self.context_length = context_length

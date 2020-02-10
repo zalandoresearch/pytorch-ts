@@ -77,7 +77,6 @@ class SimpleFeedForwardEstimator(PTSEstimator):
         self,
         freq: str,
         prediction_length: int,
-        input_size: int,
         trainer: Trainer = Trainer(),
         num_hidden_dimensions: Optional[List[int]] = None,
         context_length: Optional[int] = None,
@@ -96,7 +95,6 @@ class SimpleFeedForwardEstimator(PTSEstimator):
             if num_hidden_dimensions is not None
             else list([40, 40])
         )
-        self.input_size = input_size
         self.prediction_length = prediction_length
         self.context_length = (
             context_length if context_length is not None else prediction_length
@@ -136,7 +134,6 @@ class SimpleFeedForwardEstimator(PTSEstimator):
         self, device: torch.device
     ) -> SimpleFeedForwardTrainingNetwork:
         return SimpleFeedForwardTrainingNetwork(
-            input_size=self.input_size,
             num_hidden_dimensions=self.num_hidden_dimensions,
             prediction_length=self.prediction_length,
             context_length=self.context_length,
@@ -154,7 +151,6 @@ class SimpleFeedForwardEstimator(PTSEstimator):
         device: torch.device,
     ) -> PTSPredictor:
         prediction_network = SimpleFeedForwardPredictionNetwork(
-            input_size=self.input_size,
             num_hidden_dimensions=self.num_hidden_dimensions,
             prediction_length=self.prediction_length,
             context_length=self.context_length,
