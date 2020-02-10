@@ -58,12 +58,18 @@ class SimpleFeedForwardNetworkBase(nn.Module):
 
         modules = []
         dims = self.num_hidden_dimensions
-        # for i, dim in enumerate(dims[:-1]):
-        #     modules.append(nn.Linear(dims[i], dim))
-        #     modules.append(nn.ReLU())
-        #     if self.batch_normalization:
-        #         modules.append(nn.BatchNorm1d(dim))
-        modules.append(nn.Linear(100, dims[-1] * prediction_length))
+        for i, units in enumerate(dims[:-1]):
+            if i == 0:
+                input_size = context_length
+            else:
+                input_size = dims[i-1]
+            modules += [nn.Linear(input_size, units), nn.ReLU()]
+            if self.batch_normalization:
+                modules.append(nn.BatchNorm1d(units))
+        if len(dims) == 1:
+            modules.append(nn.Linear(context_length, dims[-1] * prediction_length))
+        else:
+            modules.append(nn.Linear(dims[-2], dims[-1] * prediction_length))
         modules.append(
             LambdaLayer(lambda o: torch.reshape(o, (-1, prediction_length, dims[-1])))
         )
