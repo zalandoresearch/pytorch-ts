@@ -158,7 +158,7 @@ class SimpleFeedForwardEstimator(PTSEstimator):
             batch_normalization=self.batch_normalization,
             mean_scaling=self.mean_scaling,
             num_parallel_samples=self.num_parallel_samples,
-        )
+        ).to(device)
 
         copy_parameters(trained_network, prediction_network)
 
