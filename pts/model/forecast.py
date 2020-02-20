@@ -55,7 +55,7 @@ class Forecast(ABC):
         """
         pass
 
-    def quantile_ts(self, q):
+    def quantile_ts(self, q: Union[float, str]) -> pd.Series:
         return pd.Series(data=self.quantile(q), index=self.index)
 
     @property
@@ -201,11 +201,11 @@ class SampleForecast(Forecast):
     def __init__(
         self,
         samples: Union[torch.Tensor, np.ndarray],
-        start_date,
-        freq,
+        start_date: pd.Timestamp,
+        freq: str,
         item_id: Optional[str] = None,
         info: Optional[Dict] = None,
-    ):
+    ) -> None:
         assert isinstance(
             samples, (np.ndarray, torch.Tensor)
         ), "samples should be either a numpy array or an torch tensor"
@@ -252,7 +252,7 @@ class SampleForecast(Forecast):
         return self.samples.shape[1]
 
     @property
-    def mean(self):
+    def mean(self) -> np.ndarray:
         """
         Forecast mean.
         """
@@ -262,18 +262,18 @@ class SampleForecast(Forecast):
             return np.mean(self.samples, axis=0)
 
     @property
-    def mean_ts(self):
+    def mean_ts(self) -> pd.Series:
         """
         Forecast mean, as a pandas.Series object.
         """
         return pd.Series(data=self.mean, index=self.index)
 
-    def quantile(self, q):
+    def quantile(self, q: Union[float, str]) -> np.ndarray:
         q = Quantile.parse(q).value
         sample_idx = int(np.round((self.num_samples - 1) * q))
         return self._sorted_samples[sample_idx, :]
 
-    def copy_dim(self, dim: int):
+    def copy_dim(self, dim: int) -> "SampleForecast":
         """
         Returns a new Forecast object with only the selected sub-dimension.
 
@@ -300,7 +300,7 @@ class SampleForecast(Forecast):
             info=self.info,
         )
 
-    def copy_aggregate(self, agg_fun: Callable):
+    def copy_aggregate(self, agg_fun: Callable) -> "SampleForecast":
         """
         Returns a new Forecast object with a time series aggregated over the
         dimension axis.
@@ -389,7 +389,7 @@ class QuantileForecast(Forecast):
         forecast_keys: List[str],
         item_id: Optional[str] = None,
         info: Optional[Dict] = None,
-    ):
+    ) -> None:
         self.forecast_array = forecast_arrays
         self.start_date = pd.Timestamp(start_date, freq=freq)
         self.freq = freq
@@ -421,7 +421,7 @@ class QuantileForecast(Forecast):
         return self._forecast_dict.get(q_str, self._nan_out)
 
     @property
-    def mean(self):
+    def mean(self) -> np.ndarray:
         """
         Forecast mean.
         """
@@ -485,11 +485,11 @@ class DistributionForecast(Forecast):
     def __init__(
         self,
         distribution: Distribution,
-        start_date,
-        freq,
+        start_date: pd.Timestamp,
+        freq: str,
         item_id: Optional[str] = None,
         info: Optional[Dict] = None,
-    ):
+    ) -> None:
         self.distribution = distribution
         self.shape = self.distribution.batch_shape + self.distribution.event_shape
         self.prediction_length = self.shape[0]
@@ -506,7 +506,7 @@ class DistributionForecast(Forecast):
         self._mean = None
 
     @property
-    def mean(self):
+    def mean(self) -> np.ndarray:
         """
         Forecast mean.
         """
@@ -517,13 +517,13 @@ class DistributionForecast(Forecast):
             return self._mean
 
     @property
-    def mean_ts(self):
+    def mean_ts(self) -> pd.Series:
         """
         Forecast mean, as a pandas.Series object.
         """
         return pd.Series(data=self.mean, index=self.index)
 
-    def quantile(self, level):
+    def quantile(self, level: Union[float, str]) -> np.ndarray:
         level = Quantile.parse(level).value
         q = self.distribution.icdf(torch.tensor([level])).cpu().numpy()
         return q
