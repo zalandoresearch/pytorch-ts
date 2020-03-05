@@ -304,6 +304,7 @@ class MADE(nn.Module):
 
 class Flow(nn.Module):
     def __init__(self, input_size):
+        super().__init__()
         self.__scale = None
         self.net = None
 
