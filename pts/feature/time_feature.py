@@ -172,7 +172,8 @@ def fourier_time_features_from_frequency_str(freq_str: str) -> List[TimeFeature]
 
     features = {
         "M": ["weekofyear"],
-        "W": ["daysinmonth", "weekofyear"],
+        "W-SUN": ["daysinmonth", "weekofyear"],
+        "W-MON": ["daysinmonth", "weekofyear"],
         "D": ["dayofweek"],
         "B": ["dayofweek", "dayofyear"],
         "H": ["hour", "dayofweek"],

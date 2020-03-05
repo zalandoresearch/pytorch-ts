@@ -92,3 +92,33 @@ def test_DistributionForecast():
     assert forecast.prediction_length == pred_length
     assert len(forecast.index) == pred_length
     assert forecast.index[0] == pd.Timestamp(START_DATE)
+
+
+@pytest.mark.parametrize(
+    "forecast, exp_index",
+    [
+        (
+            SampleForecast(
+                samples=np.random.normal(size=(100, 7, 3)),
+                start_date=pd.Timestamp("2020-01-01 00:00:00"),
+                freq="1D",
+            ),
+            pd.date_range(
+                start=pd.Timestamp("2020-01-01 00:00:00"), freq="1D", periods=7,
+            ),
+        ),
+        (
+            DistributionForecast(
+                Uniform(low=torch.zeros(size=(5, 2)), high=torch.ones(size=(5, 2)),),
+                start_date=pd.Timestamp("2020-01-01 00:00:00"),
+                freq="W",
+            ),
+            pd.date_range(
+                start=pd.Timestamp("2020-01-01 00:00:00"), freq="W", periods=5,
+            ),
+        ),
+    ],
+)
+def test_forecast_multivariate(forecast, exp_index):
+    assert forecast.prediction_length == len(exp_index)
+    assert np.all(forecast.index == exp_index)

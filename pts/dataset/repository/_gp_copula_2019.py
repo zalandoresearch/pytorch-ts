@@ -111,7 +111,7 @@ def generate_gp_copula_dataset(dataset_path: Path, dataset_name: str):
 
     download_dataset(dataset_path.parent, ds_info)
     save_metadata(dataset_path, ds_info)
-    save_dataset(dataset_path / "train" , ds_info)
+    save_dataset(dataset_path / "train", ds_info)
     save_dataset(dataset_path / "test", ds_info)
     clean_up_dataset(dataset_path, ds_info)
 
@@ -137,7 +137,9 @@ def save_metadata(dataset_path: Path, ds_info: GPCopulaDataset):
 
 
 def save_dataset(dataset_path: Path, ds_info: GPCopulaDataset):
-    dataset = list(FileDataset(dataset_path / "*.json", freq=ds_info.freq))
+    dataset = list(
+        FileDataset(dataset_path / "*.json", freq=ds_info.freq, is_train=False)
+    )
     shutil.rmtree(dataset_path)
     train_file = dataset_path / "data.json"
     save_to_file(

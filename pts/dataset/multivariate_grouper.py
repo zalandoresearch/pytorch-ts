@@ -21,6 +21,7 @@ from typing import Callable, Optional
 from .common import DataEntry, Dataset, FieldName, DateConstants
 from .list_dataset import ListDataset
 
+
 class MultivariateGrouper:
     """
     The MultivariateGrouper takes a univariate dataset and groups it into a
@@ -121,7 +122,9 @@ class MultivariateGrouper:
         grouped_data[FieldName.START] = self.first_timestamp
         grouped_data[FieldName.FEAT_STATIC_CAT] = [0]
 
-        return ListDataset([grouped_data], freq=self.frequency, one_dim_target=False)
+        return ListDataset(
+            [grouped_data], freq=self.frequency, one_dim_target=False, is_train=False
+        )
 
     def _prepare_test_data(self, dataset: Dataset) -> ListDataset:
         logging.info("group test time-series to datasets")
@@ -142,7 +145,9 @@ class MultivariateGrouper:
             grouped_data[FieldName.FEAT_STATIC_CAT] = [0]
             all_entries.append(grouped_data)
 
-        return ListDataset(all_entries, freq=self.frequency, one_dim_target=False)
+        return ListDataset(
+            all_entries, freq=self.frequency, one_dim_target=False, is_train=False
+        )
 
     def _align_data_entry(self, data: DataEntry) -> np.array:
         ts = self.to_ts(data)
@@ -204,4 +209,4 @@ class MultivariateGrouper:
                 freq=data[FieldName.START].freq,
             ),
         )
- 
+

@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import NamedTuple
 from typing import Iterator, List
 import glob
+import random
 
 import rapidjson as json
 
@@ -36,12 +37,17 @@ class JsonLinesFile:
         JSON Lines file.
     """
 
-    def __init__(self, path) -> None:
+    def __init__(self, path: Path, is_train: bool = True) -> None:
         self.path = path
+        self.is_train = is_train
 
     def __iter__(self):
         with open(self.path) as jsonl_file:
-            for line_number, raw in enumerate(jsonl_file, start=1):
+            lines = jsonl_file.read().splitlines()
+            if self.is_train:
+                random.shuffle(lines)
+
+            for line_number, raw in enumerate(lines, start=1):
                 span = Span(path=self.path, line=line_number)
                 try:
                     yield Line(json.loads(raw), span=span)
@@ -74,7 +80,10 @@ class FileDataset(Dataset):
         Whether to accept only univariate target time series.
     """
 
-    def __init__(self, path: Path, freq: str, one_dim_target: bool = True,) -> None:
+    def __init__(
+        self, path: Path, freq: str, one_dim_target: bool = True, is_train: bool = True
+    ) -> None:
+        self.is_train = is_train
         self.path = path
         self.process = ProcessDataEntry(freq, one_dim_target=one_dim_target)
         if not self.files():
@@ -82,7 +91,7 @@ class FileDataset(Dataset):
 
     def __iter__(self) -> Iterator[DataEntry]:
         for path in self.files():
-            for line in JsonLinesFile(path):
+            for line in JsonLinesFile(path, self.is_train):
                 data = self.process(line.content)
                 data["source"] = SourceContext(
                     source=line.span.path, row=line.span.line

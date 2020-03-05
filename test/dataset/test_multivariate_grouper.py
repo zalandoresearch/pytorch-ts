@@ -43,12 +43,7 @@ UNIVARIATE_TS = [
 
 MULTIVARIATE_TS = [
     [{"start": "2014-09-07", "target": [[1, 2, 3, 4], [5, 6, 7, 8]]}],
-    [
-        {
-            "start": "2014-09-07",
-            "target": [[1, 2, 3, 4, 2.5], [6.5, 5, 6, 7, 8]],
-        }
-    ],
+    [{"start": "2014-09-07", "target": [[1, 2, 3, 4, 2.5], [6.5, 5, 6, 7, 8]],}],
     [{"start": "2014-09-07", "target": [[1, 2, 3, 4], [0, 0, 0, 0]]}],
     [
         {
@@ -72,21 +67,17 @@ TRAIN_FILL_RULE = [np.mean, np.mean, np.mean, np.mean, lambda x: 0.0]
 def test_multivariate_grouper_train(
     univariate_ts, multivariate_ts, train_fill_rule
 ) -> None:
-    univariate_ds = ListDataset(univariate_ts, freq="1D")
+    univariate_ds = ListDataset(univariate_ts, freq="1D", is_train=False)
     multivariate_ds = ListDataset(
-        multivariate_ts, freq="1D", one_dim_target=False
+        multivariate_ts, freq="1D", one_dim_target=False, is_train=False
     )
 
     grouper = MultivariateGrouper(train_fill_rule=train_fill_rule)
     assert (
-        list(grouper(univariate_ds))[0]["target"]
-        == list(multivariate_ds)[0]["target"]
+        list(grouper(univariate_ds))[0]["target"] == list(multivariate_ds)[0]["target"]
     ).all()
 
-    assert (
-        list(grouper(univariate_ds))[0]["start"]
-        == list(multivariate_ds)[0]["start"]
-    )
+    assert list(grouper(univariate_ds))[0]["start"] == list(multivariate_ds)[0]["start"]
 
 
 UNIVARIATE_TS_TEST = [
@@ -121,30 +112,21 @@ MAX_TARGET_DIM = [2, 1]
 
 @pytest.mark.parametrize(
     "univariate_ts, multivariate_ts, test_fill_rule, max_target_dim",
-    zip(
-        UNIVARIATE_TS_TEST,
-        MULTIVARIATE_TS_TEST,
-        TEST_FILL_RULE,
-        MAX_TARGET_DIM,
-    ),
+    zip(UNIVARIATE_TS_TEST, MULTIVARIATE_TS_TEST, TEST_FILL_RULE, MAX_TARGET_DIM,),
 )
 def test_multivariate_grouper_test(
     univariate_ts, multivariate_ts, test_fill_rule, max_target_dim
 ) -> None:
-    univariate_ds = ListDataset(univariate_ts, freq="1D")
+    univariate_ds = ListDataset(univariate_ts, freq="1D", is_train=False)
     multivariate_ds = ListDataset(
-        multivariate_ts, freq="1D", one_dim_target=False
+        multivariate_ts, freq="1D", one_dim_target=False, is_train=False
     )
 
     grouper = MultivariateGrouper(
-        test_fill_rule=test_fill_rule,
-        num_test_dates=2,
-        max_target_dim=max_target_dim,
+        test_fill_rule=test_fill_rule, num_test_dates=2, max_target_dim=max_target_dim,
     )
 
-    for grouped_data, multivariate_data in zip(
-        grouper(univariate_ds), multivariate_ds
-    ):
+    for grouped_data, multivariate_data in zip(grouper(univariate_ds), multivariate_ds):
         assert (grouped_data["target"] == multivariate_data["target"]).all()
 
         assert grouped_data["start"] == multivariate_data["start"]

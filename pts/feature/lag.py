@@ -85,7 +85,7 @@ def get_lags_for_frequency(
 
     if offset.name == "M":
         lags = _make_lags_for_month(offset.n)
-    elif offset.name == "W-SUN":
+    elif offset.name == "W-SUN" or offset.name == "W-MON":
         lags = _make_lags_for_week(offset.n)
     elif offset.name == "D":
         lags = _make_lags_for_day(offset.n) + _make_lags_for_week(offset.n / 7.0)

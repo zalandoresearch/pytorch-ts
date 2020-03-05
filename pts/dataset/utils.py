@@ -60,7 +60,7 @@ def load_datasets(metadata, train, test) -> TrainDatasets:
     """
     meta = MetaData.parse_file(metadata)
     train_ds = FileDataset(train, meta.freq)
-    test_ds = FileDataset(test, meta.freq) if test else None
+    test_ds = FileDataset(test, meta.freq, is_train=False) if test else None
 
     return TrainDatasets(metadata=meta, train=train_ds, test=test_ds)
 

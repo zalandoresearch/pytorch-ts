@@ -4,7 +4,11 @@ from typing import Any, Dict, Iterable, NamedTuple, Sized, List, Optional, Itera
 import pandas as pd
 from pydantic import BaseModel
 
+# Dictionary used for data flowing through the transformations.
 DataEntry = Dict[str, Any]
+
+# A Dataset is an iterable of DataEntry.
+Dataset = Iterable[DataEntry]
 
 
 class SourceContext(NamedTuple):
@@ -37,16 +41,6 @@ class FieldName:
     FORECAST_START = "forecast_start"
 
 
-class Dataset(Sized, Iterable[DataEntry], ABC):
-    @abstractmethod
-    def __iter__(self) -> Iterator[DataEntry]:
-        pass
-
-    @abstractmethod
-    def __len__(self):
-        pass
-
-
 class CategoricalFeatureInfo(BaseModel):
     name: str
     cardinality: str
@@ -77,6 +71,7 @@ class TrainDatasets(NamedTuple):
     metadata: MetaData
     train: Dataset
     test: Optional[Dataset] = None
+
 
 class DateConstants:
     """

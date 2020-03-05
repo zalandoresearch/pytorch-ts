@@ -72,7 +72,7 @@ class ArtificialDataset:
         return TrainDatasets(
             metadata=self.metadata,
             train=ListDataset(self.train, self.freq),
-            test=ListDataset(self.test, self.freq),
+            test=ListDataset(self.test, self.freq, is_train=False),
         )
 
 
@@ -697,7 +697,7 @@ class RecipeDataset(ArtificialDataset):
         return TrainDatasets(
             metadata=metadata,
             train=ListDataset(train_data, metadata.freq),
-            test=ListDataset(test_data, metadata.freq),
+            test=ListDataset(test_data, metadata.freq, is_train=False),
         )
 
 
@@ -776,6 +776,7 @@ def constant_dataset() -> Tuple[DatasetInfo, Dataset, Dataset]:
             for i in range(10)
         ],
         freq=metadata.freq,
+        is_train=False
     )
 
     info = DatasetInfo(

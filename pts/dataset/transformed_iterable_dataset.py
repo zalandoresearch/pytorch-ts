@@ -1,5 +1,6 @@
 import itertools
 from typing import Dict, Iterable, Iterator, Optional
+import random
 
 import numpy as np
 import torch
@@ -8,10 +9,12 @@ from pts.transform import Transformation
 
 from .common import DataEntry, Dataset
 
+
 class TransformedIterableDataset(torch.utils.data.IterableDataset):
     def __init__(
         self, dataset: Dataset, is_train: bool, transform: Transformation
     ) -> None:
+        super().__init__()
         self.dataset = dataset
         self.transform = transform
         self.is_train = is_train
@@ -28,7 +31,7 @@ class TransformedIterableDataset(torch.utils.data.IterableDataset):
                 for x in itertools.chain([first], collection):
                     yield x
 
-    def __iter__(self) -> Dict[str, np.ndarray]:
+    def __iter__(self) -> Iterator[Dict[str, np.ndarray]]:
         if self._cur_iter is None:
             self._cur_iter = self.transform(
                 self._iterate_forever(self.dataset), is_train=self.is_train

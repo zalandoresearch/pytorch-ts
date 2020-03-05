@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Callable, Iterator, List
+from typing import Callable, Iterator, Iterable, List
 from functools import reduce
 
 
@@ -12,11 +12,11 @@ MAX_IDLE_TRANSFORMS = 100
 class Transformation(ABC):
     @abstractmethod
     def __call__(
-        self, data_it: Iterator[DataEntry], is_train: bool
+        self, data_it: Iterable[DataEntry], is_train: bool
     ) -> Iterator[DataEntry]:
         pass
 
-    def estimate(self, data_it: Iterator[DataEntry]) -> Iterator[DataEntry]:
+    def estimate(self, data_it: Iterable[DataEntry]) -> Iterator[DataEntry]:
         return data_it  # default is to pass through without estimation
 
     def chain(self, other: "Transformation") -> "Chain":
@@ -41,7 +41,7 @@ class Chain(Transformation):
                 self.transformations.append(transformation)
 
     def __call__(
-        self, data_it: Iterator[DataEntry], is_train: bool
+        self, data_it: Iterable[DataEntry], is_train: bool
     ) -> Iterator[DataEntry]:
         tmp = data_it
         for t in self.transformations:
@@ -54,7 +54,7 @@ class Chain(Transformation):
 
 class Identity(Transformation):
     def __call__(
-        self, data_it: Iterator[DataEntry], is_train: bool
+        self, data_it: Iterable[DataEntry], is_train: bool
     ) -> Iterator[DataEntry]:
         return data_it
 
@@ -64,7 +64,7 @@ class MapTransformation(Transformation):
     Base class for Transformations that returns exactly one result per input in the stream.
     """
 
-    def __call__(self, data_it: Iterator[DataEntry], is_train: bool) -> Iterator:
+    def __call__(self, data_it: Iterable[DataEntry], is_train: bool) -> Iterator:
         for data_entry in data_it:
             try:
                 yield self.map_transform(data_entry.copy(), is_train)
@@ -110,7 +110,7 @@ class FlatMapTransformation(Transformation):
     elements from the input stream.
     """
 
-    def __call__(self, data_it: Iterator[DataEntry], is_train: bool) -> Iterator:
+    def __call__(self, data_it: Iterable[DataEntry], is_train: bool) -> Iterator:
         num_idle_transforms = 0
         for data_entry in data_it:
             num_idle_transforms += 1
