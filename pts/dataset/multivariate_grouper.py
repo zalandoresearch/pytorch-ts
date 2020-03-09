@@ -144,7 +144,7 @@ class MultivariateGrouper:
             all_entries.append(grouped_data)
 
         return ListDataset(
-            all_entries, freq=self.frequency, one_dim_target=False, is_train=False
+            all_entries, freq=self.frequency, one_dim_target=False
         )
 
     def _align_data_entry(self, data: DataEntry) -> np.array:
