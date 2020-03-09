@@ -67,10 +67,8 @@ TRAIN_FILL_RULE = [np.mean, np.mean, np.mean, np.mean, lambda x: 0.0]
 def test_multivariate_grouper_train(
     univariate_ts, multivariate_ts, train_fill_rule
 ) -> None:
-    univariate_ds = ListDataset(univariate_ts, freq="1D", is_train=False)
-    multivariate_ds = ListDataset(
-        multivariate_ts, freq="1D", one_dim_target=False, is_train=False
-    )
+    univariate_ds = ListDataset(univariate_ts, freq="1D")
+    multivariate_ds = ListDataset(multivariate_ts, freq="1D", one_dim_target=False)
 
     grouper = MultivariateGrouper(train_fill_rule=train_fill_rule)
     assert (
@@ -117,10 +115,9 @@ MAX_TARGET_DIM = [2, 1]
 def test_multivariate_grouper_test(
     univariate_ts, multivariate_ts, test_fill_rule, max_target_dim
 ) -> None:
-    univariate_ds = ListDataset(univariate_ts, freq="1D", is_train=False)
+    univariate_ds = ListDataset(univariate_ts, freq="1D")
     multivariate_ds = ListDataset(
-        multivariate_ts, freq="1D", one_dim_target=False, is_train=False
-    )
+        multivariate_ts, freq="1D", one_dim_target=False)
 
     grouper = MultivariateGrouper(
         test_fill_rule=test_fill_rule, num_test_dates=2, max_target_dim=max_target_dim,

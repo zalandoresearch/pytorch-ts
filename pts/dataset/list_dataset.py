@@ -11,13 +11,12 @@ class ListDataset(Dataset):
         data_iter: Iterable[DataEntry],
         freq: str,
         one_dim_target: bool = True,
-        is_train: bool = True,
+        shuffle: bool = False,
     ) -> None:
         process = ProcessDataEntry(freq, one_dim_target)
         self.list_data = [process(data) for data in data_iter]
-        if is_train:
+        if shuffle:
             random.shuffle(self.list_data)
-
 
     def __iter__(self):
         source_name = "list_data"

@@ -37,14 +37,14 @@ class JsonLinesFile:
         JSON Lines file.
     """
 
-    def __init__(self, path: Path, is_train: bool = True) -> None:
+    def __init__(self, path: Path, shuffle: bool = True) -> None:
         self.path = path
-        self.is_train = is_train
+        self.shuffle = shuffle
 
     def __iter__(self):
         with open(self.path) as jsonl_file:
             lines = jsonl_file.read().splitlines()
-            if self.is_train:
+            if self.shuffle:
                 random.shuffle(lines)
 
             for line_number, raw in enumerate(lines, start=1):
@@ -81,9 +81,9 @@ class FileDataset(Dataset):
     """
 
     def __init__(
-        self, path: Path, freq: str, one_dim_target: bool = True, is_train: bool = True
+        self, path: Path, freq: str, one_dim_target: bool = True, shuffle: bool = False
     ) -> None:
-        self.is_train = is_train
+        self.shuffle = shuffle
         self.path = path
         self.process = ProcessDataEntry(freq, one_dim_target=one_dim_target)
         if not self.files():
@@ -91,7 +91,7 @@ class FileDataset(Dataset):
 
     def __iter__(self) -> Iterator[DataEntry]:
         for path in self.files():
-            for line in JsonLinesFile(path, self.is_train):
+            for line in JsonLinesFile(path, self.shuffle):
                 data = self.process(line.content)
                 data["source"] = SourceContext(
                     source=line.span.path, row=line.span.line
@@ -110,4 +110,8 @@ class FileDataset(Dataset):
         List[Path]
             List of the paths of all files composing the dataset.
         """
-        return glob.glob(str(self.path))
+        files = glob.glob(str(self.path))
+        if self.shuffle:
+            random.shuffle(files)
+        return files
+

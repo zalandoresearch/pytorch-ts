@@ -42,7 +42,7 @@ def to_pandas(instance: dict, freq: str = None) -> pd.Series:
     return pd.Series(target, index=index)
 
 
-def load_datasets(metadata, train, test) -> TrainDatasets:
+def load_datasets(metadata, train, test, shuffle: bool = False) -> TrainDatasets:
     """
     Loads a dataset given metadata, train and test path.
     Parameters
@@ -59,8 +59,8 @@ def load_datasets(metadata, train, test) -> TrainDatasets:
         An object collecting metadata, training data, test data.
     """
     meta = MetaData.parse_file(metadata)
-    train_ds = FileDataset(train, meta.freq)
-    test_ds = FileDataset(test, meta.freq, is_train=False) if test else None
+    train_ds = FileDataset(train, meta.freq, shuffle=shuffle)
+    test_ds = FileDataset(test, meta.freq) if test else None
 
     return TrainDatasets(metadata=meta, train=train_ds, test=test_ds)
 

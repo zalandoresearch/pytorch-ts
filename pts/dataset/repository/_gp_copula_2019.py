@@ -137,9 +137,7 @@ def save_metadata(dataset_path: Path, ds_info: GPCopulaDataset):
 
 
 def save_dataset(dataset_path: Path, ds_info: GPCopulaDataset):
-    dataset = list(
-        FileDataset(dataset_path / "*.json", freq=ds_info.freq, is_train=False)
-    )
+    dataset = list(FileDataset(dataset_path / "*.json", freq=ds_info.freq))
     shutil.rmtree(dataset_path)
     train_file = dataset_path / "data.json"
     save_to_file(

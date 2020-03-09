@@ -122,9 +122,7 @@ class MultivariateGrouper:
         grouped_data[FieldName.START] = self.first_timestamp
         grouped_data[FieldName.FEAT_STATIC_CAT] = [0]
 
-        return ListDataset(
-            [grouped_data], freq=self.frequency, one_dim_target=False, is_train=False
-        )
+        return ListDataset([grouped_data], freq=self.frequency, one_dim_target=False)
 
     def _prepare_test_data(self, dataset: Dataset) -> ListDataset:
         logging.info("group test time-series to datasets")
