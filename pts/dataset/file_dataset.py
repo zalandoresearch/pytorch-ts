@@ -78,6 +78,8 @@ class FileDataset(Dataset):
         Must be a valid Pandas frequency.
     one_dim_target
         Whether to accept only univariate target time series.
+    shuffle
+        Whether to shuffle the time series when making the batches
     """
 
     def __init__(
