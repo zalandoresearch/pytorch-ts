@@ -121,12 +121,9 @@ class NBEATSEstimator(PTSEstimator):
         else:
             return new_value
 
-    # here we do only a simple operation to convert the input data to a form
+    # Here we do only a simple operation to convert the input data to a form
     # that can be digested by our model by only splitting the target in two, a
     # conditioning part and a to-predict part, for each training example.
-    # for a more complex transformation example, see the `gluonts.model.deepar`
-    # transformation that includes time features, age feature, observed values
-    # indicator, ...
     def create_transformation(self) -> Transformation:
         return Chain(
             [

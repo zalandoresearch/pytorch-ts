@@ -210,7 +210,7 @@ class NBEATSNetwork(nn.Module):
         self.prediction_length = prediction_length
         self.context_length = context_length
 
-        self.net_blocks: nn.ModuleList[NBEATSBlock] = nn.ModuleList()
+        self.net_blocks = nn.ModuleList()
         for stack_id in range(num_stacks):
             for block_id in range(num_blocks[stack_id]):
                 if self.stack_types[stack_id] == "G":
