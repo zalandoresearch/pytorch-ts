@@ -25,7 +25,7 @@ from pts import Trainer
 from pts.dataset import to_pandas
 ```
 
-This simple example illustrates how to train a model from GluonTS on some data, and then use it to make predictions. As a first step, we need to collect some data: in this example we will use the volume of tweets mentioning the AMZN ticker symbol.
+This simple example illustrates how to train a model on some data, and then use it to make predictions. As a first step, we need to collect some data: in this example we will use the volume of tweets mentioning the AMZN ticker symbol.
 
 
 ```python
