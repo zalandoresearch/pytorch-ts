@@ -107,3 +107,18 @@ Note that the forecast is displayed in terms of a probability distribution: the 
 pip install -e .
 pytest test
 ```
+
+## Scientific Article
+
+We have implemented the following model using this framework:
+
+* [Multi-variate Probabilistic Time Series Forecasting via Conditioned Normalizing Flows](https://arxiv.org/abs/2002.06103)
+```tex
+@article{rasul2020tempflow,
+    Author = {Kashif Rasul, Abdul-Saboor Sheikh, Ingmar Schuster, Urs Bergmann, Roland Vollgraf}
+    Title = {Multi-variate Probabilistic Time Series Forecasting via Conditioned Normalizing Flows},
+    Year = {2020},
+    archivePrefix = {arXiv},
+    eprint = {2002.06103},
+}
+```
