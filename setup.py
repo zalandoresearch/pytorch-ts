@@ -1,14 +1,14 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='pytorch-ts',
+    name='pytorchts',
     version='0.1.0',
     description="PyTorch Probabilistic Time Series Modeling framework",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
 
     url='https://github.com/kashif/pytorch-ts',
-    license='Apache License Version 2.0',
+    license='MIT',
 
     packages=find_packages(exclude=["tests"]),
     include_package_data=True,
