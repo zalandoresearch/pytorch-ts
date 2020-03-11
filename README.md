@@ -12,8 +12,8 @@ $ pip3 install pytorchts
 
 ```python
 import matplotlib.pyplot as plt
-
 import pandas as pd
+import torch
 
 from pts.dataset import ListDataset
 from pts.model.deepar import DeepAREstimator
@@ -23,14 +23,12 @@ from pts.dataset import to_pandas
 
 This simple example illustrates how to train a model on some data, and then use it to make predictions. As a first step, we need to collect some data: in this example we will use the volume of tweets mentioning the AMZN ticker symbol.
 
-
 ```python
 url = "https://raw.githubusercontent.com/numenta/NAB/master/data/realTweets/Twitter_volume_AMZN.csv"
 df = pd.read_csv(url, header=0, index_col=0, parse_dates=True)
 ```
 
 The first 100 data points look like follows:
-
 
 ```python
 df[:100].plot(linewidth=2)
@@ -51,27 +49,30 @@ training_data = ListDataset(
 )
 ```
 
-A forecasting model is a *predictor* object. One way of obtaining predictors is by training a correspondent estimator. Instantiating an estimator requires specifying the frequency of the time series that it will handle, as well as the number of time steps to predict. In our example we're using 5 minutes data, so `req="5min"`, and we will train a model to predict the next hour, so `prediction_length=12`. The input to the model will be a vector of size `input_size=43` at each time point.  We also specify some minimal training options.
+A forecasting model is a *predictor* object. One way of obtaining predictors is by training a correspondent estimator. Instantiating an estimator requires specifying the frequency of the time series that it will handle, as well as the number of time steps to predict. In our example we're using 5 minutes data, so `req="5min"`, and we will train a model to predict the next hour, so `prediction_length=12`. The input to the model will be a vector of size `input_size=43` at each time point.  We also specify some minimal training options in particular training on a `device` for `epoch=10`.
 
 
 ```python
+device = device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 estimator = DeepAREstimator(freq="5min",
                             prediction_length=12,
                             input_size=43,
-                            trainer=Trainer(epochs=10))
+                            trainer=Trainer(epochs=10,
+                                            device=device))
 predictor = estimator.train(training_data=training_data)
 ```
 ```
-    47it [00:02, 16.03it/s, avg_epoch_loss=4.69, epoch=0]
-    48it [00:03, 15.55it/s, avg_epoch_loss=4.22, epoch=1]
-    47it [00:02, 16.87it/s, avg_epoch_loss=4.13, epoch=2]
-    49it [00:03, 15.99it/s, avg_epoch_loss=4.08, epoch=3]
-    49it [00:02, 17.39it/s, avg_epoch_loss=4.04, epoch=4]
-    49it [00:03, 16.07it/s, avg_epoch_loss=4.01, epoch=5]
-    48it [00:03, 15.63it/s, avg_epoch_loss=4.00, epoch=6]   
-    47it [00:02, 15.81it/s, avg_epoch_loss=3.99, epoch=7]
-    49it [00:03, 15.84it/s, avg_epoch_loss=3.98, epoch=8]
-    49it [00:02, 18.14it/s, avg_epoch_loss=3.97, epoch=9]
+    45it [00:01, 37.60it/s, avg_epoch_loss=4.64, epoch=0]
+    48it [00:01, 39.56it/s, avg_epoch_loss=4.2, epoch=1] 
+    45it [00:01, 38.11it/s, avg_epoch_loss=4.1, epoch=2] 
+    43it [00:01, 36.29it/s, avg_epoch_loss=4.05, epoch=3]
+    44it [00:01, 35.98it/s, avg_epoch_loss=4.03, epoch=4]
+    48it [00:01, 39.48it/s, avg_epoch_loss=4.01, epoch=5]
+    48it [00:01, 38.65it/s, avg_epoch_loss=4, epoch=6]   
+    46it [00:01, 37.12it/s, avg_epoch_loss=3.99, epoch=7]
+    48it [00:01, 38.86it/s, avg_epoch_loss=3.98, epoch=8]
+    48it [00:01, 39.49it/s, avg_epoch_loss=3.97, epoch=9]
 ```
 
 During training, useful information about the progress will be displayed. To get a full overview of the available options, please refer to the source code of `DeepAREstimator` (or other estimators) and `Trainer`.
