@@ -16,10 +16,6 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from pts.dataset import ListDataset
-```
-
-
-```python
 from pts.model.deepar import DeepAREstimator
 from pts import Trainer
 from pts.dataset import to_pandas
