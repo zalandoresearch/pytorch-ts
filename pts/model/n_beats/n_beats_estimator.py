@@ -11,6 +11,7 @@ from pts.transform import (
     InstanceSplitter,
     Transformation,
     Chain,
+    RemoveFields,
     ExpectedNumInstanceSampler,
 )
 from pts.dataset import FieldName
@@ -126,7 +127,10 @@ class NBEATSEstimator(PTSEstimator):
     # conditioning part and a to-predict part, for each training example.
     def create_transformation(self) -> Transformation:
         return Chain(
-            [
+            [   RemoveFields(
+                    field_names=[FieldName.FEAT_STATIC_REAL, 
+                        FieldName.FEAT_DYNAMIC_REAL, 
+                        FieldName.FEAT_DYNAMIC_CAT]),
                 InstanceSplitter(
                     target_field=FieldName.TARGET,
                     is_pad_field=FieldName.IS_PAD,
