@@ -53,7 +53,7 @@ A forecasting model is a *predictor* object. One way of obtaining predictors is 
 
 
 ```python
-device = device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 estimator = DeepAREstimator(freq="5min",
                             prediction_length=12,
