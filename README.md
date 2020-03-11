@@ -61,8 +61,8 @@ A forecasting model is a *predictor* object. One way of obtaining predictors is 
 ```python
 estimator = DeepAREstimator(freq="5min", prediction_length=12, input_size=43, trainer=Trainer(epochs=10))
 predictor = estimator.train(training_data=training_data)
-
-
+```
+```
     47it [00:02, 16.03it/s, avg_epoch_loss=4.69, epoch=0]
     48it [00:03, 15.55it/s, avg_epoch_loss=4.22, epoch=1]
     47it [00:02, 16.87it/s, avg_epoch_loss=4.13, epoch=2]
