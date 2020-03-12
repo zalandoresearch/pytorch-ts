@@ -2,8 +2,8 @@ from typing import List
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch.distributions import Distribution
+from pts.core.component import validated
 
 from pts.modules import MeanScaler, NOPScaler, DistributionOutput, LambdaLayer
 
@@ -35,7 +35,7 @@ class SimpleFeedForwardNetworkBase(nn.Module):
         Distribution to fit.
     kwargs
     """
-
+    @validated()
     def __init__(
         self,
         num_hidden_dimensions: List[int],
@@ -104,6 +104,7 @@ class SimpleFeedForwardTrainingNetwork(SimpleFeedForwardNetworkBase):
 
 
 class SimpleFeedForwardPredictionNetwork(SimpleFeedForwardNetworkBase):
+    @validated()
     def __init__(self, num_parallel_samples: int = 100, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.num_parallel_samples = num_parallel_samples

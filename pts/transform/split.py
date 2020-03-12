@@ -12,7 +12,7 @@
 # permissions and limitations under the License.
 
 from functools import lru_cache
-from typing import Iterator, List, Optional, Union
+from typing import Iterator, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -21,6 +21,7 @@ from pts.dataset import DataEntry, FieldName
 
 from .transform import FlatMapTransformation
 from .sampler import InstanceSampler, ContinuousTimePointSampler
+from pts.core.component import validated
 
 
 def shift_timestamp(ts: pd.Timestamp, offset: int) -> pd.Timestamp:
@@ -106,6 +107,7 @@ class InstanceSplitter(FlatMapTransformation):
         data is padded or not.
     """
 
+    @validated()
     def __init__(
         self,
         target_field: str,

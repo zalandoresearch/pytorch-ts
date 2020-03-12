@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Callable, Iterator, Iterable, List
 from functools import reduce
-
+from pts.core.component import validated
 
 from pts.dataset import DataEntry
 
@@ -30,7 +30,7 @@ class Chain(Transformation):
     """
     Chain multiple transformations together.
     """
-
+    @validated()
     def __init__(self, trans: List[Transformation]) -> None:
         self.transformations = []
         for transformation in trans:

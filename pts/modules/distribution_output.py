@@ -5,6 +5,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from pts.core.component import validated
 from torch.distributions import (
     Distribution,
     Beta,
@@ -74,7 +75,12 @@ class Output(ABC):
 
 
 class DistributionOutput(Output, ABC):
+
     distr_cls: type
+
+    @validated()
+    def __init__(self) -> None:
+        pass
 
     def distribution(
         self, distr_args, scale: Optional[torch.Tensor] = None
@@ -146,6 +152,7 @@ class StudentTOutput(DistributionOutput):
 
 
 class LowRankMultivariateNormalOutput(DistributionOutput):
+
     def __init__(
         self, dim: int, rank: int, sigma_init: float = 1.0, sigma_minimum: float = 1e-3,
     ) -> None:
@@ -179,6 +186,7 @@ class LowRankMultivariateNormalOutput(DistributionOutput):
 
 
 class IndependentNormalOutput(DistributionOutput):
+
     def __init__(self, dim: int) -> None:
         self.dim = dim
         self.args_dim = {"loc": self.dim, "scale": self.dim}
@@ -202,6 +210,7 @@ class IndependentNormalOutput(DistributionOutput):
 
 
 class MultivariateNormalOutput(DistributionOutput):
+
     def __init__(self, dim: int) -> None:
         self.args_dim = {"loc": dim, "scale_tril": dim * dim}
         self.dim = dim
@@ -239,8 +248,8 @@ class MultivariateNormalOutput(DistributionOutput):
         return (self.dim,)
 
 
-
 class FlowOutput(DistributionOutput):
+
     def __init__(self, flow, input_size, cond_size):
         self.args_dim = {"cond": cond_size}
         self.flow = flow
@@ -260,3 +269,4 @@ class FlowOutput(DistributionOutput):
     @property
     def event_shape(self) -> Tuple:
         return (self.dim,)
+

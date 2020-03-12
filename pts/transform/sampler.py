@@ -16,6 +16,7 @@ from abc import ABC, abstractmethod
 import numpy as np
 
 from pts.dataset.stat import ScaleHistogram
+from pts.core.component import validated
 
 
 class InstanceSampler(ABC):
@@ -92,7 +93,7 @@ class ExpectedNumInstanceSampler(InstanceSampler):
     num_instances
         number of training examples generated per time series on average
     """
-
+    @validated()
     def __init__(self, num_instances: float) -> None:
         self.num_instances = num_instances
         self.total_length = 0

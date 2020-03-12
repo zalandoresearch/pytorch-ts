@@ -8,6 +8,7 @@ import torch.nn as nn
 from pts.dataset import InferenceDataLoader, DataEntry, FieldName
 from pts.modules import DistributionOutput
 from .forecast import Forecast, DistributionForecast, QuantileForecast, SampleForecast
+from pts.core.component import validated
 
 OutputTransform = Callable[[DataEntry, np.ndarray], np.ndarray]
 
@@ -133,6 +134,11 @@ class QuantileForecastGenerator(ForecastGenerator):
 
 
 class SampleForecastGenerator(ForecastGenerator):
+
+    @validated()
+    def __init__(self):
+        pass
+
     def __call__(
         self,
         inference_data_loader: InferenceDataLoader,

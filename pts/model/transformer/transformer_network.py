@@ -5,7 +5,7 @@ import torch.nn as nn
 from torch.distributions import Distribution
 
 import numpy as np
-
+from pts.core.component import validated
 from pts.modules import DistributionOutput, MeanScaler, NOPScaler, FeatureEmbedder
 from pts.model import weighted_average
 
@@ -18,6 +18,8 @@ def prod(xs):
 
 
 class TransformerNetwork(nn.Module):
+
+    @validated()
     def __init__(
         self,
         input_size: int,

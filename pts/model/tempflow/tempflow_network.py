@@ -4,12 +4,14 @@ import torch
 import torch.nn as nn
 
 import numpy as np
-
+from pts.core.component import validated
 from pts.modules import RealNVP, MAF, FlowOutput, MeanScaler, NOPScaler
 from pts.model import weighted_average
 
 
 class TempFlowTrainingNetwork(nn.Module):
+
+    @validated()
     def __init__(
         self,
         input_size: int,
