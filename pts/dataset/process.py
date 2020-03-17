@@ -46,7 +46,7 @@ class ProcessTimeSeriesField:
         self.name = name
         self.is_required = is_required
         self.req_ndim = 1 if is_static else 2
-        self.dtype = np.int32 if is_cat else np.float32
+        self.dtype = np.int64 if is_cat else np.float32
 
     def __call__(self, data: DataEntry) -> DataEntry:
         value = data.get(self.name, None)
