@@ -19,8 +19,7 @@ from scipy.special import erf, erfinv
 import torch
 
 from pts.exception import assert_pts
-from pts.dataset import DataEntry
-
+from pts.core.component import validated
 from pts.dataset import DataEntry
 
 from .transform import (
@@ -42,7 +41,7 @@ class AsNumpyArray(SimpleTransformation):
     dtype
         numpy dtype to use.
     """
-
+    @validated()
     def __init__(
         self, field: str, expected_ndim: int, dtype: np.dtype = np.float32
     ) -> None:
@@ -86,7 +85,7 @@ class ExpandDimArray(SimpleTransformation):
     axis
         Axis to expand (see np.expand_dims for details)
     """
-
+    @validated()
     def __init__(self, field: str, axis: Optional[int] = None) -> None:
         self.field = field
         self.axis = axis
@@ -112,7 +111,7 @@ class VstackFeatures(SimpleTransformation):
     drop_inputs
         If set to true the input fields will be dropped.
     """
-
+    @validated()
     def __init__(
         self, output_field: str, input_fields: List[str], drop_inputs: bool = True,
     ) -> None:
@@ -148,7 +147,7 @@ class ConcatFeatures(SimpleTransformation):
     drop_inputs
         If set to true the input fields will be dropped.
     """
-
+    @validated()
     def __init__(
         self, output_field: str, input_fields: List[str], drop_inputs: bool = True,
     ) -> None:
@@ -180,7 +179,7 @@ class SwapAxes(SimpleTransformation):
     axes
         Axes to use
     """
-
+    @validated()
     def __init__(self, input_fields: List[str], axes: Tuple[int, int]) -> None:
         self.input_fields = input_fields
         self.axis1, self.axis2 = axes
@@ -215,7 +214,7 @@ class ListFeatures(SimpleTransformation):
     drop_inputs
         If true the input fields will be removed from the result.
     """
-
+    @validated()
     def __init__(
         self, output_field: str, input_fields: List[str], drop_inputs: bool = True,
     ) -> None:
@@ -238,7 +237,7 @@ class TargetDimIndicator(SimpleTransformation):
     """
     Label-encoding of the target dimensions.
     """
-
+    @validated()
     def __init__(self, field_name: str, target_field: str) -> None:
         self.field_name = field_name
         self.target_field = target_field
@@ -252,7 +251,7 @@ class SampleTargetDim(FlatMapTransformation):
     """
     Samples random dimensions from the target at training time.
     """
-
+    @validated()
     def __init__(
         self,
         field_name: str,
@@ -304,7 +303,7 @@ class CDFtoGaussianTransform(MapTransformation):
     Note that this transformation is currently intended for multivariate
     targets only.
     """
-
+    @validated()
     def __init__(
         self,
         target_dim: int,

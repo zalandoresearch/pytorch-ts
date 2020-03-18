@@ -4,11 +4,12 @@ from typing import List
 import numpy as np
 import pandas as pd
 from pandas.tseries.frequencies import to_offset
-
+from pts.core.component import validated
 from .utils import get_granularity
 
 
 class TimeFeature(ABC):
+    @validated()
     def __init__(self, normalized: bool = True):
         self.normalized = normalized
 

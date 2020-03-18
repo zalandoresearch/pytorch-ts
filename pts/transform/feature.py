@@ -18,7 +18,7 @@ import pandas as pd
 
 from pts.dataset import DataEntry
 from pts.feature import TimeFeature
-
+from pts.core.component import validated
 from .transform import SimpleTransformation, MapTransformation
 from .split import shift_timestamp
 
@@ -49,7 +49,7 @@ class AddObservedValuesIndicator(SimpleTransformation):
         they will not be replaced. In any case the indicator is included in the
         result.
     """
-
+    @validated()
     def __init__(
         self,
         target_field: str,
@@ -101,7 +101,7 @@ class AddConstFeature(MapTransformation):
     dtype
         Numpy dtype to use for resulting array.
     """
-
+    @validated()
     def __init__(
         self,
         output_field: str,
@@ -146,7 +146,7 @@ class AddTimeFeatures(MapTransformation):
     pred_length
         Prediction length
     """
-
+    @validated()
     def __init__(
         self,
         start_field: str,
@@ -226,7 +226,7 @@ class AddAgeFeature(MapTransformation):
         If set to true the age feature grows logarithmically otherwise linearly
         over time.
     """
-
+    @validated()
     def __init__(
         self,
         target_field: str,

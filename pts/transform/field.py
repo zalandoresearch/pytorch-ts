@@ -15,7 +15,7 @@ from collections import Counter
 from typing import Any, Dict, List
 
 from pts.dataset import DataEntry
-
+from pts.core.component import validated
 from .transform import SimpleTransformation, MapTransformation
 
 
@@ -28,7 +28,7 @@ class RenameFields(SimpleTransformation):
     mapping
         Name mapping `input_name -> output_name`
     """
-
+    @validated()
     def __init__(self, mapping: Dict[str, str]) -> None:
         self.mapping = mapping
         values_count = Counter(mapping.values())
@@ -46,6 +46,8 @@ class RenameFields(SimpleTransformation):
 
 
 class RemoveFields(SimpleTransformation):
+
+    @validated()
     def __init__(self, field_names: List[str]) -> None:
         self.field_names = field_names
 
@@ -67,7 +69,7 @@ class SetField(SimpleTransformation):
     value
         Value to be set
     """
-
+    @validated()
     def __init__(self, output_field: str, value: Any) -> None:
         self.output_field = output_field
         self.value = value
@@ -88,7 +90,7 @@ class SetFieldIfNotPresent(SimpleTransformation):
     value
         Value to be set
     """
-
+    @validated()
     def __init__(self, field: str, value: Any) -> None:
         self.output_field = field
         self.value = value
@@ -108,7 +110,7 @@ class SelectFields(MapTransformation):
     input_fields
         List of fields to keep.
     """
-
+    @validated()
     def __init__(self, input_fields: List[str]) -> None:
         self.input_fields = input_fields
 
