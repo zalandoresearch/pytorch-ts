@@ -2,6 +2,7 @@ from .distribution_output import (
     ArgProj,
     Output,
     DistributionOutput,
+    NormalOutput,
     StudentTOutput,
     BetaOutput,
     NegativeBinomialOutput,

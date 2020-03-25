@@ -8,6 +8,7 @@ import torch.nn.functional as F
 from pts.core.component import validated
 from torch.distributions import (
     Distribution,
+    Normal,
     Beta,
     NegativeBinomial,
     StudentT,
@@ -91,6 +92,20 @@ class DistributionOutput(Output, ABC):
         else:
             distr = self.distr_cls(*distr_args)
             return TransformedDistribution(distr, [AffineTransform(loc=0, scale=scale)])
+
+
+class NormalOutput(DistributionOutput):
+    args_dim: Dict[str, int] = {"loc": 1, "scale": 1}
+    distr_cls: type = Normal
+
+    @classmethod
+    def domain_map(self, loc, scale):
+        scale = F.softplus(scale)
+        return loc.squeeze(-1), scale.squeeze(-1)
+    
+    @property
+    def event_shape(self) -> Tuple:
+        return ()
 
 
 class BetaOutput(DistributionOutput):
