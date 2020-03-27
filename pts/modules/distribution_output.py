@@ -139,7 +139,7 @@ class NegativeBinomialOutput(DistributionOutput):
 
         if scale is not None:
             mu *= scale
-            alpha /= torch.sqrt(scale)
+            alpha /= scale
 
         n = 1.0 / alpha
         p = mu * alpha / (1.0 + mu * alpha)
