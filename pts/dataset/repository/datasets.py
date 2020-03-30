@@ -17,11 +17,10 @@ from functools import partial
 from pathlib import Path
 
 from pts.dataset import ConstantDataset, TrainDatasets, load_datasets
-
 from ._artificial import generate_artificial_dataset
+from ._gp_copula_2019 import generate_gp_copula_dataset
 from ._lstnet import generate_lstnet_dataset
 from ._m4 import generate_m4_dataset
-from ._gp_copula_2019 import generate_gp_copula_dataset
 from ._util import get_download_path
 
 m4_freq = "Hourly"

@@ -16,6 +16,7 @@ import numpy as np
 import pandas as pd
 import pytest
 import torch
+from torch.distributions import Uniform
 
 # First-party imports
 from pts.model import (
@@ -23,8 +24,6 @@ from pts.model import (
     SampleForecast,
     DistributionForecast,
 )
-
-from torch.distributions import Uniform
 
 QUANTILES = np.arange(1, 100) / 100
 SAMPLES = np.arange(101).reshape(101, 1) / 100

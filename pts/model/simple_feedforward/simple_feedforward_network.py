@@ -3,8 +3,8 @@ from typing import List
 import torch
 import torch.nn as nn
 from torch.distributions import Distribution
-from pts.core.component import validated
 
+from pts.core.component import validated
 from pts.modules import MeanScaler, NOPScaler, DistributionOutput, LambdaLayer
 
 

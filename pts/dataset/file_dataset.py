@@ -1,9 +1,9 @@
 import functools
-from pathlib import Path
-from typing import NamedTuple
-from typing import Iterator, List
 import glob
 import random
+from pathlib import Path
+from typing import Iterator, List
+from typing import NamedTuple
 
 import rapidjson as json
 

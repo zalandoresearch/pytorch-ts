@@ -5,10 +5,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from pts.core.component import validated
 from torch.distributions import (
     Distribution,
-    Normal,
     Beta,
     NegativeBinomial,
     StudentT,
@@ -20,8 +18,8 @@ from torch.distributions import (
     AffineTransform,
 )
 
+from pts.core.component import validated
 from .lambda_layer import LambdaLayer
-from .flows import RealNVP
 
 
 class ArgProj(nn.Module):

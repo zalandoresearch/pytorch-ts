@@ -1,10 +1,12 @@
-import inspect
-from pydantic import BaseConfig, BaseModel, create_model
-from typing import Any
-from collections import OrderedDict
-from pts.core.serde import dump_code
 import functools
+import inspect
+from collections import OrderedDict
+from typing import Any
+
 import torch
+from pydantic import BaseConfig, BaseModel, create_model
+
+from pts.core.serde import dump_code
 
 
 class BaseValidatedInitializerModel(BaseModel):

@@ -17,11 +17,10 @@ from typing import Iterator, List, Optional
 import numpy as np
 import pandas as pd
 
-from pts.dataset import DataEntry, FieldName
-
-from .transform import FlatMapTransformation
-from .sampler import InstanceSampler, ContinuousTimePointSampler
 from pts.core.component import validated
+from pts.dataset import DataEntry, FieldName
+from .sampler import InstanceSampler, ContinuousTimePointSampler
+from .transform import FlatMapTransformation
 
 
 def shift_timestamp(ts: pd.Timestamp, offset: int) -> pd.Timestamp:

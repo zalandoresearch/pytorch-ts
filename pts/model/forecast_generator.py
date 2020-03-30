@@ -5,10 +5,10 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+from pts.core.component import validated
 from pts.dataset import InferenceDataLoader, DataEntry, FieldName
 from pts.modules import DistributionOutput
 from .forecast import Forecast, DistributionForecast, QuantileForecast, SampleForecast
-from pts.core.component import validated
 
 OutputTransform = Callable[[DataEntry, np.ndarray], np.ndarray]
 

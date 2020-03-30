@@ -1,16 +1,18 @@
 from typing import List, Optional
 
 import numpy as np
-
 import torch
 import torch.nn as nn
 
 from pts import Trainer
+from pts.dataset import FieldName
 from pts.feature import (
     TimeFeature,
     get_lags_for_frequency,
     time_features_from_frequency_str,
 )
+from pts.model import PTSEstimator, Predictor, PTSPredictor, copy_parameters
+from pts.modules import DistributionOutput, StudentTOutput
 from pts.transform import (
     Transformation,
     Chain,
@@ -24,10 +26,6 @@ from pts.transform import (
     InstanceSplitter,
     ExpectedNumInstanceSampler,
 )
-from pts.dataset import FieldName
-from pts.model import PTSEstimator, Predictor, PTSPredictor, copy_parameters
-from pts.modules import DistributionOutput, StudentTOutput
-
 from .deepar_network import DeepARTrainingNetwork, DeepARPredictionNetwork
 
 

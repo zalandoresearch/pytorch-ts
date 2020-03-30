@@ -1,10 +1,8 @@
-import pytest
 from itertools import chain, combinations
 
-
+import pytest
 import torch
 import torch.nn as nn
-from torch.distributions import Uniform
 
 from pts.modules import FeatureEmbedder, FeatureAssembler
 

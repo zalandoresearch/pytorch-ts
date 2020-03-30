@@ -1,12 +1,10 @@
 import itertools
 from typing import Dict, Iterable, Iterator, Optional
-import random
 
 import numpy as np
 import torch
 
-from pts.transform import Transformation
-
+from pts.transform.transform import Transformation
 from .common import DataEntry, Dataset
 
 

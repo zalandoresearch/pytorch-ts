@@ -17,9 +17,10 @@ from typing import Tuple
 # Third-party imports
 import numpy as np
 import pandas as pd
-import torch
 import pytest
+import torch
 
+from pts import transform
 # First-party imports
 from pts.dataset import (
     ProcessStartField,
@@ -29,7 +30,6 @@ from pts.dataset import (
     calculate_dataset_statistics,
     ScaleHistogram,
 )
-from pts import transform
 from pts.feature import time_feature
 
 FREQ = "1D"

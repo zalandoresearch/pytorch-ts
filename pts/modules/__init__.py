@@ -11,7 +11,7 @@ from .distribution_output import (
     MultivariateNormalOutput,
     FlowOutput,
 )
-from .lambda_layer import LambdaLayer
 from .feature import FeatureEmbedder, FeatureAssembler
-from .scaler import MeanScaler, NOPScaler
 from .flows import RealNVP, MAF
+from .lambda_layer import LambdaLayer
+from .scaler import MeanScaler, NOPScaler

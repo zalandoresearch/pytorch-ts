@@ -1,13 +1,9 @@
-import pytest
-from typing import Iterable, List, Tuple
+from typing import List, Tuple
 
 import numpy as np
-
+import pytest
 import torch
 import torch.nn as nn
-from torch.nn.utils import clip_grad_norm_
-from torch.utils.data import TensorDataset, DataLoader
-from torch.optim import SGD
 from torch.distributions import (
     StudentT,
     Beta,
@@ -17,6 +13,9 @@ from torch.distributions import (
     Independent,
     Normal,
 )
+from torch.nn.utils import clip_grad_norm_
+from torch.optim import SGD
+from torch.utils.data import TensorDataset, DataLoader
 
 from pts.modules import (
     DistributionOutput,

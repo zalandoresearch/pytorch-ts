@@ -18,14 +18,13 @@ large files in GluonTS master.
 """
 import json
 import os
-import tarfile
 import shutil
+import tarfile
 from pathlib import Path
 from typing import NamedTuple, Optional
 from urllib import request
 
 from pts.dataset import FileDataset, FieldName
-
 from ._util import save_to_file, to_dict, metadata
 
 

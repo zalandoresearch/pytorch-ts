@@ -16,11 +16,11 @@ from typing import List
 import numpy as np
 import pandas as pd
 
+from pts.core.component import validated
 from pts.dataset import DataEntry
 from pts.feature import TimeFeature
-from pts.core.component import validated
-from .transform import SimpleTransformation, MapTransformation
 from .split import shift_timestamp
+from .transform import SimpleTransformation, MapTransformation
 
 
 def target_transformation_length(

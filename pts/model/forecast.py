@@ -2,10 +2,10 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Dict, List, Optional, Set, Union, Callable
 
-from pydantic import BaseModel, Field
 import numpy as np
 import pandas as pd
 import torch
+from pydantic import BaseModel, Field
 from torch.distributions import Distribution
 
 from .quantile import Quantile

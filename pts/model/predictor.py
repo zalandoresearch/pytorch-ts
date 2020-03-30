@@ -1,19 +1,20 @@
-import pts
 import json
+from abc import ABC, abstractmethod
+from pathlib import Path
+from pydoc import locate
+from typing import Iterator, Callable, Optional
+
 import numpy as np
 import torch
 import torch.nn as nn
-from abc import ABC, abstractmethod
-from pydoc import locate
-from typing import Iterator, Callable, Optional
+
+import pts
+from pts.core.serde import dump_json, fqname_for, load_json
 from pts.dataset import Dataset, DataEntry, InferenceDataLoader
 from pts.transform import Transformation
-from pathlib import Path
 from .forecast import Forecast
 from .forecast_generator import ForecastGenerator, SampleForecastGenerator
 from .utils import get_module_forward_input_names
-from pts.core.serde import dump_json, fqname_for, load_json
-
 
 OutputTransform = Callable[[DataEntry, np.ndarray], np.ndarray]
 

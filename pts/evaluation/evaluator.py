@@ -10,15 +10,14 @@ from typing import (
     Union,
     Callable,
 )
-from tqdm import tqdm
 
 # Third-party imports
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from pts.model import Quantile, Forecast
 from pts.feature import get_seasonality
+from pts.model import Quantile, Forecast
 
 
 class Evaluator:

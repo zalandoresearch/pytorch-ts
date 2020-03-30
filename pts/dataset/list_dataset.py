@@ -1,5 +1,5 @@
-from typing import Iterable
 import random
+from typing import Iterable
 
 from .common import DataEntry, Dataset, SourceContext
 from .process import ProcessDataEntry

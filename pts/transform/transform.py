@@ -1,10 +1,9 @@
 from abc import ABC, abstractmethod
-from typing import Callable, Iterator, Iterable, List
 from functools import reduce
+from typing import Callable, Iterator, Iterable, List
+
 from pts.core.component import validated
-
 from pts.dataset import DataEntry
-
 
 MAX_IDLE_TRANSFORMS = 100
 

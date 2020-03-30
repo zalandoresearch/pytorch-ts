@@ -1,5 +1,5 @@
-from typing import Optional
 import inspect
+from typing import Optional
 
 import torch
 import torch.nn as nn

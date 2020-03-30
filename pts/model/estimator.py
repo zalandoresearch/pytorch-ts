@@ -6,10 +6,9 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
+from pts import Trainer
 from pts.dataset import Dataset, TransformedIterableDataset
 from pts.transform import Transformation
-from pts import Trainer
-
 from .predictor import Predictor
 from .utils import get_module_forward_input_names
 

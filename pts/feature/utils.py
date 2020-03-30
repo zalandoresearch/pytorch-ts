@@ -1,6 +1,6 @@
 import re
-from typing import Tuple
 from functools import lru_cache
+from typing import Tuple
 
 
 def get_granularity(freq_str: str) -> Tuple[int, str]:

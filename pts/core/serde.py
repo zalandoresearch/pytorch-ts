@@ -1,13 +1,14 @@
-from typing import Any, Optional, cast, NamedTuple
-import json
-from functools import singledispatch
-from pts.core import fqname_for
-import numpy as np
-import textwrap
-from pydoc import locate
-import math
 import itertools
+import json
+import math
+import textwrap
+from functools import singledispatch
+from pydoc import locate
+from typing import Any, Optional, cast, NamedTuple
 
+import numpy as np
+
+from pts.core import fqname_for
 
 bad_type_msg = textwrap.dedent(
     """

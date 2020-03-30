@@ -14,8 +14,8 @@
 from collections import Counter
 from typing import Any, Dict, List
 
-from pts.dataset import DataEntry
 from pts.core.component import validated
+from pts.dataset import DataEntry
 from .transform import SimpleTransformation, MapTransformation
 
 

@@ -5,8 +5,8 @@ from typing import Any, List, NamedTuple, Optional, Set
 import numpy as np
 from tqdm import tqdm
 
-from .common import FieldName
 from pts.exception import assert_pts
+from .common import FieldName
 
 
 class ScaleHistogram:

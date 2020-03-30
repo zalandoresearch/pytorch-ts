@@ -1,5 +1,5 @@
-import os
 import math
+import os
 import random
 from typing import Callable, List, NamedTuple, Optional, Tuple, Union
 
@@ -17,7 +17,6 @@ from .common import (
     DataEntry,
 )
 from .list_dataset import ListDataset
-from .stat import DatasetStatistics, calculate_dataset_statistics
 from .recipe import (
     BinaryHolidays,
     BinaryMarkovChain,
@@ -31,6 +30,7 @@ from .recipe import (
     generate,
     take_as_list,
 )
+from .stat import DatasetStatistics, calculate_dataset_statistics
 
 
 class DatasetInfo(NamedTuple):

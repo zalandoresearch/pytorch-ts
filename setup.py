@@ -21,7 +21,6 @@ setup(
         'pandas',
         'scipy',
         'tqdm',
-        'ujson',
         'pydantic',
         'matplotlib',
         'python-rapidjson',

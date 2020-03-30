@@ -2,12 +2,10 @@ from typing import List, Optional, Tuple, Union
 
 import torch
 import torch.nn as nn
-from torch.distributions import Distribution
 
-import numpy as np
 from pts.core.component import validated
-from pts.modules import DistributionOutput, MeanScaler, NOPScaler
 from pts.model import weighted_average
+from pts.modules import DistributionOutput, MeanScaler, NOPScaler
 
 
 class DeepVARTrainingNetwork(nn.Module):

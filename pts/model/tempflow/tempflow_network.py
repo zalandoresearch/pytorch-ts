@@ -3,10 +3,9 @@ from typing import List, Optional, Tuple, Union
 import torch
 import torch.nn as nn
 
-import numpy as np
 from pts.core.component import validated
-from pts.modules import RealNVP, MAF, FlowOutput, MeanScaler, NOPScaler
 from pts.model import weighted_average
+from pts.modules import RealNVP, MAF, FlowOutput, MeanScaler, NOPScaler
 
 
 class TempFlowTrainingNetwork(nn.Module):

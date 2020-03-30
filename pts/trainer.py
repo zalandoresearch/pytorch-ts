@@ -1,12 +1,12 @@
 import time
-from typing import Any, List, NamedTuple, Optional, Union
+from typing import List, Optional
 
 import torch
 import torch.nn as nn
+from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
-from torch.utils.data import DataLoader
 
 class Trainer:
     def __init__(

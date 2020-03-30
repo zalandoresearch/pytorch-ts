@@ -13,9 +13,10 @@
 
 # Standard library imports
 import logging
+from typing import Callable, Optional
+
 import numpy as np
 import pandas as pd
-from typing import Callable, Optional
 
 # First-party imports
 from .common import DataEntry, Dataset, FieldName, DateConstants

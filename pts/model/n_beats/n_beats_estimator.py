@@ -1,11 +1,10 @@
 from typing import List, Optional
 
-import numpy as np
-
 import torch
 import torch.nn as nn
 
 from pts import Trainer
+from pts.dataset import FieldName
 from pts.model import PTSEstimator, Predictor, PTSPredictor, copy_parameters
 from pts.transform import (
     InstanceSplitter,
@@ -14,14 +13,12 @@ from pts.transform import (
     RemoveFields,
     ExpectedNumInstanceSampler,
 )
-from pts.dataset import FieldName
-
 from .n_beats_network import (
     NBEATSPredictionNetwork,
     NBEATSTrainingNetwork,
     VALID_N_BEATS_STACK_TYPES,
-    VALID_LOSS_FUNCTIONS,
 )
+
 
 class NBEATSEstimator(PTSEstimator):
     def __init__(

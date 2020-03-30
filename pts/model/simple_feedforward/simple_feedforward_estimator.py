@@ -4,16 +4,15 @@ import torch
 import torch.nn as nn
 
 from pts import Trainer
+from pts.dataset import FieldName
 from pts.model import PTSEstimator, PTSPredictor, copy_parameters
 from pts.modules import DistributionOutput, StudentTOutput
-from pts.dataset import FieldName
 from pts.transform import (
     Transformation,
     Chain,
     InstanceSplitter,
     ExpectedNumInstanceSampler,
 )
-
 from .simple_feedforward_network import (
     SimpleFeedForwardTrainingNetwork,
     SimpleFeedForwardPredictionNetwork,

@@ -1,13 +1,13 @@
 from typing import List, Optional, Tuple, Union
 
+import numpy as np
 import torch
 import torch.nn as nn
 from torch.distributions import Distribution
 
-import numpy as np
 from pts.core.component import validated
-from pts.modules import DistributionOutput, MeanScaler, NOPScaler, FeatureEmbedder
 from pts.model import weighted_average
+from pts.modules import DistributionOutput, MeanScaler, NOPScaler, FeatureEmbedder
 
 
 def prod(xs):

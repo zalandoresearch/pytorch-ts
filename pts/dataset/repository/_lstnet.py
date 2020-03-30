@@ -23,7 +23,6 @@ from typing import List, NamedTuple, Optional
 import pandas as pd
 
 from pts.dataset import frequency_add
-
 from ._util import save_to_file, to_dict, metadata
 
 

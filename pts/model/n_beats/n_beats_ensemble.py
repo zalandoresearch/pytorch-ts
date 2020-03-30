@@ -1,16 +1,15 @@
-from typing import List, Optional, Iterator
-from itertools import product
 import copy
 import logging
+from itertools import product
+from typing import List, Optional, Iterator
 
 import numpy as np
 
-from pts.model import Predictor, SampleForecast, Forecast, Estimator
 from pts import Trainer
 from pts.dataset import Dataset, FieldName
-
-from .n_beats_network import VALID_LOSS_FUNCTIONS
+from pts.model import Predictor, SampleForecast, Forecast, Estimator
 from .n_beats_estimator import NBEATSEstimator
+from .n_beats_network import VALID_LOSS_FUNCTIONS
 
 AGGREGATION_METHODS = "median", "mean", "none"
 

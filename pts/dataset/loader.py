@@ -3,13 +3,12 @@ from collections import defaultdict
 from typing import Any, Dict, Iterable, Iterator, List, Optional  # noqa: F401
 
 import numpy as np
-
 # Third-party imports
 import torch
 
+from pts.transform.transform import Transformation
 # First-party imports
 from .common import DataEntry, Dataset
-from pts.transform import Transformation
 
 DataBatch = Dict[str, Any]
 

@@ -15,12 +15,11 @@ from itertools import islice
 
 import torch
 
-from pts.modules import StudentTOutput
-from pts.dataset import constant_dataset, TrainDataLoader
-from pts.model.deepar import DeepAREstimator
-from pts.model import get_module_forward_input_names
 from pts import Trainer
-
+from pts.dataset import constant_dataset, TrainDataLoader
+from pts.model import get_module_forward_input_names
+from pts.model.deepar import DeepAREstimator
+from pts.modules import StudentTOutput
 
 ds_info, train_ds, test_ds = constant_dataset()
 freq = ds_info.metadata.freq

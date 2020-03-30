@@ -15,8 +15,8 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 
-from pts.dataset.stat import ScaleHistogram
 from pts.core.component import validated
+from pts.dataset.stat import ScaleHistogram
 
 
 class InstanceSampler(ABC):

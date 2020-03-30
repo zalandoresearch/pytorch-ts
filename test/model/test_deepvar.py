@@ -14,17 +14,17 @@
 # First-party imports
 import pytest
 
+from pts import Trainer
+from pts.dataset import TrainDatasets, MultivariateGrouper
 from pts.dataset.artificial import constant_dataset
+from pts.evaluation import MultivariateEvaluator
+from pts.evaluation import backtest_metrics
+from pts.model.deepvar import DeepVAREstimator
 from pts.modules import (
     IndependentNormalOutput,
     LowRankMultivariateNormalOutput,
     MultivariateNormalOutput,
 )
-from pts.evaluation import backtest_metrics
-from pts.model.deepvar import DeepVAREstimator
-from pts.dataset import TrainDatasets, MultivariateGrouper
-from pts import Trainer
-from pts.evaluation import MultivariateEvaluator
 
 
 def load_multivariate_constant_dataset():

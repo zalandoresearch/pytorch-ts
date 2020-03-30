@@ -14,14 +14,12 @@
 from typing import Iterator, List, Tuple, Optional
 
 import numpy as np
+import torch
 from scipy.special import erf, erfinv
 
-import torch
-
-from pts.exception import assert_pts
 from pts.core.component import validated
 from pts.dataset import DataEntry
-
+from pts.exception import assert_pts
 from .transform import (
     SimpleTransformation,
     MapTransformation,
