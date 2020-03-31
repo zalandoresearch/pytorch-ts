@@ -275,7 +275,7 @@ class MADE(nn.Module):
 
     @property
     def base_dist(self):
-        return D.Normal(self.base_dist_mean, self.base_dist_var)
+        return Normal(self.base_dist_mean, self.base_dist_var)
 
     def forward(self, x, y=None):
         # MAF eq 4 -- return mean and log std
