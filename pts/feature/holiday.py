@@ -31,8 +31,8 @@ from pandas.tseries.holiday import (
 from pandas.tseries.offsets import DateOffset, Day, Easter
 
 # This is 183 to cover half a year (in both directions), also for leap years
-# and half a week to cover holidays offset by a week
-MAX_WINDOW = 183 + 4
+# plus a week and a half to cover holidays offset by a week e.g. easter etc
+MAX_WINDOW = 192
 
 
 def distance_to_holiday(holiday):
