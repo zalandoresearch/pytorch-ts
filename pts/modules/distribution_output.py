@@ -136,7 +136,8 @@ class NegativeBinomialOutput(DistributionOutput):
         mu, alpha = distr_args
 
         if scale is not None:
-            alpha = alpha + (scale - 1) / (scale * mu)
+            # alpha += (scale - 1) / (scale * mu) # multiply 2nd moment by scale
+            alpha /= scale # multiply 2nd moment by sqrt(scale)
             mu *= scale
 
         n = 1.0 / alpha
