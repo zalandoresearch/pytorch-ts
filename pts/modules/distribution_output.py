@@ -100,7 +100,7 @@ class NormalOutput(DistributionOutput):
     def domain_map(self, loc, scale):
         scale = F.softplus(scale)
         return loc.squeeze(-1), scale.squeeze(-1)
-    
+
     @property
     def event_shape(self) -> Tuple:
         return ()
@@ -136,8 +136,8 @@ class NegativeBinomialOutput(DistributionOutput):
         mu, alpha = distr_args
 
         if scale is not None:
+            alpha = alpha + (scale - 1) / (scale * mu)
             mu *= scale
-            alpha /= scale
 
         n = 1.0 / alpha
         p = mu * alpha / (1.0 + mu * alpha)
@@ -165,7 +165,6 @@ class StudentTOutput(DistributionOutput):
 
 
 class LowRankMultivariateNormalOutput(DistributionOutput):
-
     def __init__(
         self, dim: int, rank: int, sigma_init: float = 1.0, sigma_minimum: float = 1e-3,
     ) -> None:
@@ -199,7 +198,6 @@ class LowRankMultivariateNormalOutput(DistributionOutput):
 
 
 class IndependentNormalOutput(DistributionOutput):
-
     def __init__(self, dim: int) -> None:
         self.dim = dim
         self.args_dim = {"loc": self.dim, "scale": self.dim}
@@ -223,7 +221,6 @@ class IndependentNormalOutput(DistributionOutput):
 
 
 class MultivariateNormalOutput(DistributionOutput):
-
     def __init__(self, dim: int) -> None:
         self.args_dim = {"loc": dim, "scale_tril": dim * dim}
         self.dim = dim
@@ -255,31 +252,28 @@ class MultivariateNormalOutput(DistributionOutput):
         else:
             return TransformedDistribution(distr, [AffineTransform(loc=0, scale=scale)])
 
-
     @property
     def event_shape(self) -> Tuple:
         return (self.dim,)
 
 
 class FlowOutput(DistributionOutput):
-
     def __init__(self, flow, input_size, cond_size):
         self.args_dim = {"cond": cond_size}
         self.flow = flow
         self.dim = input_size
-    
+
     def domain_map(self, cond):
         return (cond,)
 
     def distribution(self, distr_args, scale=None):
-        cond, = distr_args
+        (cond,) = distr_args
         if scale is not None:
             self.flow.scale = scale
         self.flow.cond = cond
-    
+
         return self.flow
 
     @property
     def event_shape(self) -> Tuple:
         return (self.dim,)
-
