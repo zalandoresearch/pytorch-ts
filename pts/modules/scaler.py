@@ -6,9 +6,10 @@ import torch.nn as nn
 
 
 class Scaler(ABC, nn.Module):
-    def __init__(self, keepdim: bool = False):
+    def __init__(self, keepdim: bool = False, time_first: bool = True):
         super().__init__()
         self.keepdim = keepdim
+        self.time_first = time_first
 
     @abstractmethod
     def compute_scale(
@@ -23,7 +24,8 @@ class Scaler(ABC, nn.Module):
         Parameters
         ----------
         data
-            tensor of shape (N, T, C) containing the data to be scaled
+            tensor of shape (N, T, C) if ``time_first == True`` or (N, C, T)
+            if ``time_first == False`` containing the data to be scaled
 
         observed_indicator
             observed_indicator: binary tensor with the same shape as
@@ -33,19 +35,23 @@ class Scaler(ABC, nn.Module):
         Returns
         -------
         Tensor
-            Tensor containing the "scaled" data, shape: (N, T, C).
+            Tensor containing the "scaled" data, shape: (N, T, C) or (N, C, T).
         Tensor
-            Tensor containing the scale, of shape (N, C) if ``keepdim == False``, and shape
-            (N, 1, C) if ``keepdim == True``.
+            Tensor containing the scale, of shape (N, C) if ``keepdim == False``, 
+            and shape (N, 1, C) or (N, C, 1) if ``keepdim == True``.
         """
 
         scale = self.compute_scale(data, observed_indicator)
 
+        if self.time_first:
+            dim = 1
+        else:
+            dim = 2
         if self.keepdim:
-            scale = scale.unsqueeze(1)
+            scale = scale.unsqueeze(dim=dim)
             return data / scale, scale
         else:
-            return data / scale.unsqueeze(1), scale
+            return data / scale.unsqueeze(dim=dim), scale
 
 
 class MeanScaler(Scaler):
@@ -69,9 +75,15 @@ class MeanScaler(Scaler):
     def compute_scale(
         self, data: torch.Tensor, observed_indicator: torch.Tensor
     ) -> torch.Tensor:
+
+        if self.time_first:
+            dim = 1
+        else:
+            dim = 2
+
         # these will have shape (N, C)
-        num_observed = observed_indicator.sum(dim=1)
-        sum_observed = (data.abs() * observed_indicator).sum(dim=1)
+        num_observed = observed_indicator.sum(dim=dim)
+        sum_observed = (data.abs() * observed_indicator).sum(dim=dim)
 
         # first compute a global scale per-dimension
         total_observed = num_observed.sum(dim=0)
@@ -105,4 +117,8 @@ class NOPScaler(Scaler):
     def compute_scale(
         self, data: torch.Tensor, observed_indicator: torch.Tensor
     ) -> torch.Tensor:
-        return torch.ones_like(data).mean(dim=1)
+        if self.time_first:
+            dim = 1
+        else:
+            dim = 2
+        return torch.ones_like(data).mean(dim=dim)

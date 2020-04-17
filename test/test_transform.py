@@ -363,7 +363,7 @@ def test_multi_dim_transformation(is_train):
                 past_length=train_length,
                 future_length=pred_length,
                 time_series_fields=["dynamic_feat", "observed_values"],
-                batch_first=False,
+                time_first=False,
             ),
         ]
     )

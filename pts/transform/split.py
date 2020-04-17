@@ -92,7 +92,7 @@ class InstanceSplitter(FlatMapTransformation):
         length of the target seen before making prediction
     future_length
         length of the target that must be predicted
-    batch_first
+    time_first
         whether to have time series output in (time, dimension) or in
         (dimension, time) layout
     time_series_fields
@@ -116,7 +116,7 @@ class InstanceSplitter(FlatMapTransformation):
         train_sampler: InstanceSampler,
         past_length: int,
         future_length: int,
-        batch_first: bool = True,
+        time_first: bool = True,
         time_series_fields: Optional[List[str]] = None,
         pick_incomplete: bool = True,
     ) -> None:
@@ -126,7 +126,7 @@ class InstanceSplitter(FlatMapTransformation):
         self.train_sampler = train_sampler
         self.past_length = past_length
         self.future_length = future_length
-        self.batch_first = batch_first
+        self.time_first = time_first
         self.ts_fields = time_series_fields if time_series_fields is not None else []
         self.target_field = target_field
         self.is_pad_field = is_pad_field
@@ -197,7 +197,7 @@ class InstanceSplitter(FlatMapTransformation):
             if pad_length > 0:
                 pad_indicator[:pad_length] = 1
 
-            if self.batch_first:
+            if self.time_first:
                 for ts_field in slice_cols:
                     d[self._past(ts_field)] = d[self._past(ts_field)].transpose()
                     d[self._future(ts_field)] = d[self._future(ts_field)].transpose()
@@ -245,7 +245,7 @@ class CanonicalInstanceSplitter(FlatMapTransformation):
         instance sampler that provides sampling indices given a time-series
     instance_length
         length of the target seen before making prediction
-    batch_first
+    time_first
         whether to have time series output in (time, dimension) or in
         (dimension, time) layout
     time_series_fields
@@ -270,7 +270,7 @@ class CanonicalInstanceSplitter(FlatMapTransformation):
         forecast_start_field: str,
         instance_sampler: InstanceSampler,
         instance_length: int,
-        batch_first: bool = True,
+        time_first: bool = True,
         time_series_fields: List[str] = [],
         allow_target_padding: bool = False,
         pad_value: float = 0.0,
@@ -279,7 +279,7 @@ class CanonicalInstanceSplitter(FlatMapTransformation):
     ) -> None:
         self.instance_sampler = instance_sampler
         self.instance_length = instance_length
-        self.batch_first = batch_first
+        self.time_first = time_first
         self.dynamic_feature_fields = time_series_fields
         self.target_field = target_field
         self.allow_target_padding = allow_target_padding
@@ -349,14 +349,14 @@ class CanonicalInstanceSplitter(FlatMapTransformation):
                 else:
                     past_ts = full_ts[..., (i - self.instance_length) : i]
 
-                past_ts = past_ts.transpose() if self.batch_first else past_ts
+                past_ts = past_ts.transpose() if self.time_first else past_ts
                 d[self._past(ts_field)] = past_ts
 
                 if self.use_prediction_features and not is_train:
                     if not ts_field == self.target_field:
                         future_ts = full_ts[..., i : i + self.prediction_length]
                         future_ts = (
-                            future_ts.transpose() if self.batch_first else future_ts
+                            future_ts.transpose() if self.time_first else future_ts
                         )
                         d[self._future(ts_field)] = future_ts
 
