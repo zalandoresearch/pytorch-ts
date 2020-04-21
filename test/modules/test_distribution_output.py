@@ -230,9 +230,9 @@ def test_lowrank_multivariate_normal() -> None:
     Sigma = cov_factor @ cov_factor.T + cov_diag
 
     distr = LowRankMultivariateNormal(
-        loc=torch.Tensor(loc),
-        cov_diag=torch.Tensor(np.diag(cov_diag)),
-        cov_factor=torch.Tensor(cov_factor),
+        loc=torch.Tensor(loc.copy()),
+        cov_diag=torch.Tensor(np.diag(cov_diag).copy()),
+        cov_factor=torch.Tensor(cov_factor.copy()),
     )
 
     assert np.allclose(
