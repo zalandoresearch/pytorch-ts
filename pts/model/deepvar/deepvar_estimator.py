@@ -14,6 +14,7 @@ from pts.modules import DistributionOutput, LowRankMultivariateNormalOutput
 from pts.transform import (
     Transformation,
     Chain,
+    RemoveFields,
     InstanceSplitter,
     ExpectedNumInstanceSampler,
     CDFtoGaussianTransform,
@@ -44,6 +45,8 @@ class DeepVAREstimator(PTSEstimator):
         cell_type: str = "LSTM",
         num_parallel_samples: int = 100,
         dropout_rate: float = 0.1,
+        use_feat_dynamic_real: bool = False,
+        use_feat_dynamic_cat: bool = False,
         cardinality: List[int] = [1],
         embedding_dimension: int = 5,
         distr_output: Optional[DistributionOutput] = None,
@@ -78,6 +81,8 @@ class DeepVAREstimator(PTSEstimator):
         self.cell_type = cell_type
         self.num_parallel_samples = num_parallel_samples
         self.dropout_rate = dropout_rate
+        self.use_feat_dynamic_real = use_feat_dynamic_real
+        self.use_feat_dynamic_cat = use_feat_dynamic_cat
         self.cardinality = cardinality
         self.embedding_dimension = embedding_dimension
         self.conditioning_length = conditioning_length
@@ -125,8 +130,15 @@ class DeepVAREstimator(PTSEstimator):
                     }
                 )
 
+        remove_field_names = []
+        if not self.use_feat_dynamic_real:
+            remove_field_names.append(FieldName.FEAT_DYNAMIC_REAL)
+        if not self.use_feat_dynamic_cat:
+            remove_field_names.append(FieldName.FEAT_DYNAMIC_CAT)
+
         return Chain(
-            [
+            [RemoveFields(field_names=remove_field_names)]
+            + [
                 AsNumpyArray(
                     field=FieldName.TARGET,
                     expected_ndim=1 + len(self.distr_output.event_shape),
@@ -150,7 +162,17 @@ class DeepVAREstimator(PTSEstimator):
                 ),
                 VstackFeatures(
                     output_field=FieldName.FEAT_TIME,
-                    input_fields=[FieldName.FEAT_TIME],
+                    input_fields=[FieldName.FEAT_TIME]
+                    + (
+                        [FieldName.FEAT_DYNAMIC_REAL]
+                        if self.use_feat_dynamic_real
+                        else []
+                    )
+                    + (
+                        [FieldName.FEAT_DYNAMIC_CAT]
+                        if self.use_feat_dynamic_cat
+                        else []
+                    ),
                 ),
                 SetFieldIfNotPresent(field=FieldName.FEAT_STATIC_CAT, value=[0]),
                 TargetDimIndicator(
