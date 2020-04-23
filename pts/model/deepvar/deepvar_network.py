@@ -5,7 +5,7 @@ import torch.nn as nn
 
 from pts.core.component import validated
 from pts.model import weighted_average
-from pts.modules import DistributionOutput, MeanScaler, NOPScaler
+from pts.modules import DistributionOutput, FeatureEmbedder, MeanScaler, NOPScaler
 
 
 class DeepVARTrainingNetwork(nn.Module):
@@ -23,7 +23,6 @@ class DeepVARTrainingNetwork(nn.Module):
         dropout_rate: float,
         lags_seq: List[int],
         target_dim: int,
-        conditioning_length: int,
         cardinality: List[int] = [1],
         embedding_dimension: int = 1,
         scaling: bool = True,
@@ -39,11 +38,9 @@ class DeepVARTrainingNetwork(nn.Module):
         self.dropout_rate = dropout_rate
         self.cardinality = cardinality
         self.embedding_dimension = embedding_dimension
-        self.num_cat = len(cardinality)
         self.target_dim = target_dim
         self.scaling = scaling
         self.target_dim_sample = target_dim
-        self.conditioning_length = conditioning_length
 
         assert len(set(lags_seq)) == len(lags_seq), "no duplicated lags allowed!"
         lags_seq.sort()
@@ -65,9 +62,8 @@ class DeepVARTrainingNetwork(nn.Module):
 
         self.proj_dist_args = distr_output.get_args_proj(num_cells)
 
-        self.embed_dim = 1
-        self.embed = nn.Embedding(
-            num_embeddings=self.target_dim, embedding_dim=self.embed_dim
+        self.embedder = FeatureEmbedder(
+            cardinalities=cardinality, embedding_dims=embedding_dimension
         )
 
         if scaling:
@@ -121,6 +117,8 @@ class DeepVARTrainingNetwork(nn.Module):
 
     def unroll(
         self,
+        feat_static_cat: torch.Tensor,
+        feat_static_real: torch.Tensor,
         lags: torch.Tensor,
         scale: torch.Tensor,
         time_feat: torch.Tensor,
@@ -144,20 +142,35 @@ class DeepVARTrainingNetwork(nn.Module):
         input_lags = lags_scaled.reshape(
             (-1, unroll_length, len(self.lags_seq) * self.target_dim)
         )
-
-        # (batch_size, target_dim, embed_dim)
-        index_embeddings = self.embed(target_dimension_indicator)
-        # assert_shape(index_embeddings, (-1, self.target_dim, self.embed_dim))
-
-        # (batch_size, seq_len, target_dim * embed_dim)
-        repeated_index_embeddings = (
-            index_embeddings.unsqueeze(1)
-            .expand(-1, unroll_length, -1, -1)
-            .reshape((-1, unroll_length, self.target_dim * self.embed_dim))
+        
+        # (batch_size, num_features)
+        embedded_cat = self.embedder(feat_static_cat)
+        static_feat = torch.cat(
+            (
+                embedded_cat,
+                feat_static_real,
+                scale.log() if len(self.target_shape) == 0 else scale.squeeze(1).log(),
+            ),
+            dim=1,
         )
 
+        repeated_static_feat = static_feat.unsqueeze(1).expand(
+            -1, unroll_length, -1
+        )
+        # # (batch_size, target_dim, embed_dim)
+        # index_embeddings = self.embed(target_dimension_indicator)
+        # # assert_shape(index_embeddings, (-1, self.target_dim, self.embed_dim))
+
+        # # (batch_size, seq_len, target_dim * embed_dim)
+        # repeated_index_embeddings = (
+        #     index_embeddings.unsqueeze(1)
+        #     .expand(-1, unroll_length, -1, -1)
+        #     .reshape((-1, unroll_length, self.target_dim * self.embed_dim))
+        # )
+
         # (batch_size, sub_seq_len, input_dim)
-        inputs = torch.cat((input_lags, repeated_index_embeddings, time_feat), dim=-1)
+        #inputs = torch.cat((input_lags, repeated_index_embeddings, time_feat), dim=-1)
+        inputs = torch.cat((input_lags, repeated_static_feat, time_feat), dim=-1)
 
         # unroll encoder
         outputs, state = self.rnn(inputs, begin_state)
@@ -174,6 +187,8 @@ class DeepVARTrainingNetwork(nn.Module):
 
     def unroll_encoder(
         self,
+        feat_static_cat: torch.Tensor,
+        feat_static_real: torch.Tensor,
         past_time_feat: torch.Tensor,
         past_target_cdf: torch.Tensor,
         past_observed_values: torch.Tensor,
@@ -271,6 +286,8 @@ class DeepVARTrainingNetwork(nn.Module):
         )
 
         outputs, states, lags_scaled, inputs = self.unroll(
+            feat_static_cat=feat_static_cat,
+            feat_static_real=feat_static_real,
             lags=lags,
             scale=scale,
             time_feat=time_feat,
@@ -310,6 +327,8 @@ class DeepVARTrainingNetwork(nn.Module):
 
     def forward(
         self,
+        feat_static_cat: torch.Tensor,
+        feat_static_real: torch.Tensor,
         target_dimension_indicator: torch.Tensor,
         past_time_feat: torch.Tensor,
         past_target_cdf: torch.Tensor,
@@ -364,7 +383,9 @@ class DeepVARTrainingNetwork(nn.Module):
 
         # unroll the decoder in "training mode", i.e. by providing future data
         # as well
-        rnn_outputs, _, scale, _, inputs = self.unroll_encoder(
+        rnn_outputs, _, scale, _, _ = self.unroll_encoder(
+            feat_static_cat=feat_static_cat,
+            feat_static_real=feat_static_real,
             past_time_feat=past_time_feat,
             past_target_cdf=past_target_cdf,
             past_observed_values=past_observed_values,
@@ -429,6 +450,8 @@ class DeepVARPredictionNetwork(DeepVARTrainingNetwork):
         self.shifted_lags = [l - 1 for l in self.lags_seq]
 
     def sampling_decoder(
+        feat_static_cat: torch.Tensor,
+        feat_static_real: torch.Tensor,
         self,
         past_target_cdf: torch.Tensor,
         target_dimension_indicator: torch.Tensor,
@@ -470,6 +493,8 @@ class DeepVARPredictionNetwork(DeepVARTrainingNetwork):
         repeated_time_feat = repeat(time_feat)
         repeated_scale = repeat(scale)
         repeated_target_dimension_indicator = repeat(target_dimension_indicator)
+        repeated_feat_static_cat = repeat(feat_static_cat)
+        repeated_feat_static_real= repeat(feat_static_real)
 
         # slight difference for GPVAR and DeepVAR, in GPVAR, its a list
         if self.cell_type == "LSTM":
@@ -490,6 +515,8 @@ class DeepVARPredictionNetwork(DeepVARTrainingNetwork):
             )
 
             rnn_outputs, repeated_states, _, _ = self.unroll(
+                feat_static_cat=repeated_feat_static_cat,
+                feat_static_real=repeated_feat_static_real,
                 begin_state=repeated_states,
                 lags=lags,
                 scale=repeated_scale,
@@ -521,6 +548,8 @@ class DeepVARPredictionNetwork(DeepVARTrainingNetwork):
 
     def forward(
         self,
+        feat_static_cat: torch.Tensor,
+        feat_static_real: torch.Tensor, 
         target_dimension_indicator: torch.Tensor,
         past_time_feat: torch.Tensor,
         past_target_cdf: torch.Tensor,
@@ -566,6 +595,8 @@ class DeepVARPredictionNetwork(DeepVARTrainingNetwork):
 
         # unroll the decoder in "prediction mode", i.e. with past data only
         _, state, scale, _, _ = self.unroll_encoder(
+            feat_static_cat=feat_static_cat,
+            feat_static_real=feat_static_real,
             past_time_feat=past_time_feat,
             past_target_cdf=past_target_cdf,
             past_observed_values=past_observed_values,
@@ -576,6 +607,8 @@ class DeepVARPredictionNetwork(DeepVARTrainingNetwork):
         )
 
         return self.sampling_decoder(
+            feat_static_cat=feat_static_cat,
+            feat_static_real=feat_static_real,
             past_target_cdf=past_target_cdf,
             target_dimension_indicator=target_dimension_indicator,
             time_feat=future_time_feat,
