@@ -117,12 +117,12 @@ class LSTNetBase(nn.Module):
         # CNN
         c = F.relu(self.cnn(scaled_past_target.unsqueeze(1)))
         c = self.dropout(c)
-        c = c.squeeze()  # [B, C, T]
+        c = c.squeeze(2)  # [B, C, T]
 
         # RNN
         r = c.permute(2, 0, 1)  # [F (T), B, C]
         _, r = self.rnn(r)  # [1, B, H]
-        r = self.dropout(r.squeeze()) # [B, H]
+        r = self.dropout(r.squeeze(0)) # [B, H]
 
         # Skip-RNN
         skip_c = c[..., -self.conv_skip * self.skip_size :]

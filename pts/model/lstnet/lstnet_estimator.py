@@ -136,6 +136,6 @@ class LSTNetEstimator(PTSEstimator):
             prediction_net=prediction_network,
             batch_size=self.trainer.batch_size,
             freq=self.freq,
-            prediction_length=self.prediction_length,
+            prediction_length=self.horizon or self.prediction_length,
             device=device,
         )
