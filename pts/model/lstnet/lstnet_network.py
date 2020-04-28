@@ -65,13 +65,12 @@ class LSTNetBase(nn.Module):
             "LSTM",
         ], "`skip_rnn_cell_type` must be either 'GRU' or 'LSTM' "
 
-        self.conv_out = context_length - kernel_size
-        self.conv_skip = self.conv_out // skip_size
+        conv_out = context_length - kernel_size
+        self.conv_skip = conv_out // skip_size
         assert self.conv_skip > 0, (
             "conv1d output size must be greater than or equal to `skip_size`\n"
             "Choose a smaller `kernel_size` or bigger `context_length`"
         )
-        self.skip_rnn_c_dim = channels * skip_size
 
         self.cnn = nn.Conv2d(
             in_channels=1, out_channels=channels, kernel_size=(num_series, kernel_size)
