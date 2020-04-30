@@ -8,9 +8,9 @@ PyTorchTS is a [PyTorch](https://github.com/pytorch/pytorch) Probabilistic Time 
 $ pip3 install pytorchts
 ```
 
-## Quick start (from Gluon-TS README)
+## Quick start
 
-Here we highlight the 
+Here we highlight the the API changes via the GluonTS README.
 
 ```python
 import matplotlib.pyplot as plt
