@@ -191,16 +191,15 @@ class StudentTMixtureOutput(DistributionOutput):
     def distribution(
         self, distr_args, scale: Optional[torch.Tensor] = None
     ) -> Distribution:
-        mix_logits, df, loc, scale = distr_args
+        mix_logits, df, loc, dist_scale = distr_args
 
-        comp_distr = StudentT(df, loc, scale)
+        distr = MixtureSameFamily(
+            Categorical(logits=mix_logits), StudentT(df, loc, dist_scale)
+        )
         if scale is None:
-            return MixtureSameFamily(Categorical(logits=mix_logits), comp_distr)
+            return distr
         else:
-            scaled_comp_distr = TransformedDistribution(
-                comp_distr, [AffineTransform(loc=0, scale=scale)]
-            )
-            return MixtureSameFamily(Categorical(logits=mix_logits), scaled_comp_distr)
+            return TransformedDistribution(distr, [AffineTransform(loc=0, scale=scale)])
 
     @property
     def event_shape(self) -> Tuple:
@@ -224,16 +223,13 @@ class NormalMixtureOutput(DistributionOutput):
     def distribution(
         self, distr_args, scale: Optional[torch.Tensor] = None
     ) -> Distribution:
-        mix_logits, loc, scale = distr_args
+        mix_logits, loc, dist_scale = distr_args
 
-        comp_distr = Normal(loc, scale)
+        distr = MixtureSameFamily(Categorical(logits=mix_logits), Normal(loc, dist_scale))
         if scale is None:
-            return MixtureSameFamily(Categorical(logits=mix_logits), comp_distr)
+            return distr
         else:
-            scaled_comp_distr = TransformedDistribution(
-                comp_distr, [AffineTransform(loc=0, scale=scale)]
-            )
-            return MixtureSameFamily(Categorical(logits=mix_logits), scaled_comp_distr)
+            return TransformedDistribution(distr, [AffineTransform(loc=0, scale=scale)])
 
     @property
     def event_shape(self) -> Tuple:
