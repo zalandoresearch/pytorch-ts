@@ -167,6 +167,45 @@ class StudentTOutput(DistributionOutput):
         return ()
 
 
+class StudentTMixtureOutput(DistributionOutput):
+    def __init__(self, components: int = 1) -> None:
+        self.components = components
+        self.args_dim = {
+            "mix_logits": components,
+            "df": components,
+            "loc": components,
+            "scale": components,
+        }
+
+    @classmethod
+    def domain_map(cls, mix_logits, df, loc, scale):
+        scale = F.softplus(scale)
+        df = 2.0 + F.softplus(df)
+        return (
+            mix_logits.squeeze(-1),
+            df.squeeze(-1),
+            loc.squeeze(-1),
+            scale.squeeze(-1),
+        )
+
+    def distribution(
+        self, distr_args, scale: Optional[torch.Tensor] = None
+    ) -> Distribution:
+        mix_logits, df, loc, scale = distr_args
+
+        distr = MixtureSameFamily(
+            Categorical(logits=mix_logits), StudentT(df, loc, scale)
+        )
+        if scale is None:
+            return distr
+        else:
+            return TransformedDistribution(distr, [AffineTransform(loc=0, scale=scale)])
+
+    @property
+    def event_shape(self) -> Tuple:
+        return ()
+
+
 class NormalMixtureOutput(DistributionOutput):
     def __init__(self, components: int = 1) -> None:
         self.components = components
