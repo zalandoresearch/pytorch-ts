@@ -67,6 +67,8 @@ def load_datasets(metadata, train, test, shuffle: bool = False) -> TrainDatasets
         Path to the training dataset files.
     test
         Path to the test dataset files.
+    shuffle
+        Return shuffled train data.
     Returns
     -------
     TrainDatasets

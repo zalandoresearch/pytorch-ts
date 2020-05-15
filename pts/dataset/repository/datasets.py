@@ -133,6 +133,7 @@ def materialize_dataset(
 
 def get_dataset(
     dataset_name: str, path: Path = default_dataset_path, regenerate: bool = False,
+    shuffle: bool = True,
 ) -> TrainDatasets:
     """
     Get a repository dataset.
@@ -151,6 +152,8 @@ def get_dataset(
         be downloaded again.
     path
         where the dataset should be saved
+    shuffle
+        wheather to shuffle the training time series
     Returns
     -------
         dataset obtained by either downloading or reloading from local file.
@@ -161,6 +164,7 @@ def get_dataset(
         metadata=dataset_path / "metadata.json",
         train=dataset_path / "train" / "*.json",
         test=dataset_path / "test" / "*.json",
+        shuffle=shuffle
     )
 
 
