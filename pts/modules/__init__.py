@@ -6,6 +6,8 @@ from .distribution_output import (
     StudentTOutput,
     BetaOutput,
     NegativeBinomialOutput,
+    NormalMixtureOutput,
+    StudentTMixtureOutput,
     IndependentNormalOutput,
     LowRankMultivariateNormalOutput,
     MultivariateNormalOutput,
