@@ -247,8 +247,7 @@ class LowRankMultivariateNormalOutput(DistributionOutput):
         self.sigma_minimum = sigma_minimum
         self.args_dim = {"loc": dim, "cov_factor": dim * rank, "cov_diag": dim}
 
-    @classmethod
-    def domain_map(cls, loc, cov_factor, cov_diag):
+    def domain_map(self, loc, cov_factor, cov_diag):
         diag_bias = (
             self.inv_softplus(self.sigma_init ** 2) if self.sigma_init > 0.0 else 0.0
         )
@@ -299,9 +298,8 @@ class MultivariateNormalOutput(DistributionOutput):
         self.args_dim = {"loc": dim, "scale_tril": dim * dim}
         self.dim = dim
 
-    @classmethod
-    def domain_map(cls, loc, scale):
-        d = len(loc)
+    def domain_map(self, loc, scale):
+        d = self.dim
         device = scale.device
 
         shape = scale.shape[:-1] + (d, d)
