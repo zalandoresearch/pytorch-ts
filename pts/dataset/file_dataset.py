@@ -53,33 +53,15 @@ class JsonLinesFile:
 
     def __init__(self, path: Path, shuffle: bool = True) -> None:
         self.path = path
-        if shuffle:
-            self.__iter_internal = self.__iter_shuffle__
-        else:
-            self.__iter_internal = self.__iter_inorder__
-    
-    def __iter__(self):
-        return self.__iter_internal()
+        self.shuffle = shuffle
 
-    def __iter_shuffle__(self):
+    def __iter__(self):
         with open(self.path) as jsonl_file:
             lines = jsonl_file.read().splitlines()
-
-            random.shuffle(lines)
+            if self.shuffle:
+                random.shuffle(lines)
 
             for line_number, raw in enumerate(lines, start=1):
-                span = Span(path=self.path, line=line_number)
-                try:
-                    yield Line(json.loads(raw), span=span)
-                except ValueError:
-                    raise Exception(f"Could not read json line {line_number}, {raw}")
-    
-    def __iter_inorder__(self):
-        with open(self.path) as jsonl_file:
-            line_number = 0
-            while True:
-                line_number += 1
-                raw = jsonl_file.readline()
                 span = Span(path=self.path, line=line_number)
                 try:
                     yield Line(json.loads(raw), span=span)
