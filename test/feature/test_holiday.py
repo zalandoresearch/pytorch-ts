@@ -39,6 +39,7 @@ from pts.feature.holiday import (
     CYBER_MONDAY,
     SpecialDateFeatureSet,
     squared_exponential_kernel,
+    CustomDateFeatureSet
 )
 
 test_dates = {
@@ -253,4 +254,21 @@ def test_special_date_feature_set_daily_squared_exponential():
     sfs = SpecialDateFeatureSet([CHRISTMAS_EVE, CHRISTMAS_DAY], squared_exp_kernel)
     computed_features = sfs(date_indices)
     np.testing.assert_almost_equal(computed_features, reference_features, decimal=6)
+    
+def test_custom_date_feature_set():
+
+    ref_dates = [pd.to_datetime('20191129', format='%Y%m%d'), pd.to_datetime('20200101', format='%Y%m%d')]
+
+    kernel = exponential_kernel(alpha=1.0)
+
+    cfs = CustomDateFeatureSet(ref_dates, kernel)
+    sfs = SpecialDateFeatureSet([BLACK_FRIDAY, NEW_YEARS_DAY], kernel)
+
+    date_indices = pd.date_range(
+            start=pd.to_datetime('20191101', format='%Y%m%d'),
+            end=pd.to_datetime('20200131', format='%Y%m%d'),
+            freq='D')
+
+    assert(np.sum(cfs(date_indices) - sfs(date_indices)) == 0), "Features don't match"
+        
 
