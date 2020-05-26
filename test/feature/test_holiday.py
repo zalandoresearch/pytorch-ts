@@ -15,6 +15,8 @@
 import numpy as np
 import pandas as pd
 import pytest
+from pandas.tseries.holiday import Holiday
+
 
 # First-party imports
 from pts.feature.holiday import (
@@ -272,3 +274,18 @@ def test_custom_date_feature_set():
     assert(np.sum(cfs(date_indices) - sfs(date_indices)) == 0), "Features don't match"
         
 
+def test_custom_holiday_feature_set():
+
+    custom_holidays = [Holiday("New Years Day", month=1, day=1), Holiday("Christmas Day", month=12, day=25)]
+
+    kernel = exponential_kernel(alpha=1.0)
+
+    cfs = CustomHolidayFeatureSet(custom_holidays, kernel)
+    sfs = SpecialDateFeatureSet([NEW_YEARS_DAY, CHRISTMAS_DAY], kernel)
+
+    date_indices = pd.date_range(
+            start=pd.to_datetime('20191101', format='%Y%m%d'),
+            end=pd.to_datetime('20200131', format='%Y%m%d'),
+            freq='D')
+
+    assert(np.sum(cfs(date_indices) - sfs(date_indices)) == 0), "Features don't match"

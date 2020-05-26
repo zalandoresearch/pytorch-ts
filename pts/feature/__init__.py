@@ -1,4 +1,4 @@
-from .holiday import SPECIAL_DATE_FEATURES, SpecialDateFeatureSet, CustomDateFeatureSet
+from .holiday import SPECIAL_DATE_FEATURES, SpecialDateFeatureSet, CustomDateFeatureSet, CustomHolidayFeatureSet
 from .lag import get_lags_for_frequency, get_fourier_lags_for_frequency
 from .time_feature import (
     DayOfMonth,
