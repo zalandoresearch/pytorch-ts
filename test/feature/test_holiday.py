@@ -41,7 +41,9 @@ from pts.feature.holiday import (
     CYBER_MONDAY,
     SpecialDateFeatureSet,
     squared_exponential_kernel,
-    CustomDateFeatureSet
+    exponential_kernel,
+    CustomDateFeatureSet,
+    CustomHolidayFeatureSet
 )
 
 test_dates = {
