@@ -138,6 +138,7 @@ class NegativeBinomialOutput(DistributionOutput):
         mu, alpha = distr_args
 
         if scale is not None:
+            scale = 1.0 + F.softplus(scale - 1.0) # make sure scale > 1
             mu *= scale
             # alpha = alpha + (scale - 1) / (scale * mu) # multiply 2nd moment by scale
             alpha += (scale - 1) / mu

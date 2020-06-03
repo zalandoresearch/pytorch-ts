@@ -42,9 +42,7 @@ def fcst_iterator(fcst, start_dates, freq):
     :return:
     """
     for i in range(len(fcst)):
-        yield SampleForecast(
-            samples=fcst[i], start_date=start_dates[i], freq=freq
-        )
+        yield SampleForecast(samples=fcst[i], start_date=start_dates[i], freq=freq)
 
 
 def iterator(it):
@@ -114,18 +112,14 @@ def calculate_metrics(
     start_dates = []  # start date of the prediction range
     for i in range(num_timeseries):
         ts_start_dates.append(pd.Timestamp(year=2018, month=1, day=1, hour=1))
-        index = pd.date_range(
-            ts_start_dates[i], periods=num_timestamps, freq=freq
-        )
+        index = pd.date_range(ts_start_dates[i], periods=num_timestamps, freq=freq)
 
         pd_timeseries.append(ts_datastructure(timeseries[i], index=index))
-        samples.append(
-            forecaster(pd_timeseries[i], prediction_length, num_samples)
-        )
+        samples.append(forecaster(pd_timeseries[i], prediction_length, num_samples))
         start_dates.append(
-            pd.date_range(
-                ts_start_dates[i], periods=num_timestamps, freq=freq
-            )[-prediction_length]
+            pd.date_range(ts_start_dates[i], periods=num_timestamps, freq=freq)[
+                -prediction_length
+            ]
         )
 
     # data iterator
@@ -292,9 +286,7 @@ RES_M4 = [
 def test_MASE_sMAPE_M4(timeseries, res):
     ts_datastructure = pd.Series
     evaluator = Evaluator(quantiles=QUANTILES)
-    agg_df, item_df = calculate_metrics(
-        timeseries, evaluator, ts_datastructure
-    )
+    agg_df, item_df = calculate_metrics(timeseries, evaluator, ts_datastructure)
 
     assert abs((agg_df["MASE"] - res["MASE"]) / res["MASE"]) < 0.001, (
         "Scores for the metric MASE do not match: "
@@ -308,14 +300,9 @@ def test_MASE_sMAPE_M4(timeseries, res):
         "Scores for the metric sMAPE do not match: \nexpected: {} "
         "\nobtained: {}".format(res["sMAPE"], agg_df["sMAPE"])
     )
-    assert (
-        sum(abs(item_df["seasonal_error"].values - res["seasonal_error"]))
-        < 0.001
-    ), (
+    assert sum(abs(item_df["seasonal_error"].values - res["seasonal_error"])) < 0.001, (
         "Scores for the metric seasonal_error do not match: \nexpected: {} "
-        "\nobtained: {}".format(
-            res["seasonal_error"], item_df["seasonal_error"].values
-        )
+        "\nobtained: {}".format(res["seasonal_error"], item_df["seasonal_error"].values)
     )
 
 
@@ -412,12 +399,34 @@ INPUT_TYPE = [iterable, iterable, iterator, iterator, iterable]
 
 
 @pytest.mark.parametrize(
-    "timeseries, res, has_nans, input_type",
-    zip(TIMESERIES, RES, HAS_NANS, INPUT_TYPE),
+    "timeseries, res, has_nans, input_type", zip(TIMESERIES, RES, HAS_NANS, INPUT_TYPE),
 )
 def test_metrics(timeseries, res, has_nans, input_type):
     ts_datastructure = pd.Series
-    evaluator = Evaluator(quantiles=QUANTILES)
+    evaluator = Evaluator(quantiles=QUANTILES, num_workers=0)
+    agg_metrics, item_metrics = calculate_metrics(
+        timeseries,
+        evaluator,
+        ts_datastructure,
+        has_nans=has_nans,
+        input_type=input_type,
+    )
+
+    for metric, score in agg_metrics.items():
+        if metric in res.keys():
+            assert abs(score - res[metric]) < 0.001, (
+                "Scores for the metric {} do not match: \nexpected: {} "
+                "\nobtained: {}".format(metric, res[metric], score)
+            )
+
+
+@pytest.mark.parametrize(
+    "timeseries, res, has_nans, input_type", zip(TIMESERIES, RES, HAS_NANS, INPUT_TYPE),
+)
+def test_metrics_mp(timeseries, res, has_nans, input_type):
+    ts_datastructure = pd.Series
+    # Default will be multiprocessing evaluator
+    evaluator = Evaluator(quantiles=QUANTILES, num_workers=4)
     agg_metrics, item_metrics = calculate_metrics(
         timeseries,
         evaluator,
@@ -573,14 +582,10 @@ INPUT_TYPE = [iterable, iterable, iterator, iterator, iterable, iterator]
         INPUT_TYPE,
     ),
 )
-def test_metrics_multivariate(
-    timeseries, res, has_nans, eval_dims, input_type
-):
+def test_metrics_multivariate(timeseries, res, has_nans, eval_dims, input_type):
     ts_datastructure = pd.DataFrame
     evaluator = MultivariateEvaluator(
-        quantiles=QUANTILES,
-        eval_dims=eval_dims,
-        target_agg_funcs={"sum": np.sum},
+        quantiles=QUANTILES, eval_dims=eval_dims, target_agg_funcs={"sum": np.sum},
     )
 
     agg_metrics, item_metrics = calculate_metrics(
