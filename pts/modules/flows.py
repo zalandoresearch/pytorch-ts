@@ -327,8 +327,6 @@ class Flow(nn.Module):
         if self.scale is not None:
             x /= self.scale
         u, log_abs_det_jacobian = self.net(x, cond)
-        if self.scale is not None:
-            log_abs_det_jacobian -= torch.log(torch.abs(self.scale))
         return u, log_abs_det_jacobian
 
     def inverse(self, u, cond):
