@@ -43,7 +43,7 @@ from pts.feature.holiday import (
     squared_exponential_kernel,
     exponential_kernel,
     CustomDateFeatureSet,
-    CustomHolidayFeatureSet
+    CustomHolidayFeatureSet,
 )
 
 test_dates = {
@@ -105,7 +105,13 @@ test_dates = {
     CHRISTMAS_EVE: ["2016-12-24", "2017-12-24", "2018-12-24", "2019-12-24"],
     CHRISTMAS_DAY: ["2016-12-25", "2017-12-25", "2018-12-25", "2019-12-25"],
     NEW_YEARS_EVE: ["2016-12-31", "2017-12-31", "2018-12-31", "2019-12-31"],
-    BLACK_FRIDAY: ["2016-11-25", "2017-11-24", "2018-11-23", "2019-11-29", "2020-11-27"],
+    BLACK_FRIDAY: [
+        "2016-11-25",
+        "2017-11-24",
+        "2018-11-23",
+        "2019-11-29",
+        "2020-11-27",
+    ],
     CYBER_MONDAY: ["2016-11-28", "2017-11-27", "2018-11-26", "2019-12-2", "2020-11-30"],
 }
 
@@ -258,10 +264,14 @@ def test_special_date_feature_set_daily_squared_exponential():
     sfs = SpecialDateFeatureSet([CHRISTMAS_EVE, CHRISTMAS_DAY], squared_exp_kernel)
     computed_features = sfs(date_indices)
     np.testing.assert_almost_equal(computed_features, reference_features, decimal=6)
-    
+
+
 def test_custom_date_feature_set():
 
-    ref_dates = [pd.to_datetime('20191129', format='%Y%m%d'), pd.to_datetime('20200101', format='%Y%m%d')]
+    ref_dates = [
+        pd.to_datetime("20191129", format="%Y%m%d"),
+        pd.to_datetime("20200101", format="%Y%m%d"),
+    ]
 
     kernel = exponential_kernel(alpha=1.0)
 
@@ -269,16 +279,22 @@ def test_custom_date_feature_set():
     sfs = SpecialDateFeatureSet([BLACK_FRIDAY, NEW_YEARS_DAY], kernel)
 
     date_indices = pd.date_range(
-            start=pd.to_datetime('20191101', format='%Y%m%d'),
-            end=pd.to_datetime('20200131', format='%Y%m%d'),
-            freq='D')
+        start=pd.to_datetime("20191101", format="%Y%m%d"),
+        end=pd.to_datetime("20200131", format="%Y%m%d"),
+        freq="D",
+    )
 
-    assert(np.sum(cfs(date_indices) - sfs(date_indices)) == 0), "Features don't match"
-        
+    assert (
+        np.sum(cfs(date_indices) - sfs(date_indices).sum(0, keepdims=True)) == 0
+    ), "Features don't match"
+
 
 def test_custom_holiday_feature_set():
 
-    custom_holidays = [Holiday("New Years Day", month=1, day=1), Holiday("Christmas Day", month=12, day=25)]
+    custom_holidays = [
+        Holiday("New Years Day", month=1, day=1),
+        Holiday("Christmas Day", month=12, day=25),
+    ]
 
     kernel = exponential_kernel(alpha=1.0)
 
@@ -286,8 +302,9 @@ def test_custom_holiday_feature_set():
     sfs = SpecialDateFeatureSet([NEW_YEARS_DAY, CHRISTMAS_DAY], kernel)
 
     date_indices = pd.date_range(
-            start=pd.to_datetime('20191101', format='%Y%m%d'),
-            end=pd.to_datetime('20200131', format='%Y%m%d'),
-            freq='D')
+        start=pd.to_datetime("20191101", format="%Y%m%d"),
+        end=pd.to_datetime("20200131", format="%Y%m%d"),
+        freq="D",
+    )
 
-    assert(np.sum(cfs(date_indices) - sfs(date_indices)) == 0), "Features don't match"
+    assert np.sum(cfs(date_indices) - sfs(date_indices)) == 0, "Features don't match"
