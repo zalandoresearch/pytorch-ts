@@ -14,6 +14,7 @@
 # First-party imports
 from pts.dataset import FieldName
 
+
 def test_dataset_fields():
     assert (
         "feat_static_cat" == FieldName.FEAT_STATIC_CAT

@@ -46,28 +46,13 @@ metadata = dataset.metadata
 estimator = DeepVAREstimator
 
 
-#@pytest.mark.timeout(10)
+# @pytest.mark.timeout(10)
 @pytest.mark.parametrize(
     "distr_output, num_batches_per_epoch, Estimator, use_marginal_transformation",
     [
-        (
-            NormalOutput(dim=target_dim),
-            10,
-            estimator,
-            True,
-        ),
-        (
-            NormalOutput(dim=target_dim),
-            10,
-            estimator,
-            False,
-        ),
-        (
-            LowRankMultivariateNormalOutput(dim=target_dim, rank=2),
-            10,
-            estimator,
-            True,
-        ),
+        (NormalOutput(dim=target_dim), 10, estimator, True,),
+        (NormalOutput(dim=target_dim), 10, estimator, False,),
+        (LowRankMultivariateNormalOutput(dim=target_dim, rank=2), 10, estimator, True,),
         (
             LowRankMultivariateNormalOutput(dim=target_dim, rank=2),
             10,
@@ -75,18 +60,8 @@ estimator = DeepVAREstimator
             False,
         ),
         (None, 10, estimator, True),
-        (
-            MultivariateNormalOutput(dim=target_dim),
-            10,
-            estimator,
-            True,
-        ),
-        (
-            MultivariateNormalOutput(dim=target_dim),
-            10,
-            estimator,
-            False,
-        ),
+        (MultivariateNormalOutput(dim=target_dim), 10, estimator, True,),
+        (MultivariateNormalOutput(dim=target_dim), 10, estimator, False,),
     ],
 )
 def test_deepvar(

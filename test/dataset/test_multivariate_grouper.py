@@ -12,6 +12,7 @@
 # permissions and limitations under the License.
 
 import numpy as np
+
 # Standard library imports
 import pytest
 
@@ -116,8 +117,7 @@ def test_multivariate_grouper_test(
     univariate_ts, multivariate_ts, test_fill_rule, max_target_dim
 ) -> None:
     univariate_ds = ListDataset(univariate_ts, freq="1D")
-    multivariate_ds = ListDataset(
-        multivariate_ts, freq="1D", one_dim_target=False)
+    multivariate_ds = ListDataset(multivariate_ts, freq="1D", one_dim_target=False)
 
     grouper = MultivariateGrouper(
         test_fill_rule=test_fill_rule, num_test_dates=2, max_target_dim=max_target_dim,
