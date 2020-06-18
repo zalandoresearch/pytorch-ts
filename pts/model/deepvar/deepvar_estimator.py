@@ -1,5 +1,6 @@
-from typing import List, Optional
+from typing import List, Optional, Callable
 
+import numpy as np
 import torch
 
 from pts import Trainer
@@ -24,8 +25,10 @@ from pts.transform import (
     ExpandDimArray,
     AddObservedValuesIndicator,
     AddTimeFeatures,
+    AddAgeFeature,
     VstackFeatures,
     SetFieldIfNotPresent,
+    SetField,
     TargetDimIndicator,
 )
 from .deepvar_network import DeepVARTrainingNetwork, DeepVARPredictionNetwork
@@ -46,9 +49,10 @@ class DeepVAREstimator(PTSEstimator):
         num_parallel_samples: int = 100,
         dropout_rate: float = 0.1,
         use_feat_dynamic_real: bool = False,
-        use_feat_dynamic_cat: bool = False,
-        cardinality: List[int] = [1],
-        embedding_dimension: int = 5,
+        use_feat_static_cat: bool = False,
+        use_feat_static_real: bool = False,
+        cardinality: Optional[List[int]] = None,
+        embedding_dimension: Optional[List[int]] = None,
         distr_output: Optional[DistributionOutput] = None,
         rank: Optional[int] = 5,
         scaling: bool = True,
@@ -82,9 +86,14 @@ class DeepVAREstimator(PTSEstimator):
         self.num_parallel_samples = num_parallel_samples
         self.dropout_rate = dropout_rate
         self.use_feat_dynamic_real = use_feat_dynamic_real
-        self.use_feat_dynamic_cat = use_feat_dynamic_cat
-        self.cardinality = cardinality
-        self.embedding_dimension = embedding_dimension
+        self.use_feat_static_cat = use_feat_static_cat
+        self.use_feat_static_real = use_feat_static_real
+        self.cardinality = cardinality if cardinality and use_feat_static_cat else [1]
+        self.embedding_dimension = (
+            embedding_dimension
+            if embedding_dimension is not None
+            else [min(50, (cat + 1) // 2) for cat in self.cardinality]
+        )
         self.conditioning_length = conditioning_length
         self.use_marginal_transformation = use_marginal_transformation
 
@@ -130,14 +139,24 @@ class DeepVAREstimator(PTSEstimator):
                     }
                 )
 
-        remove_field_names = []
+        remove_field_names = [FieldName.FEAT_DYNAMIC_CAT]
         if not self.use_feat_dynamic_real:
             remove_field_names.append(FieldName.FEAT_DYNAMIC_REAL)
-        if not self.use_feat_dynamic_cat:
-            remove_field_names.append(FieldName.FEAT_DYNAMIC_CAT)
+        if not self.use_feat_static_real:
+            remove_field_names.append(FieldName.FEAT_STATIC_REAL)
 
         return Chain(
             [RemoveFields(field_names=remove_field_names)]
+            + (
+                [SetField(output_field=FieldName.FEAT_STATIC_CAT, value=[0])]
+                if not self.use_feat_static_cat
+                else []
+            )
+            + (
+                [SetField(output_field=FieldName.FEAT_STATIC_REAL, value=[0.0])]
+                if not self.use_feat_static_real
+                else []
+            )
             + [
                 AsNumpyArray(
                     field=FieldName.TARGET,
@@ -160,26 +179,28 @@ class DeepVAREstimator(PTSEstimator):
                     time_features=self.time_features,
                     pred_length=self.prediction_length,
                 ),
+                AddAgeFeature(
+                    target_field=FieldName.TARGET,
+                    output_field=FieldName.FEAT_AGE,
+                    pred_length=self.prediction_length,
+                    log_scale=True,
+                    dtype=self.dtype,
+                ),
                 VstackFeatures(
                     output_field=FieldName.FEAT_TIME,
-                    input_fields=[FieldName.FEAT_TIME]
+                    input_fields=[FieldName.FEAT_TIME, FieldName.FEAT_AGE]
                     + (
                         [FieldName.FEAT_DYNAMIC_REAL]
                         if self.use_feat_dynamic_real
                         else []
-                    )
-                    + (
-                        [FieldName.FEAT_DYNAMIC_CAT]
-                        if self.use_feat_dynamic_cat
-                        else []
                     ),
                 ),
-                SetFieldIfNotPresent(field=FieldName.FEAT_STATIC_CAT, value=[0]),
                 TargetDimIndicator(
                     field_name="target_dimension_indicator",
                     target_field=FieldName.TARGET,
                 ),
-                AsNumpyArray(field=FieldName.FEAT_STATIC_CAT, expected_ndim=1),
+                AsNumpyArray(field=FieldName.FEAT_STATIC_CAT, expected_ndim=1, dtype=np.long),
+                AsNumpyArray(field=FieldName.FEAT_STATIC_REAL, expected_ndim=1),
                 InstanceSplitter(
                     target_field=FieldName.TARGET,
                     is_pad_field=FieldName.IS_PAD,
@@ -214,7 +235,6 @@ class DeepVAREstimator(PTSEstimator):
             embedding_dimension=self.embedding_dimension,
             lags_seq=self.lags_seq,
             scaling=self.scaling,
-            conditioning_length=self.conditioning_length,
         ).to(device)
 
     def create_predictor(
@@ -239,7 +259,6 @@ class DeepVAREstimator(PTSEstimator):
             embedding_dimension=self.embedding_dimension,
             lags_seq=self.lags_seq,
             scaling=self.scaling,
-            conditioning_length=self.conditioning_length,
         ).to(device)
 
         copy_parameters(trained_network, prediction_network)

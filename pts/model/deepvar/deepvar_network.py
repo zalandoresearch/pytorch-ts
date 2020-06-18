@@ -5,7 +5,7 @@ import torch.nn as nn
 
 from pts.core.component import validated
 from pts.model import weighted_average
-from pts.modules import DistributionOutput, MeanScaler, NOPScaler
+from pts.modules import DistributionOutput, MeanScaler, NOPScaler, FeatureEmbedder
 
 
 class DeepVARTrainingNetwork(nn.Module):
@@ -23,9 +23,8 @@ class DeepVARTrainingNetwork(nn.Module):
         dropout_rate: float,
         lags_seq: List[int],
         target_dim: int,
-        conditioning_length: int,
-        cardinality: List[int] = [1],
-        embedding_dimension: int = 1,
+        cardinality: List[int],
+        embedding_dimension: List[int],
         scaling: bool = True,
         **kwargs,
     ) -> None:
@@ -43,7 +42,6 @@ class DeepVARTrainingNetwork(nn.Module):
         self.target_dim = target_dim
         self.scaling = scaling
         self.target_dim_sample = target_dim
-        self.conditioning_length = conditioning_length
 
         assert len(set(lags_seq)) == len(lags_seq), "no duplicated lags allowed!"
         lags_seq.sort()
@@ -65,9 +63,8 @@ class DeepVARTrainingNetwork(nn.Module):
 
         self.proj_dist_args = distr_output.get_args_proj(num_cells)
 
-        self.embed_dim = 1
-        self.embed = nn.Embedding(
-            num_embeddings=self.target_dim, embedding_dim=self.embed_dim
+        self.embed = FeatureEmbedder(
+            cardinalities=cardinality, embedding_dims=embedding_dimension
         )
 
         if scaling:
@@ -124,7 +121,8 @@ class DeepVARTrainingNetwork(nn.Module):
         lags: torch.Tensor,
         scale: torch.Tensor,
         time_feat: torch.Tensor,
-        target_dimension_indicator: torch.Tensor,
+        feat_static_cat: torch.Tensor,
+        feat_static_real: torch.Tensor,
         unroll_length: int,
         begin_state: Optional[Union[List[torch.Tensor], torch.Tensor]] = None,
     ) -> Tuple[
@@ -146,18 +144,16 @@ class DeepVARTrainingNetwork(nn.Module):
         )
 
         # (batch_size, target_dim, embed_dim)
-        index_embeddings = self.embed(target_dimension_indicator)
+        embedded_cat = self.embed(feat_static_cat)
         # assert_shape(index_embeddings, (-1, self.target_dim, self.embed_dim))
 
-        # (batch_size, seq_len, target_dim * embed_dim)
-        repeated_index_embeddings = (
-            index_embeddings.unsqueeze(1)
-            .expand(-1, unroll_length, -1, -1)
-            .reshape((-1, unroll_length, self.target_dim * self.embed_dim))
-        )
+        static_feat = torch.cat((embedded_cat, feat_static_real, scale.log()), dim=1)
+
+        # (batch_size, seq_len, embed_dim)
+        repeated_static_feat = static_feat.unsqueeze(1).expand(-1, unroll_length, -1)
 
         # (batch_size, sub_seq_len, input_dim)
-        inputs = torch.cat((input_lags, repeated_index_embeddings, time_feat), dim=-1)
+        inputs = torch.cat((input_lags, repeated_static_feat, time_feat), dim=-1)
 
         # unroll encoder
         outputs, state = self.rnn(inputs, begin_state)
@@ -174,13 +170,14 @@ class DeepVARTrainingNetwork(nn.Module):
 
     def unroll_encoder(
         self,
+        feat_static_real: torch.Tensor,
         past_time_feat: torch.Tensor,
         past_target_cdf: torch.Tensor,
         past_observed_values: torch.Tensor,
         past_is_pad: torch.Tensor,
         future_time_feat: Optional[torch.Tensor],
         future_target_cdf: Optional[torch.Tensor],
-        target_dimension_indicator: torch.Tensor,
+        feat_static_cat: torch.Tensor,
     ) -> Tuple[
         torch.Tensor,
         Union[List[torch.Tensor], torch.Tensor],
@@ -197,6 +194,8 @@ class DeepVARTrainingNetwork(nn.Module):
 
         Parameters
         ----------
+        feat_static_real
+
         past_time_feat
             Past time features (batch_size, history_length, num_features)
         past_target_cdf
@@ -213,8 +212,8 @@ class DeepVARTrainingNetwork(nn.Module):
         future_target_cdf
             Future marginal CDF transformed target values (batch_size,
             prediction_length, target_dim)
-        target_dimension_indicator
-            Dimensionality of the time series (batch_size, target_dim)
+        feat_static_cat
+
 
         Returns
         -------
@@ -237,18 +236,13 @@ class DeepVARTrainingNetwork(nn.Module):
         )
 
         if future_time_feat is None or future_target_cdf is None:
-            time_feat = past_time_feat[
-                :,- self.context_length :, ...
-            ]
+            time_feat = past_time_feat[:, -self.context_length :, ...]
             sequence = past_target_cdf
             sequence_length = self.history_length
             subsequences_length = self.context_length
         else:
             time_feat = torch.cat(
-                (
-                    past_time_feat[:,- self.context_length :, ...],
-                    future_time_feat,
-                ),
+                (past_time_feat[:, -self.context_length :, ...], future_time_feat,),
                 dim=1,
             )
             sequence = torch.cat((past_target_cdf, future_target_cdf), dim=1)
@@ -274,7 +268,8 @@ class DeepVARTrainingNetwork(nn.Module):
             lags=lags,
             scale=scale,
             time_feat=time_feat,
-            target_dimension_indicator=target_dimension_indicator,
+            feat_static_cat=feat_static_cat,
+            feat_static_real=feat_static_real,
             unroll_length=subsequences_length,
             begin_state=None,
         )
@@ -310,7 +305,8 @@ class DeepVARTrainingNetwork(nn.Module):
 
     def forward(
         self,
-        target_dimension_indicator: torch.Tensor,
+        feat_static_cat: torch.Tensor,
+        feat_static_real: torch.Tensor,
         past_time_feat: torch.Tensor,
         past_target_cdf: torch.Tensor,
         past_observed_values: torch.Tensor,
@@ -325,8 +321,8 @@ class DeepVARTrainingNetwork(nn.Module):
 
         Parameters
         ----------
-        target_dimension_indicator
-            Indices of the target dimension (batch_size, target_dim)
+        feat_static_cat
+
         past_time_feat
             Dynamic features of past time series (batch_size, history_length,
             num_features)
@@ -365,13 +361,14 @@ class DeepVARTrainingNetwork(nn.Module):
         # unroll the decoder in "training mode", i.e. by providing future data
         # as well
         rnn_outputs, _, scale, _, inputs = self.unroll_encoder(
+            feat_static_real=feat_static_real,
             past_time_feat=past_time_feat,
             past_target_cdf=past_target_cdf,
             past_observed_values=past_observed_values,
             past_is_pad=past_is_pad,
             future_time_feat=future_time_feat,
             future_target_cdf=future_target_cdf,
-            target_dimension_indicator=target_dimension_indicator,
+            feat_static_cat=feat_static_cat,
         )
 
         # put together target sequence
@@ -413,8 +410,6 @@ class DeepVARTrainingNetwork(nn.Module):
 
         # assert_shape(loss, (-1, -1, 1))
 
-        self.distribution = distr
-
         return (loss.mean(), likelihoods) + distr_args
 
 
@@ -431,7 +426,8 @@ class DeepVARPredictionNetwork(DeepVARTrainingNetwork):
     def sampling_decoder(
         self,
         past_target_cdf: torch.Tensor,
-        target_dimension_indicator: torch.Tensor,
+        feat_static_cat: torch.Tensor,
+        feat_static_real: torch.Tensor,
         time_feat: torch.Tensor,
         scale: torch.Tensor,
         begin_states: Union[List[torch.Tensor], torch.Tensor],
@@ -445,8 +441,10 @@ class DeepVARPredictionNetwork(DeepVARTrainingNetwork):
         past_target_cdf
             Past marginal CDF transformed target values (batch_size,
             history_length, target_dim)
-        target_dimension_indicator
-            Indices of the target dimension (batch_size, target_dim)
+        feat_static_cat
+
+        feat_static_real
+
         time_feat
             Dynamic features of future time series (batch_size, history_length,
             num_features)
@@ -469,7 +467,8 @@ class DeepVARPredictionNetwork(DeepVARTrainingNetwork):
         repeated_past_target_cdf = repeat(past_target_cdf)
         repeated_time_feat = repeat(time_feat)
         repeated_scale = repeat(scale)
-        repeated_target_dimension_indicator = repeat(target_dimension_indicator)
+        repeated_feat_static_cat = repeat(feat_static_cat)
+        repeated_feat_static_real = repeat(feat_static_real)
 
         # slight difference for GPVAR and DeepVAR, in GPVAR, its a list
         if self.cell_type == "LSTM":
@@ -494,7 +493,8 @@ class DeepVARPredictionNetwork(DeepVARTrainingNetwork):
                 lags=lags,
                 scale=repeated_scale,
                 time_feat=repeated_time_feat[:, k : k + 1, ...],
-                target_dimension_indicator=repeated_target_dimension_indicator,
+                feat_static_cat=repeated_feat_static_cat,
+                feat_static_real=repeated_feat_static_real,
                 unroll_length=1,
             )
 
@@ -521,7 +521,8 @@ class DeepVARPredictionNetwork(DeepVARTrainingNetwork):
 
     def forward(
         self,
-        target_dimension_indicator: torch.Tensor,
+        feat_static_cat: torch.Tensor,
+        feat_static_real: torch.Tensor,
         past_time_feat: torch.Tensor,
         past_target_cdf: torch.Tensor,
         past_observed_values: torch.Tensor,
@@ -533,8 +534,10 @@ class DeepVARPredictionNetwork(DeepVARTrainingNetwork):
         All tensors should have NTC layout.
         Parameters
         ----------
-        target_dimension_indicator
-            Indices of the target dimension (batch_size, target_dim)
+        feat_static_cat
+
+        feat_static_real
+
         past_time_feat
             Dynamic features of past time series (batch_size, history_length,
             num_features)
@@ -566,18 +569,20 @@ class DeepVARPredictionNetwork(DeepVARTrainingNetwork):
 
         # unroll the decoder in "prediction mode", i.e. with past data only
         _, state, scale, _, _ = self.unroll_encoder(
+            feat_static_real=feat_static_real,
             past_time_feat=past_time_feat,
             past_target_cdf=past_target_cdf,
             past_observed_values=past_observed_values,
             past_is_pad=past_is_pad,
             future_time_feat=None,
             future_target_cdf=None,
-            target_dimension_indicator=target_dimension_indicator,
+            feat_static_cat=feat_static_cat,
         )
 
         return self.sampling_decoder(
             past_target_cdf=past_target_cdf,
-            target_dimension_indicator=target_dimension_indicator,
+            feat_static_cat=feat_static_cat,
+            feat_static_real=feat_static_real,
             time_feat=future_time_feat,
             scale=scale,
             begin_states=state,
