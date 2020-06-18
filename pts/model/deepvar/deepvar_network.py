@@ -61,6 +61,7 @@ class DeepVARTrainingNetwork(nn.Module):
             batch_first=True,
         )
 
+        self.target_shape = distr_output.event_shape
         self.proj_dist_args = distr_output.get_args_proj(num_cells)
 
         self.embed = FeatureEmbedder(
@@ -147,7 +148,14 @@ class DeepVARTrainingNetwork(nn.Module):
         embedded_cat = self.embed(feat_static_cat)
         # assert_shape(index_embeddings, (-1, self.target_dim, self.embed_dim))
 
-        static_feat = torch.cat((embedded_cat, feat_static_real, scale.log()), dim=1)
+        static_feat = torch.cat(
+            (
+                embedded_cat,
+                feat_static_real,
+                scale.log() if len(self.target_shape) == 0 else scale.squeeze(1).log(),
+            ),
+            dim=1,
+        )
 
         # (batch_size, seq_len, embed_dim)
         repeated_static_feat = static_feat.unsqueeze(1).expand(-1, unroll_length, -1)
