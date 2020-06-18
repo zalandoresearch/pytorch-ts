@@ -21,7 +21,7 @@ from pts.evaluation import MultivariateEvaluator
 from pts.evaluation import backtest_metrics
 from pts.model.deepvar import DeepVAREstimator
 from pts.modules import (
-    IndependentNormalOutput,
+    NormalOutput,
     LowRankMultivariateNormalOutput,
     MultivariateNormalOutput,
 )
@@ -51,13 +51,13 @@ estimator = DeepVAREstimator
     "distr_output, num_batches_per_epoch, Estimator, use_marginal_transformation",
     [
         (
-            IndependentNormalOutput(dim=target_dim),
+            NormalOutput(dim=target_dim),
             10,
             estimator,
             True,
         ),
         (
-            IndependentNormalOutput(dim=target_dim),
+            NormalOutput(dim=target_dim),
             10,
             estimator,
             False,

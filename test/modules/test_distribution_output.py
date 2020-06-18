@@ -24,7 +24,7 @@ from pts.modules import (
     NegativeBinomialOutput,
     LowRankMultivariateNormalOutput,
     MultivariateNormalOutput,
-    IndependentNormalOutput,
+    NormalOutput,
 )
 
 NUM_SAMPLES = 2000
@@ -201,7 +201,7 @@ def test_independent_normal() -> None:
     samples = distr.sample((num_samples,))
 
     loc_hat, diag_hat = maximum_likelihood_estimate_sgd(
-        IndependentNormalOutput(dim=dim), samples, learning_rate=0.01, num_epochs=10,
+        NormalOutput(dim=dim), samples, learning_rate=0.01, num_epochs=10,
     )
 
     distr = Independent(

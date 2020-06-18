@@ -1,4 +1,5 @@
 from abc import ABC, abstractclassmethod
+import warnings
 from typing import Callable, Dict, Optional, Tuple
 
 import numpy as np
@@ -93,24 +94,65 @@ class DistributionOutput(Output, ABC):
         else:
             return TransformedDistribution(distr, [AffineTransform(loc=0, scale=scale)])
 
+class IndependentDistributionOutput(DistributionOutput):
+    @validated()
+    def __init__(self, dim: Optional[int] = None) -> None:
+        self.dim = dim
+        
 
-class NormalOutput(DistributionOutput):
+    @property
+    def event_shape(self) -> Tuple:
+        if self.dim is None:
+            return ()
+        else:
+            return (self.dim,)
+    
+    def independent(self, distr:Distribution) -> Distribution:
+        if self.dim is None:
+            return distr
+        
+        return Independent(distr, 1)
+    
+    def distribution(
+        self, distr_args, scale: Optional[torch.Tensor] = None
+    ) -> Distribution:
+
+        distr = self.independent(self.distr_cls(*distr_args))
+        if scale is None:
+            return distr
+        else:
+            return TransformedDistribution(distr, [AffineTransform(loc=0, scale=scale)])
+
+class NormalOutput(IndependentDistributionOutput):
     args_dim: Dict[str, int] = {"loc": 1, "scale": 1}
     distr_cls: type = Normal
+        
+    def __init__(self, dim:Optional[int] = None) -> None:
+        super().__init__(dim)
+        if dim is not None:
+            self.args_dim = {k: dim for k in self.args_dim}
 
     @classmethod
     def domain_map(cls, loc, scale):
         scale = F.softplus(scale)
         return loc.squeeze(-1), scale.squeeze(-1)
 
-    @property
-    def event_shape(self) -> Tuple:
-        return ()
+    
+class IndependentNormalOutput(NormalOutput):
+    @validated()
+    def __init__(self, dim: int) -> None:
+        super().__init__(dim)
+        warnings.warn("IndependentNormalOutput is deprecated. Use NormalOutput instead.", DeprecationWarning)
 
 
-class BetaOutput(DistributionOutput):
+class BetaOutput(IndependentDistributionOutput):
     args_dim: Dict[str, int] = {"concentration1": 1, "concentration0": 1}
     distr_cls: type = Beta
+    
+    def __init__(self, dim:Optional[int] = None) -> None:
+        super().__init__(dim)
+        if dim is not None:
+            self.args_dim = {k: dim for k in self.args_dim}
 
     @classmethod
     def domain_map(cls, concentration1, concentration0):
@@ -118,13 +160,15 @@ class BetaOutput(DistributionOutput):
         concentration0 = F.softplus(concentration0) + 1e-8
         return concentration1.squeeze(-1), concentration0.squeeze(-1)
 
-    @property
-    def event_shape(self) -> Tuple:
-        return ()
 
-
-class NegativeBinomialOutput(DistributionOutput):
+class NegativeBinomialOutput(IndependentDistributionOutput):
     args_dim: Dict[str, int] = {"mu": 1, "alpha": 1}
+    distr_cls: type = NegativeBinomial
+    
+    def __init__(self, dim:Optional[int] = None) -> None:
+        super().__init__(dim)
+        if dim is not None:
+            self.args_dim = {k: dim for k in self.args_dim}
 
     @classmethod
     def domain_map(cls, mu, alpha):
@@ -146,26 +190,23 @@ class NegativeBinomialOutput(DistributionOutput):
         n = 1.0 / alpha
         p = mu * alpha / (1.0 + mu * alpha)
 
-        return NegativeBinomial(total_count=n, probs=p)
-
-    @property
-    def event_shape(self) -> Tuple:
-        return ()
+        return self.independent(NegativeBinomial(total_count=n, probs=p))
 
 
-class StudentTOutput(DistributionOutput):
+class StudentTOutput(IndependentDistributionOutput):
     args_dim: Dict[str, int] = {"df": 1, "loc": 1, "scale": 1}
     distr_cls: type = StudentT
+    
+    def __init__(self, dim:Optional[int] = None) -> None:
+        super().__init__(dim)
+        if dim is not None:
+            self.args_dim = {k: dim for k in self.args_dim}
 
     @classmethod
     def domain_map(cls, df, loc, scale):
         scale = F.softplus(scale)
         df = 2.0 + F.softplus(df)
         return df.squeeze(-1), loc.squeeze(-1), scale.squeeze(-1)
-
-    @property
-    def event_shape(self) -> Tuple:
-        return ()
 
 
 class StudentTMixtureOutput(DistributionOutput):
@@ -271,31 +312,6 @@ class LowRankMultivariateNormalOutput(DistributionOutput):
     @property
     def event_shape(self) -> Tuple:
         return (self.dim,)
-
-
-class IndependentNormalOutput(DistributionOutput):
-    @validated()
-    def __init__(self, dim: int) -> None:
-        self.dim = dim
-        self.args_dim = {"loc": self.dim, "scale": self.dim}
-
-    @classmethod
-    def domain_map(cls, loc, scale):
-        return loc, F.softplus(scale)
-
-    @property
-    def event_shape(self) -> Tuple:
-        return (self.dim,)
-
-    def distribution(
-        self, distr_args, scale: Optional[torch.Tensor] = None
-    ) -> Distribution:
-        distr = Independent(Normal(*distr_args), 1)
-
-        if scale is None:
-            return distr
-        else:
-            return TransformedDistribution(distr, [AffineTransform(loc=0, scale=scale)])
 
 
 class MultivariateNormalOutput(DistributionOutput):
