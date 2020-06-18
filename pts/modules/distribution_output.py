@@ -94,11 +94,11 @@ class DistributionOutput(Output, ABC):
         else:
             return TransformedDistribution(distr, [AffineTransform(loc=0, scale=scale)])
 
+
 class IndependentDistributionOutput(DistributionOutput):
     @validated()
     def __init__(self, dim: Optional[int] = None) -> None:
         self.dim = dim
-        
 
     @property
     def event_shape(self) -> Tuple:
@@ -106,13 +106,13 @@ class IndependentDistributionOutput(DistributionOutput):
             return ()
         else:
             return (self.dim,)
-    
-    def independent(self, distr:Distribution) -> Distribution:
+
+    def independent(self, distr: Distribution) -> Distribution:
         if self.dim is None:
             return distr
-        
+
         return Independent(distr, 1)
-    
+
     def distribution(
         self, distr_args, scale: Optional[torch.Tensor] = None
     ) -> Distribution:
@@ -123,11 +123,12 @@ class IndependentDistributionOutput(DistributionOutput):
         else:
             return TransformedDistribution(distr, [AffineTransform(loc=0, scale=scale)])
 
+
 class NormalOutput(IndependentDistributionOutput):
     args_dim: Dict[str, int] = {"loc": 1, "scale": 1}
     distr_cls: type = Normal
-        
-    def __init__(self, dim:Optional[int] = None) -> None:
+
+    def __init__(self, dim: Optional[int] = None) -> None:
         super().__init__(dim)
         if dim is not None:
             self.args_dim = {k: dim for k in self.args_dim}
@@ -137,19 +138,22 @@ class NormalOutput(IndependentDistributionOutput):
         scale = F.softplus(scale)
         return loc.squeeze(-1), scale.squeeze(-1)
 
-    
+
 class IndependentNormalOutput(NormalOutput):
     @validated()
     def __init__(self, dim: int) -> None:
         super().__init__(dim)
-        warnings.warn("IndependentNormalOutput is deprecated. Use NormalOutput instead.", DeprecationWarning)
+        warnings.warn(
+            "IndependentNormalOutput is deprecated. Use NormalOutput instead.",
+            DeprecationWarning,
+        )
 
 
 class BetaOutput(IndependentDistributionOutput):
     args_dim: Dict[str, int] = {"concentration1": 1, "concentration0": 1}
     distr_cls: type = Beta
-    
-    def __init__(self, dim:Optional[int] = None) -> None:
+
+    def __init__(self, dim: Optional[int] = None) -> None:
         super().__init__(dim)
         if dim is not None:
             self.args_dim = {k: dim for k in self.args_dim}
@@ -164,8 +168,8 @@ class BetaOutput(IndependentDistributionOutput):
 class NegativeBinomialOutput(IndependentDistributionOutput):
     args_dim: Dict[str, int] = {"mu": 1, "alpha": 1}
     distr_cls: type = NegativeBinomial
-    
-    def __init__(self, dim:Optional[int] = None) -> None:
+
+    def __init__(self, dim: Optional[int] = None) -> None:
         super().__init__(dim)
         if dim is not None:
             self.args_dim = {k: dim for k in self.args_dim}
@@ -182,7 +186,7 @@ class NegativeBinomialOutput(IndependentDistributionOutput):
         mu, alpha = distr_args
 
         if scale is not None:
-            scale = 1.0 + F.softplus(scale - 1.0) # make sure scale > 1
+            scale = 1.0 + F.softplus(scale - 1.0)  # make sure scale > 1
             mu *= scale
             # alpha = alpha + (scale - 1) / (scale * mu) # multiply 2nd moment by scale
             alpha += (scale - 1) / mu
@@ -196,8 +200,8 @@ class NegativeBinomialOutput(IndependentDistributionOutput):
 class StudentTOutput(IndependentDistributionOutput):
     args_dim: Dict[str, int] = {"df": 1, "loc": 1, "scale": 1}
     distr_cls: type = StudentT
-    
-    def __init__(self, dim:Optional[int] = None) -> None:
+
+    def __init__(self, dim: Optional[int] = None) -> None:
         super().__init__(dim)
         if dim is not None:
             self.args_dim = {k: dim for k in self.args_dim}
@@ -269,7 +273,9 @@ class NormalMixtureOutput(DistributionOutput):
     ) -> Distribution:
         mix_logits, loc, dist_scale = distr_args
 
-        distr = MixtureSameFamily(Categorical(logits=mix_logits), Normal(loc, dist_scale))
+        distr = MixtureSameFamily(
+            Categorical(logits=mix_logits), Normal(loc, dist_scale)
+        )
         if scale is None:
             return distr
         else:
