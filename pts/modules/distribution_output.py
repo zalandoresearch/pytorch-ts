@@ -43,11 +43,6 @@ class ArgProj(nn.Module):
             [nn.Linear(in_features, dim) for dim in args_dim.values()]
         )
         self.domain_map = domain_map
-        
-        map(self._init_weights, self.proj)
-    
-    def _init_weights(self, m):
-        nn.init.kaiming_normal_(m.weight)
 
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor]:
         params_unbounded = [proj(x) for proj in self.proj]
