@@ -19,6 +19,7 @@ from torch.distributions import (
     MultivariateNormal,
     TransformedDistribution,
     AffineTransform,
+    Poisson,
 )
 
 from pts.core.component import validated
@@ -42,6 +43,11 @@ class ArgProj(nn.Module):
             [nn.Linear(in_features, dim) for dim in args_dim.values()]
         )
         self.domain_map = domain_map
+        
+        map(self._init_weights, self.proj)
+    
+    def _init_weights(self, m):
+        nn.init.kaiming_normal_(m.weight)
 
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor]:
         params_unbounded = [proj(x) for proj in self.proj]
@@ -165,8 +171,32 @@ class BetaOutput(IndependentDistributionOutput):
         return concentration1.squeeze(-1), concentration0.squeeze(-1)
 
 
+class PoissonOutput(IndependentDistributionOutput):
+    args_dim: Dict[str, int] = {"rate": 1}
+    distr_cls: type = Poisson
+    
+    def __init__(self, dim: Optional[int]=None) -> None:
+        super().__init__(dim)
+        if dim is not None:
+            self.args_dim = {k: dim for k in self.args_dim}
+            
+    @classmethod
+    def domain_map(cls, rate):
+        rate_pos = F.softplus(rate).clone()
+        
+        return (rate_pos.squeeze(-1),)
+    
+    def distribution(self, distr_args, scale: Optional[torch.Tensor] = None) -> Distribution:
+        (rate,) = distr_args
+        
+        if scale is not None:
+            rate *= scale
+        
+        return Poisson(rate)
+
+
 class NegativeBinomialOutput(IndependentDistributionOutput):
-    args_dim: Dict[str, int] = {"mu": 1, "alpha": 1}
+    args_dim: Dict[str, int] = {"total_count": 1, "logits": 1}
     distr_cls: type = NegativeBinomial
 
     def __init__(self, dim: Optional[int] = None) -> None:
@@ -175,26 +205,19 @@ class NegativeBinomialOutput(IndependentDistributionOutput):
             self.args_dim = {k: dim for k in self.args_dim}
 
     @classmethod
-    def domain_map(cls, mu, alpha):
-        mu = F.softplus(mu) + 1e-8
-        alpha = F.softplus(alpha) + 1e-8
-        return mu.squeeze(-1), alpha.squeeze(-1)
+    def domain_map(cls, total_count, logits):
+        total_count = F.softplus(total_count)
+        return total_count.squeeze(-1), logits.squeeze(-1)
 
     def distribution(
         self, distr_args, scale: Optional[torch.Tensor] = None
     ) -> Distribution:
-        mu, alpha = distr_args
+        total_count, logits = distr_args
 
         if scale is not None:
-            scale = 1.0 + F.softplus(scale - 1.0)  # make sure scale > 1
-            mu *= scale
-            # alpha = alpha + (scale - 1) / (scale * mu) # multiply 2nd moment by scale
-            alpha += (scale - 1) / mu
+            logits += scale.log()
 
-        n = 1.0 / alpha
-        p = mu * alpha / (1.0 + mu * alpha)
-
-        return self.independent(NegativeBinomial(total_count=n, probs=p))
+        return self.independent(NegativeBinomial(total_count=total_count, logits=logits))
 
 
 class StudentTOutput(IndependentDistributionOutput):
