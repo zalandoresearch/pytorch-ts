@@ -38,7 +38,7 @@ plt.grid(which='both')
 plt.show()
 ```
 
-![png](examples/images/readme_0.png)
+![png](https://github.com/zalandoresearch/pytorch-ts/blob/master/examples/images/readme_0.png)
 
 
 We can now prepare a training dataset for our model to train on. Datasets are essentially iterable collections of dictionaries: each dictionary represents a time series with possibly associated features. For this example, we only have one entry, specified by the `"start"` field which is the timestamp of the first data point, and the `"target"` field containing time series data. For training, we will use data up to midnight on April 5th, 2015.
@@ -97,7 +97,7 @@ for test_entry, forecast in zip(test_data, predictor.predict(test_data)):
 plt.grid(which='both')
 ```
 
-![png](examples/images/readme_1.png)
+![png](https://github.com/zalandoresearch/pytorch-ts/blob/master/examples/images/readme_1.png)
 
 
 Note that the forecast is displayed in terms of a probability distribution: the shaded areas represent the 50% and 90% prediction intervals, respectively, centered around the median (dark green line).
