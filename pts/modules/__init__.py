@@ -5,6 +5,7 @@ from .distribution_output import (
     NormalOutput,
     StudentTOutput,
     BetaOutput,
+    PoissonOutput,
     NegativeBinomialOutput,
     NormalMixtureOutput,
     StudentTMixtureOutput,

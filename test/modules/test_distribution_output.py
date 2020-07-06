@@ -115,38 +115,38 @@ def test_beta_likelihood(concentration1: float, concentration0: float) -> None:
     ), f"concentration0 did not match: concentration0 = {concentration0}, concentration0_hat = {concentration0_hat}"
 
 
-@pytest.mark.parametrize("mu_alpha", [(2.5, 0.7)])
-def test_neg_binomial(mu_alpha: Tuple[float, float]) -> None:
+@pytest.mark.parametrize("total_count_logit", [(2.5, 0.7)])
+def test_neg_binomial(total_count_logit: Tuple[float, float]) -> None:
     """
     Test to check that maximizing the likelihood recovers the parameters
     """
     # test instance
-    mu, alpha = mu_alpha
+    total_count, logit = total_count_logit
 
     # generate samples
-    mus = torch.zeros((NUM_SAMPLES,)) + mu
-    alphas = torch.zeros((NUM_SAMPLES,)) + alpha
+    total_counts = torch.zeros((NUM_SAMPLES,)) + total_count
+    logits = torch.zeros((NUM_SAMPLES,)) + logit
 
     neg_bin_distr = NegativeBinomial(
-        total_count=1.0 / alphas, probs=mus * alphas / (1.0 + mus * alphas)
+        total_count=total_counts, logits=logits
     )
     samples = neg_bin_distr.sample()
 
     init_biases = [
-        inv_softplus(mu - START_TOL_MULTIPLE * TOL * mu),
-        inv_softplus(alpha + START_TOL_MULTIPLE * TOL * alpha),
+        inv_softplus(total_count - START_TOL_MULTIPLE * TOL * total_count),
+        logit - START_TOL_MULTIPLE * TOL * logit,
     ]
 
-    mu_hat, alpha_hat = maximum_likelihood_estimate_sgd(
+    total_count_hat, logit_hat = maximum_likelihood_estimate_sgd(
         NegativeBinomialOutput(), samples, init_biases=init_biases, num_epochs=15,
     )
 
     assert (
-        np.abs(mu_hat - mu) < TOL * mu
-    ), f"mu did not match: mu = {mu}, mu_hat = {mu_hat}"
+        np.abs(total_count_hat - total_count) < TOL * total_count
+    ), f"total_count did not match: total_count = {total_count}, total_count_hat = {total_count_hat}"
     assert (
-        np.abs(alpha_hat - alpha) < TOL * alpha
-    ), f"alpha did not match: alpha = {alpha}, alpha_hat = {alpha_hat}"
+        np.abs(logit_hat - logit) < TOL * logit_hat
+    ), f"logit did not match: logit = {logit}, logit_hat = {logit_hat}"
 
 
 @pytest.mark.parametrize("df, loc, scale,", [(6.0, 2.3, 0.7)])
