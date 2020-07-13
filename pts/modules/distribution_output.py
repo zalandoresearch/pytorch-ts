@@ -22,6 +22,7 @@ from torch.distributions import (
     Poisson,
 )
 
+from pts.distributions import ZeroInflatedPoisson, ZeroInflatedNegativeBinomial
 from pts.core.component import validated
 from .lambda_layer import LambdaLayer
 
@@ -169,25 +170,54 @@ class BetaOutput(IndependentDistributionOutput):
 class PoissonOutput(IndependentDistributionOutput):
     args_dim: Dict[str, int] = {"rate": 1}
     distr_cls: type = Poisson
-    
-    def __init__(self, dim: Optional[int]=None) -> None:
+
+    def __init__(self, dim: Optional[int] = None) -> None:
         super().__init__(dim)
         if dim is not None:
             self.args_dim = {k: dim for k in self.args_dim}
-            
+
     @classmethod
     def domain_map(cls, rate):
         rate_pos = F.softplus(rate).clone()
-        
+
         return (rate_pos.squeeze(-1),)
-    
-    def distribution(self, distr_args, scale: Optional[torch.Tensor] = None) -> Distribution:
+
+    def distribution(
+        self, distr_args, scale: Optional[torch.Tensor] = None
+    ) -> Distribution:
         (rate,) = distr_args
-        
+
         if scale is not None:
             rate *= scale
-        
-        return Poisson(rate)
+
+        return self.independent(Poisson(rate))
+
+
+class ZeroInflatedPoissonOutput(IndependentDistributionOutput):
+    args_dim: Dict[str, int] = {"gate": 1, "rate": 1}
+    distr_cls: type = ZeroInflatedPoisson
+
+    def __init__(self, dim: Optional[int] = None) -> None:
+        super().__init__(dim)
+        if dim is not None:
+            self.args_dim = {k: dim for k in self.args_dim}
+
+    @classmethod
+    def domain_map(cls, gate, rate):
+        gate_unit = torch.sigmoid(gate).clone()
+        rate_pos = F.softplus(rate).clone()
+
+        return gate_unit.squeeze(-1), rate_pos.squeeze(-1)
+
+    def distribution(
+        self, distr_args, scale: Optional[torch.Tensor] = None
+    ) -> Distribution:
+        gate, rate = distr_args
+
+        if scale is not None:
+            rate *= scale
+
+        return self.independent(ZeroInflatedPoisson(gate=gate, rate=rate))
 
 
 class NegativeBinomialOutput(IndependentDistributionOutput):
@@ -212,7 +242,39 @@ class NegativeBinomialOutput(IndependentDistributionOutput):
         if scale is not None:
             logits += scale.log()
 
-        return self.independent(NegativeBinomial(total_count=total_count, logits=logits))
+        return self.independent(
+            NegativeBinomial(total_count=total_count, logits=logits)
+        )
+
+
+class ZeroInflatedNegativeBinomialOutput(IndependentDistributionOutput):
+    args_dim: Dict[str, int] = {"gate": 1, "total_count": 1, "logits": 1}
+    distr_cls: type = ZeroInflatedNegativeBinomial
+
+    def __init__(self, dim: Optional[int] = None) -> None:
+        super().__init__(dim)
+        if dim is not None:
+            self.args_dim = {k: dim for k in self.args_dim}
+
+    @classmethod
+    def domain_map(cls, gate, total_count, logits):
+        gate = torch.sigmoid(gate)
+        total_count = F.softplus(total_count)
+        return gate.squeeze(-1), total_count.squeeze(-1), logits.squeeze(-1)
+
+    def distribution(
+        self, distr_args, scale: Optional[torch.Tensor] = None
+    ) -> Distribution:
+        gate, total_count, logits = distr_args
+
+        if scale is not None:
+            logits += scale.log()
+
+        return self.independent(
+            ZeroInflatedNegativeBinomial(
+                gate=gate, total_count=total_count, logits=logits
+            )
+        )
 
 
 class StudentTOutput(IndependentDistributionOutput):
