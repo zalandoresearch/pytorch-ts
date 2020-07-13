@@ -204,7 +204,7 @@ class ZeroInflatedPoissonOutput(IndependentDistributionOutput):
 
     @classmethod
     def domain_map(cls, gate, rate):
-        gate_unit = F.sigmoid(gate).clone()
+        gate_unit = torch.sigmoid(gate).clone()
         rate_pos = F.softplus(rate).clone()
 
         return gate_unit.squeeze(-1), rate_pos.squeeze(-1)
@@ -258,7 +258,7 @@ class ZeroInflatedNegativeBinomialOutput(IndependentDistributionOutput):
 
     @classmethod
     def domain_map(cls, gate, total_count, logits):
-        gate = F.sigmoid(gate)
+        gate = torch.sigmoid(gate)
         total_count = F.softplus(total_count)
         return gate.squeeze(-1), total_count.squeeze(-1), logits.squeeze(-1)
 
