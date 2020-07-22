@@ -6,6 +6,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from pts.feature import get_seasonality
+from pts.modules import smape_loss, mape_loss, mase_loss, dilate_loss
 
 VALID_N_BEATS_STACK_TYPES = "G", "S", "T"
 VALID_LOSS_FUNCTIONS = "sMAPE", "MASE", "MAPE"
@@ -251,51 +252,6 @@ class NBEATSNetwork(nn.Module):
             _, last_forecast = self.net_blocks[-1](backcast)
             return forecast + last_forecast
 
-    def smape_loss(
-        self, forecast: torch.Tensor, future_target: torch.Tensor
-    ) -> torch.Tensor:
-        denominator = (torch.abs(future_target) + torch.abs(forecast)).detach()
-        flag = denominator == 0
-
-        return (200 / self.prediction_length) * torch.mean(
-            (torch.abs(future_target - forecast) * torch.logical_not(flag)) / (denominator + flag),
-            dim=1,
-        )
-
-    def mape_loss(
-        self, forecast: torch.Tensor, future_target: torch.Tensor
-    ) -> torch.Tensor:
-        denominator = torch.abs(future_target)
-        flag = denominator == 0
-
-        return (100 / self.prediction_length) * torch.mean(
-            (torch.abs(future_target - forecast) * torch.logical_not(flag)) / (denominator + flag),
-            dim=1,
-        )
-
-    def mase_loss(
-        self,
-        forecast: torch.Tensor,
-        future_target: torch.Tensor,
-        past_target: torch.Tensor,
-        periodicity: int,
-    ) -> torch.Tensor:
-        factor = 1 / (self.context_length + self.prediction_length - periodicity)
-
-        whole_target = torch.cat((past_target, future_target), dim=1)
-        seasonal_error = factor * torch.mean(
-            torch.abs(
-                whole_target[:, periodicity:, ...]
-                - whole_target[:, :-periodicity:, ...]
-            ),
-            dim=1,
-        )
-        flag = seasonal_error == 0
-
-        return (torch.mean(torch.abs(future_target - forecast), dim=1) * torch.logical_not(flag)) / (
-            seasonal_error + flag
-        )
-
 
 class NBEATSTrainingNetwork(NBEATSNetwork):
     def __init__(self, loss_function: str, freq: str, *args, **kwargs) -> None:
@@ -317,13 +273,15 @@ class NBEATSTrainingNetwork(NBEATSNetwork):
         forecast = super().forward(past_target=past_target)
 
         if self.loss_function == "sMAPE":
-            loss = self.smape_loss(forecast, future_target)
+            loss = smape_loss(forecast, future_target)
         elif self.loss_function == "MAPE":
-            loss = self.mape_loss(forecast, future_target)
+            loss = mape_loss(forecast, future_target)
         elif self.loss_function == "MASE":
-            loss = self.mase_loss(
+            loss = mase_loss(
                 forecast, future_target, past_target, self.periodicity
             )
+        elif self.loss_function == "DILATE":
+            loss = dilate_loss(forecast, future_target)
         else:
             raise ValueError(
                 f"Invalid value {self.loss_function} for argument loss_function."

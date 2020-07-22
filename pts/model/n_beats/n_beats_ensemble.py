@@ -118,7 +118,7 @@ class NBEATSEnsembleEstimator(Estimator):
     meta_loss_function
         The different 'loss_function' (also known as metric) to use for training the models.
         Unlike other models in GluonTS this network does not use a distribution.
-        Default and recommended value: ["sMAPE", "MASE", "MAPE"]
+        Default and recommended value: ["sMAPE", "MASE", "MAPE", "DILATE"]
     meta_bagging_size
         The number of models that share the parameter combination of 'context_length'
         and 'loss_function'. Each of these models gets a different initialization random initialization.
