@@ -5,22 +5,26 @@ from .soft_dtw import SoftDTWBatch, pairwise_distances
 from .path_soft_dtw import PathDTWBatch
 
 
-def smape_loss(forecast: torch.Tensor, future_target: torch.Tensor) -> torch.Tensor:
+def smape_loss(
+    forecast: torch.Tensor, future_target: torch.Tensor, prediction_length: int
+) -> torch.Tensor:
     denominator = (torch.abs(future_target) + torch.abs(forecast)).detach()
     flag = denominator == 0
 
-    return (200 / self.prediction_length) * torch.mean(
+    return (200 / prediction_length) * torch.mean(
         (torch.abs(future_target - forecast) * torch.logical_not(flag))
         / (denominator + flag),
         dim=1,
     )
 
 
-def mape_loss(forecast: torch.Tensor, future_target: torch.Tensor) -> torch.Tensor:
+def mape_loss(
+    forecast: torch.Tensor, future_target: torch.Tensor, prediction_length: int
+) -> torch.Tensor:
     denominator = torch.abs(future_target)
     flag = denominator == 0
 
-    return (100 / self.prediction_length) * torch.mean(
+    return (100 / prediction_length) * torch.mean(
         (torch.abs(future_target - forecast) * torch.logical_not(flag))
         / (denominator + flag),
         dim=1,
@@ -31,9 +35,11 @@ def mase_loss(
     forecast: torch.Tensor,
     future_target: torch.Tensor,
     past_target: torch.Tensor,
+    context_length: int,
+    prediction_length: int,
     periodicity: int,
 ) -> torch.Tensor:
-    factor = 1 / (self.context_length + self.prediction_length - periodicity)
+    factor = 1 / (context_length + prediction_length - periodicity)
 
     whole_target = torch.cat((past_target, future_target), dim=1)
     seasonal_error = factor * torch.mean(

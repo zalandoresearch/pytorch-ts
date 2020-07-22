@@ -9,7 +9,7 @@ from pts.feature import get_seasonality
 from pts.modules import smape_loss, mape_loss, mase_loss, dilate_loss
 
 VALID_N_BEATS_STACK_TYPES = "G", "S", "T"
-VALID_LOSS_FUNCTIONS = "sMAPE", "MASE", "MAPE"
+VALID_LOSS_FUNCTIONS = "sMAPE", "MASE", "MAPE", "DILATE"
 
 
 def linspace(
@@ -273,12 +273,21 @@ class NBEATSTrainingNetwork(NBEATSNetwork):
         forecast = super().forward(past_target=past_target)
 
         if self.loss_function == "sMAPE":
-            loss = smape_loss(forecast, future_target)
+            loss = smape_loss(
+                forecast, future_target, prediction_length=self.prediction_length
+            )
         elif self.loss_function == "MAPE":
-            loss = mape_loss(forecast, future_target)
+            loss = mape_loss(
+                forecast, future_target, prediction_length=self.prediction_length
+            )
         elif self.loss_function == "MASE":
             loss = mase_loss(
-                forecast, future_target, past_target, self.periodicity
+                forecast,
+                future_target,
+                past_target,
+                context_length=self.context_length,
+                prediction_length=self.prediction_length,
+                periodicity=self.periodicity,
             )
         elif self.loss_function == "DILATE":
             loss = dilate_loss(forecast, future_target)
