@@ -55,8 +55,7 @@ class TransformerNetwork(nn.Module):
         self.target_shape = distr_output.event_shape
 
         # [B, T, input_size] -> [B, T, d_model]
-        self.encoder_input = nn.Linear(input_size, d_model)
-        self.decoder_input = nn.Linear(input_size, d_model)
+        self.transformer_input = nn.Linear(input_size, d_model)
 
         # [B, T, d_model] where d_model / num_heads is int
         self.transformer = nn.Transformer(
@@ -259,14 +258,14 @@ class TransformerTrainingNetwork(TransformerNetwork):
         #     inputs, axis=1, begin=self.context_length, end=None
         # )
 
-        # pass through encoder [T, B, b_model]
+        # pass through encoder [T, B, d_model]
         enc_out = self.transformer.encoder(
-            self.encoder_input(enc_input).permute(1, 0, 2)
+            self.transformer_input(enc_input).permute(1, 0, 2)
         )
 
         # input to decoder
         dec_output = self.transformer.decoder(
-            self.decoder_input(dec_input).permute(1, 0, 2),
+            self.transformer_input(dec_input).permute(1, 0, 2),
             enc_out,  # memory
             tgt_mask=self.tgt_mask,
         )
@@ -367,7 +366,7 @@ class TransformerPredictionNetwork(TransformerNetwork):
             )
 
             dec_output = self.transformer.decoder(
-                self.decoder_input(dec_input).permute(1, 0, 2), repeated_enc_out
+                self.transformer_input(dec_input).permute(1, 0, 2), repeated_enc_out
             )
 
             distr_args = self.proj_dist_args(dec_output.permute(1, 0, 2))
@@ -432,7 +431,7 @@ class TransformerPredictionNetwork(TransformerNetwork):
         )
 
         # pass through encoder
-        enc_out = self.transformer.encoder(self.encoder_input(inputs).permute(1, 0, 2))
+        enc_out = self.transformer.encoder(self.transformer_input(inputs).permute(1, 0, 2))
 
         return self.sampling_decoder(
             past_target=past_target,
