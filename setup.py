@@ -26,6 +26,7 @@ setup(
         'matplotlib',
         'python-rapidjson',
         'tensorboard',
+        'pytorch-fast-transformers',
     ],
 
     test_suite='tests',
