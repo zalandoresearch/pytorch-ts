@@ -60,12 +60,10 @@ class DNRI_Encoder(nn.Module):
             input_size=mlp_hidden_size, hidden_size=rnn_hidden_size, batch_first=True
         )
 
-        encoder_mlp_hidden += [num_edge_types]
-
-        self.encoder_fc_out = MLP(2 * rnn_hidden_size, encoder_mlp_hidden)
-
-        prior_mlp_hidden += [num_edge_types]
-        self.prior_fc_out = MLP(rnn_hidden_size, prior_mlp_hidden)
+        self.encoder_fc_out = MLP(
+            2 * rnn_hidden_size, encoder_mlp_hidden + [num_edge_types]
+        )
+        self.prior_fc_out = MLP(rnn_hidden_size, prior_mlp_hidden + [num_edge_types])
 
     def node2edge(self, node_embeddings):
         # Input size: [B, target_dim, T, embed_size]
@@ -159,7 +157,9 @@ class DNRI_Decoder(nn.Module):
         self.input_n = nn.Linear(input_size, decoder_hidden, bias=True)
 
         self.out_mlp = MLP(decoder_hidden, [decoder_hidden, decoder_hidden])
-        self.proj_dist_args = distr_output.get_args_proj(decoder_hidden*self.target_dim)
+        self.proj_dist_args = distr_output.get_args_proj(
+            decoder_hidden * self.target_dim
+        )
 
         edges = np.ones(target_dim) - np.eye(target_dim)
         self.send_edges = np.where(edges)[0]

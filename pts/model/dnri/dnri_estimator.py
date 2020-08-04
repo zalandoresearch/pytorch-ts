@@ -49,7 +49,7 @@ class DNRIEstimator(PTSEstimator):
         cell_type: str = "LSTM",
         num_parallel_samples: int = 100,
         dropout_rate: float = 0.1,
-        skip_first_edge_type: bool = False,
+        skip_first_edge_type: bool = True,
         gumbel_temp: float = 0.5,
         kl_coef: float = 1.0,
         use_feat_dynamic_real: bool = False,
