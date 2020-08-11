@@ -251,6 +251,7 @@ class DNRI(nn.Module):
         cell_type="GRU",
         num_edge_types=2,
         scaling: bool = True,
+        num_parallel_samples: int = 100,
     ):
         super().__init__()
         self.target_dim = target_dim
@@ -261,6 +262,7 @@ class DNRI(nn.Module):
         assert len(set(lags_seq)) == len(lags_seq), "no duplicated lags allowed!"
         lags_seq.sort()
         self.lags_seq = lags_seq
+        self.num_parallel_samples = num_parallel_samples
 
         self.encoder = DNRI_Encoder(
             target_dim=target_dim,
@@ -291,53 +293,7 @@ class DNRI(nn.Module):
         self.history_length = history_length
         self.context_length = context_length
         self.prediction_length = prediction_length
-
-    @staticmethod
-    def get_lagged_subsequences(
-        sequence: torch.Tensor,
-        sequence_length: int,
-        indices: List[int],
-        subsequences_length: int = 1,
-    ) -> torch.Tensor:
-        """
-        Returns lagged subsequences of a given sequence.
-        Parameters
-        ----------
-        sequence
-            the sequence from which lagged subsequences should be extracted.
-            Shape: (N, T, C).
-        sequence_length
-            length of sequence in the T (time) dimension (axis = 1).
-        indices
-            list of lag indices to be used.
-        subsequences_length
-            length of the subsequences to be extracted.
-        Returns
-        --------
-        lagged : Tensor
-            a tensor of shape (N, S, C, I),
-            where S = subsequences_length and I = len(indices),
-            containing lagged subsequences.
-            Specifically, lagged[i, :, j, k] = sequence[i, -indices[k]-S+j, :].
-        """
-        # we must have: history_length + begin_index >= 0
-        # that is: history_length - lag_index - sequence_length >= 0
-        # hence the following assert
-        assert max(indices) + subsequences_length <= sequence_length, (
-            f"lags cannot go further than history length, found lag "
-            f"{max(indices)} while history length is only {sequence_length}"
-        )
-        assert all(lag_index >= 0 for lag_index in indices)
-
-        lagged_values = []
-        for lag_index in indices:
-            begin_index = -lag_index - subsequences_length
-            end_index = -lag_index if lag_index > 0 else None
-            lagged_values.append(sequence[:, begin_index:end_index, ...].unsqueeze(1))
-        return torch.cat(lagged_values, dim=1).permute(0, 2, 3, 1)
-
-
-class DNRI_TrainingNetwork(DNRI):
+    
     def unroll_encoder(
         self,
         feat_static_real: torch.Tensor,
@@ -471,6 +427,53 @@ class DNRI_TrainingNetwork(DNRI):
 
         return prior_logits, posterior_logits, lags_scaled, inputs
 
+    @staticmethod
+    def get_lagged_subsequences(
+        sequence: torch.Tensor,
+        sequence_length: int,
+        indices: List[int],
+        subsequences_length: int = 1,
+    ) -> torch.Tensor:
+        """
+        Returns lagged subsequences of a given sequence.
+        Parameters
+        ----------
+        sequence
+            the sequence from which lagged subsequences should be extracted.
+            Shape: (N, T, C).
+        sequence_length
+            length of sequence in the T (time) dimension (axis = 1).
+        indices
+            list of lag indices to be used.
+        subsequences_length
+            length of the subsequences to be extracted.
+        Returns
+        --------
+        lagged : Tensor
+            a tensor of shape (N, S, C, I),
+            where S = subsequences_length and I = len(indices),
+            containing lagged subsequences.
+            Specifically, lagged[i, :, j, k] = sequence[i, -indices[k]-S+j, :].
+        """
+        # we must have: history_length + begin_index >= 0
+        # that is: history_length - lag_index - sequence_length >= 0
+        # hence the following assert
+        assert max(indices) + subsequences_length <= sequence_length, (
+            f"lags cannot go further than history length, found lag "
+            f"{max(indices)} while history length is only {sequence_length}"
+        )
+        assert all(lag_index >= 0 for lag_index in indices)
+
+        lagged_values = []
+        for lag_index in indices:
+            begin_index = -lag_index - subsequences_length
+            end_index = -lag_index if lag_index > 0 else None
+            lagged_values.append(sequence[:, begin_index:end_index, ...].unsqueeze(1))
+        return torch.cat(lagged_values, dim=1).permute(0, 2, 3, 1)
+
+
+class DNRI_TrainingNetwork(DNRI):
+
     def forward(
         self,
         target_dimension_indicator: torch.Tensor,
@@ -541,5 +544,29 @@ class DNRI_TrainingNetwork(DNRI):
 
 
 class DNRI_PredictionNetwork(DNRI):
-    def forward(self, input):
-        pass
+    def forward(
+        self,
+        target_dimension_indicator: torch.Tensor,
+        feat_static_cat: torch.Tensor,
+        feat_static_real: torch.Tensor,
+        past_time_feat: torch.Tensor,
+        past_target_cdf: torch.Tensor,
+        past_observed_values: torch.Tensor,
+        past_is_pad: torch.Tensor,
+        future_time_feat: torch.Tensor,
+    ) -> torch.Tensor:
+
+        #  encoder
+        prior_logits, posterior_logits, scale, _, inputs = self.unroll_encoder(
+            feat_static_real=feat_static_real,
+            past_time_feat=past_time_feat,
+            past_target_cdf=past_target_cdf,
+            past_observed_values=past_observed_values,
+            past_is_pad=past_is_pad,
+            future_time_feat=None,
+            future_target_cdf=None,
+            feat_static_cat=target_dimension_indicator,
+        )
+
+        # sampling decoder
+        
