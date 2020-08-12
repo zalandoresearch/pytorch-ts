@@ -35,6 +35,7 @@ class DNRI_Encoder(nn.Module):
         super().__init__()
         self.target_dim = target_dim
         self.num_edge_types = num_edge_types
+        self.cell_type = cell_type
 
         edges = np.ones(target_dim) - np.eye(target_dim)
         self.send_edges = np.where(edges)[0]
@@ -251,7 +252,6 @@ class DNRI(nn.Module):
         cell_type="GRU",
         num_edge_types=2,
         scaling: bool = True,
-        num_parallel_samples: int = 100,
     ):
         super().__init__()
         self.target_dim = target_dim
@@ -262,8 +262,6 @@ class DNRI(nn.Module):
         assert len(set(lags_seq)) == len(lags_seq), "no duplicated lags allowed!"
         lags_seq.sort()
         self.lags_seq = lags_seq
-        self.num_parallel_samples = num_parallel_samples
-        self.gumbel_temp = gumbel_temp
 
         self.encoder = DNRI_Encoder(
             target_dim=target_dim,
@@ -545,21 +543,15 @@ class DNRI_TrainingNetwork(DNRI):
 
 
 class DNRI_PredictionNetwork(DNRI):
-    def decoder_single_step_forward(
-        self, inputs, decoder_hidden, edge_logits, hard_sample: bool = True
-    ):
-        old_shape = edge_logits.shape
-        edges = F.gumbel_softmax(
-            edge_logits.reshape(-1, self.num_edge_types),
-            tau=self.gumbel_temp,
-            hard=hard_sample,
-        ).view(old_shape)
+    def __init__(self, num_parallel_samples: int, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.num_parallel_samples = num_parallel_samples
 
-        distr_args, decoder_hidden, _ = self.decoder(
-            inputs=inputs, hidden=decoder_hidden, edge_logits=edges,
-        )
+        # for decoding the lags are shifted by one,
+        # at the first time-step of the decoder a lag of one corresponds to
+        # the last target value
+        self.shifted_lags = [l - 1 for l in self.lags_seq]
 
-        return distr_args, decoder_hidden
 
     def forward(
         self,
@@ -590,12 +582,11 @@ class DNRI_PredictionNetwork(DNRI):
         for k in range(self.context_length):
             current_inputs = inputs[:, k]
             current_edge_logits = prior_logits[:, k]
-            _, decoder_hidden = self.decoder_single_step_forward(
+            _, decoder_hidden, _ = self.decoder(
                 current_inputs,
-                decoder_hidden=decoder_hidden,
+                hidden=decoder_hidden,
                 edge_logits=current_edge_logits,
             )
-
 
         # sampling decoder
         def repeat(tensor, dim=0):
@@ -606,12 +597,54 @@ class DNRI_PredictionNetwork(DNRI):
         repeated_past_target_cdf = repeat(past_target_cdf)
         repeated_time_feat = repeat(future_time_feat)
         repeated_scale = repeat(scale)
-        repeated_feat_static_cat = repeat(feat_static_cat)
+        repeated_feat_static_cat = repeat(target_dimension_indicator)
         repeated_feat_static_real = repeat(feat_static_real)
-
         repeated_decoder_hidden = repeat(decoder_hidden)
+        if self.encoder.cell_type == "LSTM":
+            repeated_prior_states = [repeat(s, dim=1) for s in prior_state]
+        else:
+            repeated_prior_states = repeat(prior_state, dim=1)
+
 
         future_samples = []
-
         for k in range(self.prediction_length):
-            pass
+            lags = self.get_lagged_subsequences(
+                sequence=repeated_past_target_cdf,
+                sequence_length=self.history_length + k,
+                indices=self.shifted_lags,
+                subsequences_length=1,
+            )
+
+            current_edge_logits, _, repeated_prior_states, current_inputs = self.unroll(
+                prior_state=repeated_prior_states,
+                lags=lags,
+                scale=repeated_scale,
+                time_feat=repeated_time_feat[:, k : k + 1, ...],
+                feat_static_cat=repeated_feat_static_cat,
+                feat_static_real=repeated_feat_static_real,
+                unroll_length=1,
+            )
+
+            distr_args, repeated_decoder_hidden, _ = self.decoder(
+                current_inputs.squeeze(1),
+                hidden=repeated_decoder_hidden,
+                edge_logits=current_edge_logits.squeeze(1),
+            )
+
+            distr = self.distr_output.distribution(distr_args, scale=repeated_scale.squeeze(1))
+            new_samples = distr.sample().unsqueeze(1)
+
+            future_samples.append(new_samples)
+            repeated_past_target_cdf = torch.cat(
+                (repeated_past_target_cdf, new_samples), dim=1
+            )
+
+
+        # (batch_size * num_samples, prediction_length, target_dim)
+        samples = torch.cat(future_samples, dim=1)
+
+        # (batch_size, num_samples, prediction_length, target_dim)
+        return samples.reshape(
+            (-1, self.num_parallel_samples, self.prediction_length, self.target_dim,)
+        )
+

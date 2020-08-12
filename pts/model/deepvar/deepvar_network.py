@@ -506,7 +506,7 @@ class DeepVARPredictionNetwork(DeepVARTrainingNetwork):
                 unroll_length=1,
             )
 
-            distr, distr_args = self.distr(
+            distr, _ = self.distr(
                 rnn_outputs=rnn_outputs, scale=repeated_scale,
             )
 
