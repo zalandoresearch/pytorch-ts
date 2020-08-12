@@ -263,6 +263,7 @@ class DNRI(nn.Module):
         lags_seq.sort()
         self.lags_seq = lags_seq
         self.num_parallel_samples = num_parallel_samples
+        self.gumbel_temp = gumbel_temp
 
         self.encoder = DNRI_Encoder(
             target_dim=target_dim,
@@ -293,7 +294,7 @@ class DNRI(nn.Module):
         self.history_length = history_length
         self.context_length = context_length
         self.prediction_length = prediction_length
-    
+
     def unroll_encoder(
         self,
         feat_static_real: torch.Tensor,
@@ -344,17 +345,16 @@ class DNRI(nn.Module):
             past_observed_values[:, -self.context_length :, ...],
         )
 
-        prior_logits, posterior_logits, lags_scaled, inputs = self.unroll(
+        prior_logits, posterior_logits, prior_state, inputs = self.unroll(
             lags=lags,
             scale=scale,
             time_feat=time_feat,
             feat_static_cat=feat_static_cat,
             feat_static_real=feat_static_real,
             unroll_length=subsequences_length,
-            begin_state=None,
         )
 
-        return prior_logits, posterior_logits, scale, lags_scaled, inputs
+        return prior_logits, posterior_logits, prior_state, scale, inputs
 
     def unroll(
         self,
@@ -364,7 +364,7 @@ class DNRI(nn.Module):
         feat_static_cat: torch.Tensor,
         feat_static_real: torch.Tensor,
         unroll_length: int,
-        begin_state: Optional[Union[List[torch.Tensor], torch.Tensor]] = None,
+        prior_state: Optional[Union[List[torch.Tensor], torch.Tensor]] = None,
     ) -> Tuple[
         torch.Tensor,
         Union[List[torch.Tensor], torch.Tensor],
@@ -413,7 +413,9 @@ class DNRI(nn.Module):
             (lags_scaled, repeated_static_feat, repeated_time_feat), dim=-1
         )
 
-        prior_logits, posterior_logits, _ = self.encoder(inputs)  # TODO [:, :-1]
+        prior_logits, posterior_logits, prior_state = self.encoder(
+            inputs, prior_state=prior_state
+        )  # TODO [:, :-1]
         # unroll encoder
         # outputs, state = self.rnn(inputs, begin_state)
 
@@ -425,7 +427,7 @@ class DNRI(nn.Module):
         #     lags_scaled, (-1, unroll_length, self.target_dim, len(self.lags_seq)),
         # )
 
-        return prior_logits, posterior_logits, lags_scaled, inputs
+        return prior_logits, posterior_logits, prior_state, inputs
 
     @staticmethod
     def get_lagged_subsequences(
@@ -473,7 +475,6 @@ class DNRI(nn.Module):
 
 
 class DNRI_TrainingNetwork(DNRI):
-
     def forward(
         self,
         target_dimension_indicator: torch.Tensor,
@@ -489,7 +490,7 @@ class DNRI_TrainingNetwork(DNRI):
     ):
 
         #  encoder
-        prior_logits, posterior_logits, scale, _, inputs = self.unroll_encoder(
+        prior_logits, posterior_logits, _, scale, inputs = self.unroll_encoder(
             feat_static_real=feat_static_real,
             past_time_feat=past_time_feat,
             past_target_cdf=past_target_cdf,
@@ -544,6 +545,22 @@ class DNRI_TrainingNetwork(DNRI):
 
 
 class DNRI_PredictionNetwork(DNRI):
+    def decoder_single_step_forward(
+        self, inputs, decoder_hidden, edge_logits, hard_sample: bool = True
+    ):
+        old_shape = edge_logits.shape
+        edges = F.gumbel_softmax(
+            edge_logits.reshape(-1, self.num_edge_types),
+            tau=self.gumbel_temp,
+            hard=hard_sample,
+        ).view(old_shape)
+
+        distr_args, decoder_hidden, _ = self.decoder(
+            inputs=inputs, hidden=decoder_hidden, edge_logits=edges,
+        )
+
+        return distr_args, decoder_hidden
+
     def forward(
         self,
         target_dimension_indicator: torch.Tensor,
@@ -557,7 +574,7 @@ class DNRI_PredictionNetwork(DNRI):
     ) -> torch.Tensor:
 
         #  encoder
-        prior_logits, posterior_logits, scale, _, inputs = self.unroll_encoder(
+        prior_logits, _, prior_state, scale, inputs = self.unroll_encoder(
             feat_static_real=feat_static_real,
             past_time_feat=past_time_feat,
             past_target_cdf=past_target_cdf,
@@ -568,5 +585,33 @@ class DNRI_PredictionNetwork(DNRI):
             feat_static_cat=target_dimension_indicator,
         )
 
+        # decoder_hidden via prior_logits
+        decoder_hidden = self.decoder.get_initial_hidden(inputs)
+        for k in range(self.context_length):
+            current_inputs = inputs[:, k]
+            current_edge_logits = prior_logits[:, k]
+            _, decoder_hidden = self.decoder_single_step_forward(
+                current_inputs,
+                decoder_hidden=decoder_hidden,
+                edge_logits=current_edge_logits,
+            )
+
+
         # sampling decoder
-        
+        def repeat(tensor, dim=0):
+            return tensor.repeat_interleave(repeats=self.num_parallel_samples, dim=dim)
+
+        # blows-up the dimension of each tensor to
+        # batch_size * self.num_sample_paths for increasing parallelism
+        repeated_past_target_cdf = repeat(past_target_cdf)
+        repeated_time_feat = repeat(future_time_feat)
+        repeated_scale = repeat(scale)
+        repeated_feat_static_cat = repeat(feat_static_cat)
+        repeated_feat_static_real = repeat(feat_static_real)
+
+        repeated_decoder_hidden = repeat(decoder_hidden)
+
+        future_samples = []
+
+        for k in range(self.prediction_length):
+            pass
