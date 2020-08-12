@@ -413,7 +413,7 @@ class DNRI(nn.Module):
 
         prior_logits, posterior_logits, prior_state = self.encoder(
             inputs, prior_state=prior_state
-        )  # TODO [:, :-1]
+        )
         # unroll encoder
         # outputs, state = self.rnn(inputs, begin_state)
 
@@ -528,7 +528,6 @@ class DNRI_TrainingNetwork(DNRI):
         prob = F.softmax(posterior_logits, dim=-1)
         loss_kl = self.kl_categorical_learned(prob, prior_logits)
         loss = loss_nll + self.kl_coef * loss_kl
-
         return loss.mean()
 
     def kl_categorical_learned(self, preds, prior_logits):
@@ -539,7 +538,7 @@ class DNRI_TrainingNetwork(DNRI):
         # elif self.normalize_kl_per_var:
         #     return kl_div.sum() / (self.target_dim * preds.size(0))
         # else:
-        return kl_div.view(preds.size(0), -1).sum(dim=1)
+        return kl_div.view(preds.size(0), preds.size(1), -1).sum(dim=-1, keepdims=True)
 
 
 class DNRI_PredictionNetwork(DNRI):
@@ -551,7 +550,6 @@ class DNRI_PredictionNetwork(DNRI):
         # at the first time-step of the decoder a lag of one corresponds to
         # the last target value
         self.shifted_lags = [l - 1 for l in self.lags_seq]
-
 
     def forward(
         self,
@@ -583,9 +581,7 @@ class DNRI_PredictionNetwork(DNRI):
             current_inputs = inputs[:, k]
             current_edge_logits = prior_logits[:, k]
             _, decoder_hidden, _ = self.decoder(
-                current_inputs,
-                hidden=decoder_hidden,
-                edge_logits=current_edge_logits,
+                current_inputs, hidden=decoder_hidden, edge_logits=current_edge_logits,
             )
 
         # sampling decoder
@@ -604,7 +600,6 @@ class DNRI_PredictionNetwork(DNRI):
             repeated_prior_states = [repeat(s, dim=1) for s in prior_state]
         else:
             repeated_prior_states = repeat(prior_state, dim=1)
-
 
         future_samples = []
         for k in range(self.prediction_length):
@@ -631,14 +626,15 @@ class DNRI_PredictionNetwork(DNRI):
                 edge_logits=current_edge_logits.squeeze(1),
             )
 
-            distr = self.distr_output.distribution(distr_args, scale=repeated_scale.squeeze(1))
+            distr = self.distr_output.distribution(
+                distr_args, scale=repeated_scale.squeeze(1)
+            )
             new_samples = distr.sample().unsqueeze(1)
 
             future_samples.append(new_samples)
             repeated_past_target_cdf = torch.cat(
                 (repeated_past_target_cdf, new_samples), dim=1
             )
-
 
         # (batch_size * num_samples, prediction_length, target_dim)
         samples = torch.cat(future_samples, dim=1)
@@ -647,4 +643,3 @@ class DNRI_PredictionNetwork(DNRI):
         return samples.reshape(
             (-1, self.num_parallel_samples, self.prediction_length, self.target_dim,)
         )
-
