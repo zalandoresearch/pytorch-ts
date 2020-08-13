@@ -206,7 +206,9 @@ class DNRIEstimator(PTSEstimator):
                     field_name="target_dimension_indicator",
                     target_field=FieldName.TARGET,
                 ),
-                AsNumpyArray(field=FieldName.FEAT_STATIC_CAT, expected_ndim=1, dtype=np.long),
+                AsNumpyArray(
+                    field=FieldName.FEAT_STATIC_CAT, expected_ndim=1, dtype=np.long
+                ),
                 AsNumpyArray(field=FieldName.FEAT_STATIC_REAL, expected_ndim=1),
                 InstanceSplitter(
                     target_field=FieldName.TARGET,

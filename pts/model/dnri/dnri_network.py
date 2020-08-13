@@ -98,18 +98,19 @@ class DNRI_Encoder(nn.Module):
         timesteps = old_shape[2]
         x = x.contiguous().view(-1, timesteps, old_shape[3])
         forward_x, prior_state = self.forward_rnn(x, prior_state)
-        reverse_x, _ = self.reverse_rnn(x.flip(1))
-        combined_x = torch.cat([forward_x, reverse_x.flip(1)], dim=-1)
 
-        posterior_logits = (
-            self.encoder_fc_out(combined_x)
+        prior_logits = (
+            self.prior_fc_out(forward_x)
             .view(old_shape[0], old_shape[1], timesteps, self.num_edge_types)
             .transpose(1, 2)
             .contiguous()
         )
 
-        prior_logits = (
-            self.prior_fc_out(forward_x)
+        reverse_x, _ = self.reverse_rnn(x.flip(1))
+        combined_x = torch.cat([forward_x, reverse_x.flip(1)], dim=-1)
+
+        posterior_logits = (
+            self.encoder_fc_out(combined_x)
             .view(old_shape[0], old_shape[1], timesteps, self.num_edge_types)
             .transpose(1, 2)
             .contiguous()
@@ -533,11 +534,7 @@ class DNRI_TrainingNetwork(DNRI):
     def kl_categorical_learned(self, preds, prior_logits):
         log_prior = nn.LogSoftmax(dim=-1)(prior_logits)
         kl_div = preds * (torch.log(preds + 1e-16) - log_prior)
-        # if self.normalize_kl:
-        #     return kl_div.sum(-1).view(preds.size(0), -1).mean(dim=1)
-        # elif self.normalize_kl_per_var:
-        #     return kl_div.sum() / (self.target_dim * preds.size(0))
-        # else:
+
         return kl_div.view(preds.size(0), preds.size(1), -1).sum(dim=-1, keepdims=True)
 
 
@@ -578,10 +575,8 @@ class DNRI_PredictionNetwork(DNRI):
         # decoder_hidden via prior_logits
         decoder_hidden = self.decoder.get_initial_hidden(inputs)
         for k in range(self.context_length):
-            current_inputs = inputs[:, k]
-            current_edge_logits = prior_logits[:, k]
             _, decoder_hidden, _ = self.decoder(
-                current_inputs, hidden=decoder_hidden, edge_logits=current_edge_logits,
+                inputs[:, k], hidden=decoder_hidden, edge_logits=prior_logits[:, k],
             )
 
         # sampling decoder
@@ -626,10 +621,9 @@ class DNRI_PredictionNetwork(DNRI):
                 edge_logits=current_edge_logits.squeeze(1),
             )
 
-            distr = self.distr_output.distribution(
-                distr_args, scale=repeated_scale.squeeze(1)
-            )
-            new_samples = distr.sample().unsqueeze(1)
+            distr_args = tuple([distr_arg.unsqueeze(1) for distr_arg in distr_args])
+            distr = self.distr_output.distribution(distr_args, scale=repeated_scale)
+            new_samples = distr.sample()
 
             future_samples.append(new_samples)
             repeated_past_target_cdf = torch.cat(
