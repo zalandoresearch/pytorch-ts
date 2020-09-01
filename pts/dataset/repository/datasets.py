@@ -21,6 +21,7 @@ from ._artificial import generate_artificial_dataset
 from ._gp_copula_2019 import generate_gp_copula_dataset
 from ._lstnet import generate_lstnet_dataset
 from ._m4 import generate_m4_dataset
+from ._m5 import generate_m5_dataset
 from ._util import get_download_path
 
 m4_freq = "Hourly"
@@ -83,6 +84,9 @@ dataset_recipes = OrderedDict(
             pandas_freq="12M",
             prediction_length=6,
         ),
+        "m5": partial(
+            generate_m5_dataset, pandas_freq="D", prediction_length=28, alpha=0.5
+        ),
     }
 )
 
@@ -132,7 +136,9 @@ def materialize_dataset(
 
 
 def get_dataset(
-    dataset_name: str, path: Path = default_dataset_path, regenerate: bool = False,
+    dataset_name: str,
+    path: Path = default_dataset_path,
+    regenerate: bool = False,
     shuffle: bool = True,
 ) -> TrainDatasets:
     """
@@ -164,7 +170,7 @@ def get_dataset(
         metadata=dataset_path / "metadata.json",
         train=dataset_path / "train" / "*.json",
         test=dataset_path / "test" / "*.json",
-        shuffle=shuffle
+        shuffle=shuffle,
     )
 
 

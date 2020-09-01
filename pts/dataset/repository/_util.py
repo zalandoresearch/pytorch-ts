@@ -39,7 +39,7 @@ def to_dict(
 
     if cat is not None:
         res["feat_static_cat"] = cat
-    
+
     if item_id is not None:
         res["item_id"] = item_id
 

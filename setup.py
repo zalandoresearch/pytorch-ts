@@ -19,7 +19,7 @@ setup(
         'torch>=1.5.0',
         'holidays',
         'numpy',
-        'pandas',
+        'pandas>=1.0,<1.1',
         'scipy',
         'tqdm',
         'pydantic',
