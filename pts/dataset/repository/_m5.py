@@ -141,17 +141,17 @@ def generate_m5_dataset(
         start_date = time_index[start_index]
         time_series = {}
 
-        store_enc, state_enc, cat_enc, dept_enc, item_enc = item.iloc[1913:]
+        state_enc, store_enc, cat_enc, dept_enc, item_enc = item.iloc[1913:]
 
         time_series["start"] = str(start_date)
         time_series["item_id"] = id[:-11]
 
         time_series["feat_static_cat"] = [
-            item_enc,
-            dept_enc,
-            cat_enc,
-            store_enc,
             state_enc,
+            store_enc,
+            cat_enc,
+            dept_enc,
+            item_enc,
         ]
 
         sell_price = get_sell_price(item_id, store_id)
@@ -202,17 +202,17 @@ def generate_m5_dataset(
         start_date = time_index[start_index]
         time_series = {}
 
-        store_enc, state_enc, cat_enc, dept_enc, item_enc = item.iloc[1941:]
+        state_enc, store_enc, cat_enc, dept_enc, item_enc = item.iloc[1941:]
 
         time_series["start"] = str(start_date)
         time_series["item_id"] = id[:-11]
 
         time_series["feat_static_cat"] = [
-            item_enc,
-            dept_enc,
-            cat_enc,
-            store_enc,
             state_enc,
+            store_enc,
+            cat_enc,
+            dept_enc,
+            item_enc,
         ]
 
         sell_price = get_sell_price(item_id, store_id)
