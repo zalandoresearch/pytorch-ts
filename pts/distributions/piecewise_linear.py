@@ -39,6 +39,9 @@ class PiecewiseLinear(Distribution):
 
         sample = self.quantile(u)
 
+        if len(sample_shape) == 0:
+            sample = sample.squeeze(0)
+
         return sample
 
     def quantile(self, level):
@@ -86,7 +89,7 @@ class PiecewiseLinear(Distribution):
 
         max_a_tilde_knots = torch.max(a_tilde.unsqueeze(-1), knot_positions)
 
-        knots_cubed = torch.pow(self.knot_positions, 3.0)
+        knots_cubed = torch.pow(knot_positions, 3.0)
         coeff = (
             (1.0 - knots_cubed) / 3.0
             - knot_positions

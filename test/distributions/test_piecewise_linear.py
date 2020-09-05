@@ -6,6 +6,7 @@ import numpy as np
 
 from pts.distributions import PiecewiseLinear
 
+
 def empirical_cdf(
     samples: np.ndarray, num_bins: int = 100
 ) -> Tuple[np.ndarray, np.ndarray]:
@@ -43,6 +44,7 @@ def empirical_cdf(
     edges = np.stack(edges, axis=-1).reshape(num_bins + 1, *batch_shape)
     return empirical_cdf, edges
 
+
 @pytest.mark.parametrize(
     "distr, target, expected_target_cdf, expected_target_crps",
     [
@@ -50,9 +52,7 @@ def empirical_cdf(
             PiecewiseLinear(
                 gamma=torch.ones(size=(1,)),
                 slopes=torch.Tensor([2, 3, 1]).reshape(shape=(1, 3)),
-                knot_spacings=torch.Tensor([0.3, 0.4, 0.3]).reshape(
-                    shape=(1, 3)
-                ),
+                knot_spacings=torch.Tensor([0.3, 0.4, 0.3]).reshape(shape=(1, 3)),
             ),
             [2.2],
             [0.5],
@@ -97,3 +97,72 @@ def test_values(
     emp_cdf, edges = empirical_cdf(samples)
     calc_cdf = distr.cdf(torch.Tensor(edges)).numpy()
     assert np.allclose(calc_cdf[1:, :], emp_cdf, atol=1e-2)
+
+
+@pytest.mark.parametrize(
+    "batch_shape, num_pieces, num_samples",
+    [((3, 4, 5), 10, 100), ((1,), 2, 1), ((10,), 10, 10), ((10, 5), 2, 1)],
+)
+def test_shapes(batch_shape: Tuple, num_pieces: int, num_samples: int):
+    gamma = torch.ones(size=(*batch_shape,))
+    slopes = torch.ones(size=(*batch_shape, num_pieces))  # all positive
+    knot_spacings = (
+        torch.ones(size=(*batch_shape, num_pieces)) / num_pieces
+    )  # positive and sum to 1
+    target = torch.ones(size=batch_shape)  # shape of gamma
+
+    distr = PiecewiseLinear(gamma=gamma, slopes=slopes, knot_spacings=knot_spacings)
+
+    # assert that the parameters and target have proper shapes
+    assert gamma.shape == target.shape
+    assert knot_spacings.shape == slopes.shape
+    assert len(gamma.shape) + 1 == len(knot_spacings.shape)
+
+    # assert that batch_shape is computed properly
+    assert distr.batch_shape == batch_shape
+
+    # assert that shapes of original parameters are correct
+    assert distr.b.shape == slopes.shape
+    assert distr.knot_positions.shape == knot_spacings.shape
+
+    # assert that the shape of crps is correct
+    assert distr.crps(target).shape == batch_shape
+
+    # assert that the quantile shape is correct when computing the
+    # quantile values at knot positions - used for a_tilde
+    assert distr.quantile_internal(knot_spacings, dim=-2).shape == (
+        *batch_shape,
+        num_pieces,
+    )
+
+    # assert that the samples and the quantile values shape when num_samples
+    # is None is correct
+    samples = distr.sample()
+    assert samples.shape == batch_shape
+    assert distr.quantile_internal(samples).shape == batch_shape
+
+    # assert that the samples and the quantile values shape when num_samples
+    # is not None is correct
+    samples = distr.sample((num_samples,))
+    assert samples.shape == (num_samples, *batch_shape)
+    assert distr.quantile_internal(samples, dim=0).shape == (
+        num_samples,
+        *batch_shape,
+    )
+
+
+def test_simple_symmetric():
+    gamma = torch.Tensor([-1.0])
+    slopes = torch.Tensor([[2.0, 2.0]])
+    knot_spacings = torch.Tensor([[0.5, 0.5]])
+
+    distr = PiecewiseLinear(gamma=gamma, slopes=slopes, knot_spacings=knot_spacings)
+
+    assert distr.cdf(torch.Tensor([-2.0])).numpy().item() == 0.0
+    assert distr.cdf(torch.Tensor([+2.0])).numpy().item() == 1.0
+
+    expected_crps = np.array([1.0 + 2.0 / 3.0])
+
+    assert np.allclose(distr.crps(torch.Tensor([-2.0])).numpy(), expected_crps)
+
+    assert np.allclose(distr.crps(torch.Tensor([2.0])).numpy(), expected_crps)
