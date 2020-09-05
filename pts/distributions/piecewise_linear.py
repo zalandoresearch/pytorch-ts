@@ -86,7 +86,7 @@ class PiecewiseLinear(Distribution):
 
         max_a_tilde_knots = torch.max(a_tilde.unsqueeze(-1), knot_positions)
 
-        knots_cubed = torch.pow(max_a_tilde_knots, 3.0)
+        knots_cubed = torch.pow(self.knot_positions, 3.0)
         coeff = (
             (1.0 - knots_cubed) / 3.0
             - knot_positions
