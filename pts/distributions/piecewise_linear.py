@@ -1,6 +1,13 @@
 import torch
 import torch.nn.functional as F
-from torch.distributions import constraints, NegativeBinomial, Poisson, Distribution
+from torch.distributions import (
+    constraints,
+    NegativeBinomial,
+    Poisson,
+    Distribution,
+    TransFormedDistribution,
+    AffineTransform,
+)
 from torch.distributions.utils import broadcast_all, lazy_property
 
 from .utils import broadcast_shape
@@ -98,3 +105,21 @@ class PiecewiseLinear(Distribution):
         )
 
         return (2 * a_tilde - 1) * x + (1 - 2 * a_tilde) * gamma + (b * coeff).sum(-1)
+
+
+class TransformedPiecewiseLinear(TransformedDistribution, PiecewiseLinear):
+    def __init__(self, base_distribution, transforms):
+        super().__init__(base_distribution, transforms)
+
+    def crps(self, x):
+        scale = 1.0
+
+        for transform in reversed(self.transforms):
+            assert isinstance(
+                transform, AffineTransform
+            ), "Not an AffineTransform"
+            x = transform.inv(x)
+            scale *= transform.scale
+
+        p = self.base_distribution.crps(x)
+        return p * scale
