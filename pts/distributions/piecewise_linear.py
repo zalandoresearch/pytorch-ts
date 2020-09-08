@@ -14,7 +14,7 @@ from .utils import broadcast_shape
 
 
 class PiecewiseLinear(Distribution):
-    def __init__(self, gamma, slopes, knot_spacings):
+    def __init__(self, gamma, slopes, knot_spacings, validate_args=None):
         self.gamma = gamma
         self.slopes = slopes
         self.knot_spacings = knot_spacings
@@ -22,7 +22,9 @@ class PiecewiseLinear(Distribution):
         self.b, self.knot_positions = PiecewiseLinear._to_orig_params(
             slopes=slopes, knot_spacings=knot_spacings
         )
-        super(PiecewiseLinear, self).__init__(batch_shape=self.gamma.shape)
+        super(PiecewiseLinear, self).__init__(
+            batch_shape=self.gamma.shape, validate_args=validate_args
+        )
 
     @staticmethod
     def _to_orig_params(slopes, knot_spacings):
@@ -107,7 +109,7 @@ class PiecewiseLinear(Distribution):
         return (2 * a_tilde - 1) * x + (1 - 2 * a_tilde) * gamma + (b * coeff).sum(-1)
 
 
-class TransformedPiecewiseLinear(TransformedDistribution, PiecewiseLinear):
+class TransformedPiecewiseLinear(TransformedDistribution):
     def __init__(self, base_distribution, transforms):
         super().__init__(base_distribution, transforms)
 
@@ -115,11 +117,9 @@ class TransformedPiecewiseLinear(TransformedDistribution, PiecewiseLinear):
         scale = 1.0
 
         for transform in reversed(self.transforms):
-            assert isinstance(
-                transform, AffineTransform
-            ), "Not an AffineTransform"
+            assert isinstance(transform, AffineTransform), "Not an AffineTransform"
             x = transform.inv(x)
             scale *= transform.scale
 
-        p = self.base_distribution.crps(x)
+        p = self.base_dist.crps(x)
         return p * scale
