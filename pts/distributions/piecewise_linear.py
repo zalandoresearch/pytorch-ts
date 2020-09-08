@@ -5,7 +5,7 @@ from torch.distributions import (
     NegativeBinomial,
     Poisson,
     Distribution,
-    TransFormedDistribution,
+    TransformedDistribution,
     AffineTransform,
 )
 from torch.distributions.utils import broadcast_all, lazy_property
@@ -87,7 +87,7 @@ class PiecewiseLinear(Distribution):
             (x - gamma + (b * knot_positions * mask).sum(-1)) / slope_l0,
         )
 
-        return torch.clamp(a_tilde, max=1.0)
+        return torch.clamp(a_tilde, min=0.0, max=1.0)
 
     def crps(self, x):
         gamma, b, knot_positions = self.gamma, self.b, self.knot_positions

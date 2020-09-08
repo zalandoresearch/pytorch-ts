@@ -357,7 +357,7 @@ class PiecewiseLinearOutput(DistributionOutput):
         slopes_proj = F.softplus(slopes) + 1e-4
 
         # the spacing between the knots should be in [0, 1] and sum to 1
-        knot_spacings_proj = torch.softmax(knot_spacings)
+        knot_spacings_proj = torch.softmax(knot_spacings, dim=-1)
 
         return gamma.squeeze(axis=-1), slopes_proj, knot_spacings_proj
 

@@ -5,6 +5,7 @@ import torch
 import numpy as np
 
 from pts.distributions import PiecewiseLinear
+from pts.modules import PiecewiseLinearOutput
 
 
 def empirical_cdf(
@@ -145,10 +146,7 @@ def test_shapes(batch_shape: Tuple, num_pieces: int, num_samples: int):
     # is not None is correct
     samples = distr.sample((num_samples,))
     assert samples.shape == (num_samples, *batch_shape)
-    assert distr.quantile_internal(samples, dim=0).shape == (
-        num_samples,
-        *batch_shape,
-    )
+    assert distr.quantile_internal(samples, dim=0).shape == (num_samples, *batch_shape,)
 
 
 def test_simple_symmetric():
@@ -166,3 +164,33 @@ def test_simple_symmetric():
     assert np.allclose(distr.crps(torch.Tensor([-2.0])).numpy(), expected_crps)
 
     assert np.allclose(distr.crps(torch.Tensor([2.0])).numpy(), expected_crps)
+
+
+def test_robustness():
+    distr_out = PiecewiseLinearOutput(num_pieces=10)
+    args_proj = distr_out.get_args_proj(in_features=30)
+
+    net_out = torch.normal(mean=0.0, size=(1000, 30), std=1e2)
+    gamma, slopes, knot_spacings = args_proj(net_out)
+    distr = distr_out.distribution((gamma, slopes, knot_spacings))
+
+    # compute the 1-quantile (the 0-quantile is gamma)
+    sup_support = gamma + (slopes * knot_spacings).sum(-1)
+
+    assert torch.le(gamma, sup_support).numpy().all()
+
+    width = sup_support - gamma
+    x = torch.from_numpy(
+        np.random.uniform(
+            low=(gamma - width).detach().numpy(),
+            high=(sup_support + width).detach().numpy(),
+        ).astype(np.float32),
+    )
+
+    # check that 0 < cdf < 1
+    cdf_x = distr.cdf(x)
+    assert torch.min(cdf_x).item() >= 0.0 and torch.max(cdf_x).item() <= 1.0
+
+    # check that 0 <= crps
+    crps_x = distr.crps(x)
+    assert torch.min(crps_x).item() >= 0.0
