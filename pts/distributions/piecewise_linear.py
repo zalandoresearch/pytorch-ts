@@ -1,3 +1,16 @@
+# Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License").
+# You may not use this file except in compliance with the License.
+# A copy of the License is located at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# or in the "license" file accompanying this file. This file is distributed
+# on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+# express or implied. See the License for the specific language governing
+# permissions and limitations under the License.
+
 import torch
 import torch.nn.functional as F
 from torch.distributions import (
@@ -83,10 +96,14 @@ class PiecewiseLinear(Distribution):
         slope_l0 = (b * mask).sum(-1)
 
         # slope_l0 can be zero in which case a_tilde = 0.
+        # The following is to circumvent an issue where the
+        # backward() returns nans when slope_l0 is zero in the where
+        slope_l0_nz = torch.where(slope_l0 == 0.0, torch.ones_like(x), slope_l0)
+
         a_tilde = torch.where(
-            slope_l0 == torch.zeros_like(slope_l0),
+            slope_l0 == 0.0,
             torch.zeros_like(x),
-            (x - gamma + (b * knot_positions * mask).sum(-1)) / slope_l0,
+            (x - gamma + (b * knot_positions * mask).sum(-1)) / slope_l0_nz,
         )
 
         return torch.clamp(a_tilde, min=0.0, max=1.0)
