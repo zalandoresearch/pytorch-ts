@@ -7,6 +7,7 @@ from .distribution_output import (
     BetaOutput,
     PoissonOutput,
     ZeroInflatedPoissonOutput,
+    PiecewiseLinearOutput,
     NegativeBinomialOutput,
     ZeroInflatedNegativeBinomialOutput,
     NormalMixtureOutput,

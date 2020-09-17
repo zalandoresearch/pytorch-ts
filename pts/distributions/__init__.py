@@ -4,3 +4,4 @@ from .zero_inflated import (
     ZeroInflatedPoisson,
     ZeroInflatedNegativeBinomial,
 )
+from .piecewise_linear import PiecewiseLinear, TransformedPiecewiseLinear
