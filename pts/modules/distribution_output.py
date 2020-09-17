@@ -363,7 +363,7 @@ class PiecewiseLinearOutput(DistributionOutput):
 
     def distribution(
         self, distr_args, scale: Optional[torch.Tensor] = None,
-    ) -> PiecewiseLinear:
+    ) -> Distribution:
         if scale is None:
             return self.distr_cls(*distr_args)
         else:
