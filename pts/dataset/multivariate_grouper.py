@@ -172,7 +172,7 @@ class MultivariateGrouper:
 
     @staticmethod
     def _transform_target(funcs, dataset: Dataset) -> DataEntry:
-        return {FieldName.TARGET: np.array([funcs(data) for data in dataset])}
+        return {FieldName.TARGET: np.array([funcs(data) for data in dataset], dtype=object)}
 
     def _restrict_max_dimensionality(self, data: DataEntry) -> DataEntry:
         """

@@ -159,7 +159,10 @@ def test_shapes(batch_shape: Tuple, num_pieces: int, num_samples: int):
     # is not None is correct
     samples = distr.sample((num_samples,))
     assert samples.shape == (num_samples, *batch_shape)
-    assert distr.quantile_internal(samples, dim=0).shape == (num_samples, *batch_shape,)
+    assert distr.quantile_internal(samples, dim=0).shape == (
+        num_samples,
+        *batch_shape,
+    )
 
 
 def test_simple_symmetric():

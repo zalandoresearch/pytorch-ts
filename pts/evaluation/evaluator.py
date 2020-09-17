@@ -13,6 +13,8 @@
 
 # Standard library imports
 import multiprocessing
+from os import stat
+import pdb
 import sys
 
 from itertools import chain, tee
@@ -135,7 +137,9 @@ class Evaluator:
                     initializer=_worker_init(self), processes=self.num_workers
                 )
                 rows = mp_pool.map(
-                    func=_worker_fun, iterable=iter(it), chunksize=self.chunk_size,
+                    func=_worker_fun,
+                    iterable=iter(it),
+                    chunksize=self.chunk_size,
                 )
                 mp_pool.close()
                 mp_pool.join()
@@ -486,7 +490,7 @@ class Evaluator:
 
 class MultivariateEvaluator(Evaluator):
     """
-    
+
     The MultivariateEvaluator class owns functionality for evaluating
     multidimensional target arrays of shape
     (target_dimensionality, prediction_length).
@@ -545,6 +549,14 @@ class MultivariateEvaluator(Evaluator):
         super().__init__(quantiles=quantiles, seasonality=seasonality, alpha=alpha)
         self._eval_dims = eval_dims
         self.target_agg_funcs = target_agg_funcs
+
+    @staticmethod
+    def energy_score(forecast, target):
+        obs_dist = np.mean(np.linalg.norm((forecast - target), axis=-1))
+        pair_dist = np.mean(
+            np.linalg.norm(forecast[:, np.newaxis, ...] - forecast, axis=-1)
+        )
+        return obs_dist - pair_dist * 0.5
 
     @staticmethod
     def extract_target_by_dim(
@@ -630,7 +642,9 @@ class MultivariateEvaluator(Evaluator):
         return agg_metrics
 
     def calculate_aggregate_vector_metrics(
-        self, all_agg_metrics: Dict[str, float], all_metrics_per_ts: pd.DataFrame,
+        self,
+        all_agg_metrics: Dict[str, float],
+        all_metrics_per_ts: pd.DataFrame,
     ) -> Dict[str, float]:
         """
 
@@ -659,11 +673,21 @@ class MultivariateEvaluator(Evaluator):
         fcst_iterator: Iterable[Forecast],
         num_series=None,
     ) -> Tuple[Dict[str, float], pd.DataFrame]:
-        ts_iterator = iter(ts_iterator)
-        fcst_iterator = iter(fcst_iterator)
-
+       
         all_agg_metrics = dict()
         all_metrics_per_ts = list()
+
+        # proper scoring rule for Multivariate forecasts
+        energy_scores = []
+        for forecast, ts in zip(fcst_iterator, ts_iterator):
+            samples = forecast.samples
+            target = ts.loc[forecast.index].values
+
+            energy_scores.append(self.energy_score(samples, target))
+        all_agg_metrics["m_ES"] = np.mean(energy_scores)
+
+        ts_iterator = iter(ts_iterator)
+        fcst_iterator = iter(fcst_iterator)
 
         peeked_forecast, fcst_iterator = self.peek(fcst_iterator)
         target_dimensionality = self.get_target_dimensionality(peeked_forecast)
