@@ -13,8 +13,6 @@
 
 # Standard library imports
 import multiprocessing
-from os import stat
-import pdb
 import sys
 
 from itertools import chain, tee
