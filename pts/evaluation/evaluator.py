@@ -135,9 +135,7 @@ class Evaluator:
                     initializer=_worker_init(self), processes=self.num_workers
                 )
                 rows = mp_pool.map(
-                    func=_worker_fun,
-                    iterable=iter(it),
-                    chunksize=self.chunk_size,
+                    func=_worker_fun, iterable=iter(it), chunksize=self.chunk_size,
                 )
                 mp_pool.close()
                 mp_pool.join()
@@ -544,7 +542,9 @@ class MultivariateEvaluator(Evaluator):
             dimension axis. Useful to compute metrics over aggregated target
             and forecast (typically sum or mean).
         """
-        super().__init__(quantiles=quantiles, seasonality=seasonality, alpha=alpha)
+        super().__init__(
+            quantiles=quantiles, seasonality=seasonality, alpha=alpha, num_workers=0
+        )
         self._eval_dims = eval_dims
         self.target_agg_funcs = target_agg_funcs
 
@@ -555,6 +555,19 @@ class MultivariateEvaluator(Evaluator):
             np.linalg.norm(forecast[:, np.newaxis, ...] - forecast, axis=-1)
         )
         return obs_dist - pair_dist * 0.5
+
+    @staticmethod
+    def variogram_score(forecast, target, p=0.5):
+        _, T, D = forecast.shape
+        score = np.zeros(T)
+
+        for i in range(D):
+            for j in range(D):
+                vdat = np.mean(np.abs(forecast[..., i] - forecast[..., j]) ** p, 0)
+                vy = np.abs(target[..., i] - target[..., j]) ** p
+                score += (vy - vdat) ** 2
+
+        return np.mean(score)
 
     @staticmethod
     def extract_target_by_dim(
@@ -640,9 +653,7 @@ class MultivariateEvaluator(Evaluator):
         return agg_metrics
 
     def calculate_aggregate_vector_metrics(
-        self,
-        all_agg_metrics: Dict[str, float],
-        all_metrics_per_ts: pd.DataFrame,
+        self, all_agg_metrics: Dict[str, float], all_metrics_per_ts: pd.DataFrame,
     ) -> Dict[str, float]:
         """
 
@@ -671,18 +682,21 @@ class MultivariateEvaluator(Evaluator):
         fcst_iterator: Iterable[Forecast],
         num_series=None,
     ) -> Tuple[Dict[str, float], pd.DataFrame]:
-       
+
         all_agg_metrics = dict()
         all_metrics_per_ts = list()
 
         # proper scoring rule for Multivariate forecasts
         energy_scores = []
+        variogram_scores = []
         for forecast, ts in zip(fcst_iterator, ts_iterator):
             samples = forecast.samples
             target = ts.loc[forecast.index].values
 
             energy_scores.append(self.energy_score(samples, target))
+            variogram_scores.append(self.variogram_score(samples, target))
         all_agg_metrics["m_ES"] = np.mean(energy_scores)
+        all_agg_metrics["m_VariogramScore"] = np.mean(energy_scores)
 
         ts_iterator = iter(ts_iterator)
         fcst_iterator = iter(fcst_iterator)
