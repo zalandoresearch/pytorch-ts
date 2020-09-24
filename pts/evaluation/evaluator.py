@@ -696,7 +696,7 @@ class MultivariateEvaluator(Evaluator):
             energy_scores.append(self.energy_score(samples, target))
             variogram_scores.append(self.variogram_score(samples, target))
         all_agg_metrics["m_ES"] = np.mean(energy_scores)
-        all_agg_metrics["m_VariogramScore"] = np.mean(energy_scores)
+        all_agg_metrics["m_VariogramScore"] = np.mean(variogram_scores)
 
         ts_iterator = iter(ts_iterator)
         fcst_iterator = iter(fcst_iterator)
