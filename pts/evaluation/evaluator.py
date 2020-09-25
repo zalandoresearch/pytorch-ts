@@ -563,9 +563,9 @@ class MultivariateEvaluator(Evaluator):
 
         for i in range(D):
             for j in range(D):
-                vdat = np.mean(np.abs(forecast[..., i] - forecast[..., j]) ** p, 0)
-                vy = np.abs(target[..., i] - target[..., j]) ** p
-                score += (vy - vdat) ** 2
+                vdat = np.mean(np.power(np.abs(forecast[..., i] - forecast[..., j]), p), 0)
+                vy = np.power(np.abs(target[..., i] - target[..., j]), p)
+                score += np.power(vy - vdat, 2)
 
         return np.mean(score)
 
@@ -696,7 +696,7 @@ class MultivariateEvaluator(Evaluator):
             energy_scores.append(self.energy_score(samples, target))
             variogram_scores.append(self.variogram_score(samples, target))
         all_agg_metrics["m_ES"] = np.mean(energy_scores)
-        all_agg_metrics["m_VariogramScore"] = np.mean(variogram_scores)
+        all_agg_metrics["m_VS"] = np.mean(variogram_scores)
 
         ts_iterator = iter(ts_iterator)
         fcst_iterator = iter(fcst_iterator)
