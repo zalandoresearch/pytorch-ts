@@ -19,16 +19,18 @@ from torch.distributions import (
     MultivariateNormal,
     TransformedDistribution,
     AffineTransform,
-    Poisson,
-)
+    Poisson)
 
 from pts.distributions import (
     ZeroInflatedPoisson,
     ZeroInflatedNegativeBinomial,
     PiecewiseLinear,
     TransformedPiecewiseLinear,
+    ImplicitQuantile,
+    TransformedImplicitQuantile,
 )
 from pts.core.component import validated
+from pts.modules.iqn_modules import ImplicitQuantileModule
 from .lambda_layer import LambdaLayer
 
 
@@ -504,3 +506,108 @@ class FlowOutput(DistributionOutput):
     @property
     def event_shape(self) -> Tuple:
         return (self.dim,)
+
+
+class QuantileArgProj(ArgProj):
+    def __init__(
+            self,
+            in_features: int,
+            output_domain_cls: nn.Module,
+            args_dim: Dict[str, int],
+            domain_map: Callable[..., Tuple[torch.Tensor]],
+            dtype: np.dtype = np.float32,
+            prefix: Optional[str] = None,
+            **kwargs,
+    ):
+        super().__init__(
+            in_features,
+            args_dim,
+            domain_map,
+            dtype,
+            prefix,
+            **kwargs
+        )
+        self.output_domain_cls = output_domain_cls
+        self.proj = ImplicitQuantileModule(in_features, output_domain_cls)
+
+    def forward(self, x: torch.Tensor):
+        batch_size = x.shape[0]
+        forecast_length = x.shape[1]
+        device = x.device
+        taus = torch.rand(size=(batch_size, forecast_length), device=device)
+        self.register_buffer('taus', taus)
+        self.register_buffer('nn_ouput', x.clone().detach())
+        predicted_quantiles = self.proj(x, taus)
+        return self.domain_map(predicted_quantiles)
+
+
+class ImplicitQuantileOutput(IndependentDistributionOutput):
+    distr_cls: type = ImplicitQuantile
+    in_features = 1
+    args_dim = {"quantile_function": 1}
+    output_domain_cls: type = nn.Module
+    quantile_arg_proj: type = nn.Module
+
+    def __init__(self, output_domain: str) -> None:
+        super().__init__()
+        self.set_output_domain_map(output_domain)
+        self.set_args_proj()
+
+    @classmethod
+    def set_output_domain_map(cls, output_domain):
+        available_domain_map_cls = {
+            "Positive": nn.Softplus,
+            "Real": nn.Identity,
+        }
+        assert output_domain in available_domain_map_cls.keys(), \
+            "Only the following output domains are allowed: {}".format(available_domain_map_cls.keys())
+        output_domain_cls = available_domain_map_cls[output_domain]
+        cls.output_domain_cls = output_domain_cls
+
+    @classmethod
+    def set_args_proj(cls):
+        cls.quantile_arg_proj = QuantileArgProj(
+            in_features=cls.in_features,
+            output_domain_cls=cls.output_domain_cls,
+            args_dim=cls.args_dim,
+            domain_map=LambdaLayer(cls.domain_map),
+        )
+
+    @classmethod
+    def domain_map(cls, *args):
+        return args
+
+    @classmethod
+    def args_proj(cls, in_features):
+        if in_features != cls.in_features:
+            cls.in_features = in_features
+            cls.set_args_proj()
+        return cls.quantile_arg_proj
+
+    def get_args_proj(self, in_features: int, prefix: Optional[str] = None) :
+        return self.args_proj(in_features)
+
+    def distribution(
+            self, distr_args, scale: Optional[torch.Tensor] = None,
+    ) -> ImplicitQuantile:
+
+        args_proj = self.get_args_proj(self.in_features)
+        implicit_quantile_function = args_proj.proj.eval()
+        distr = self.distr_cls(
+            implicit_quantile_function=implicit_quantile_function,
+            taus=list(args_proj.buffers())[0],
+            nn_output=list(args_proj.buffers())[1],
+            predicted_quantiles=distr_args)
+        if scale is None:
+            return distr
+        else:
+            return TransformedImplicitQuantile(
+                distr, [AffineTransform(loc=0, scale=scale)]
+            )
+
+    @property
+    def event_shape(self) -> Tuple:
+        return ()
+
+
+

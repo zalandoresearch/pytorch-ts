@@ -16,6 +16,7 @@ from .distribution_output import (
     LowRankMultivariateNormalOutput,
     MultivariateNormalOutput,
     FlowOutput,
+    ImplicitQuantileOutput,
 )
 from .feature import FeatureEmbedder, FeatureAssembler
 from .flows import RealNVP, MAF

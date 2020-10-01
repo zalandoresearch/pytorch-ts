@@ -84,6 +84,9 @@ class PiecewiseLinear(Distribution):
 
         return quantile
 
+    def log_prob(self, value):
+        return -self.crps(value)
+
     def cdf(self, x):
         gamma, b, knot_positions = self.gamma, self.b, self.knot_positions
 
