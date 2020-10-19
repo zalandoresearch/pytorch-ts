@@ -201,7 +201,7 @@ class PoissonOutput(IndependentDistributionOutput):
 
 
 class ZeroInflatedPoissonOutput(IndependentDistributionOutput):
-    args_dim: Dict[str, int] = {"gate": 1, "rate": 1}
+    args_dim: Dict[str, int] = {"gate_logits": 1, "rate": 1}
     distr_cls: type = ZeroInflatedPoisson
 
     def __init__(self, dim: Optional[int] = None) -> None:
@@ -210,21 +210,20 @@ class ZeroInflatedPoissonOutput(IndependentDistributionOutput):
             self.args_dim = {k: dim for k in self.args_dim}
 
     @classmethod
-    def domain_map(cls, gate, rate):
-        gate_unit = torch.sigmoid(gate).clone()
+    def domain_map(cls, gate_logits, rate):
         rate_pos = F.softplus(rate).clone()
 
-        return gate_unit.squeeze(-1), rate_pos.squeeze(-1)
+        return gate_logits.squeeze(-1), rate_pos.squeeze(-1)
 
     def distribution(
         self, distr_args, scale: Optional[torch.Tensor] = None
     ) -> Distribution:
-        gate, rate = distr_args
+        gate_logits, rate = distr_args
 
         if scale is not None:
             rate *= scale
 
-        return self.independent(ZeroInflatedPoisson(gate=gate, rate=rate))
+        return self.independent(ZeroInflatedPoisson(rate=rate, gate_logits=gate_logits))
 
 
 class NegativeBinomialOutput(IndependentDistributionOutput):
@@ -255,7 +254,7 @@ class NegativeBinomialOutput(IndependentDistributionOutput):
 
 
 class ZeroInflatedNegativeBinomialOutput(IndependentDistributionOutput):
-    args_dim: Dict[str, int] = {"gate": 1, "total_count": 1, "logits": 1}
+    args_dim: Dict[str, int] = {"gate_logits": 1, "total_count": 1, "logits": 1}
     distr_cls: type = ZeroInflatedNegativeBinomial
 
     def __init__(self, dim: Optional[int] = None) -> None:
@@ -264,22 +263,22 @@ class ZeroInflatedNegativeBinomialOutput(IndependentDistributionOutput):
             self.args_dim = {k: dim for k in self.args_dim}
 
     @classmethod
-    def domain_map(cls, gate, total_count, logits):
-        gate = torch.sigmoid(gate)
+    def domain_map(cls, gate_logits, total_count, logits):
         total_count = F.softplus(total_count)
-        return gate.squeeze(-1), total_count.squeeze(-1), logits.squeeze(-1)
+        return gate_logits.squeeze(-1), total_count.squeeze(-1), logits.squeeze(-1)
 
     def distribution(
         self, distr_args, scale: Optional[torch.Tensor] = None
     ) -> Distribution:
-        gate, total_count, logits = distr_args
+        gate_logits, total_count, logits = distr_args
 
         if scale is not None:
             logits += scale.log()
 
         return self.independent(
             ZeroInflatedNegativeBinomial(
-                gate=gate, total_count=total_count, logits=logits
+                total_count=total_count,
+                gate_logits=gate_logits, logits=logits
             )
         )
 
