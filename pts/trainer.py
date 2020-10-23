@@ -76,16 +76,16 @@ class Trainer:
                     loss.backward()
                     optimizer.step()
 
-                    if epoch_no > swa_epoch_start:
-                        swa_model.update_parameters(net)
-                        swa_scheduler.step()
-                    else:
-                        scheduler.step()
-
                     if self.num_batches_per_epoch == batch_no:
                         for name, param in net.named_parameters():
                             writer.add_histogram(name, param.clone().cpu().data.numpy(), n_iter)
                         break
+
+            if epoch_no > swa_epoch_start:
+                swa_model.update_parameters(net)
+                swa_scheduler.step()
+            else:
+                scheduler.step()
 
             # mark epoch end time and log time cost of current epoch
             toc = time.time()
