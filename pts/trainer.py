@@ -5,7 +5,6 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-from torch.optim.swa_utils import AveragedModel, SWALR, update_bn
 
 from tqdm import tqdm
 
@@ -38,10 +37,6 @@ class Trainer:
             net.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay
         )
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=self.epochs)
-        swa_epoch_start = int(self.epochs * 0.75)
-
-        swa_model = AveragedModel(net)
-        swa_scheduler = SWALR(optimizer, swa_lr=0.05)
 
         writer = SummaryWriter()
         #writer.add_graph(net)
@@ -81,17 +76,10 @@ class Trainer:
                             writer.add_histogram(name, param.clone().cpu().data.numpy(), n_iter)
                         break
 
-            if epoch_no > swa_epoch_start:
-                swa_model.update_parameters(net)
-                swa_scheduler.step()
-            else:
-                scheduler.step()
+            scheduler.step()
 
             # mark epoch end time and log time cost of current epoch
             toc = time.time()
         
         writer.close()
 
-        update_bn(data_loader, swa_model)
-
-        return swa_model
