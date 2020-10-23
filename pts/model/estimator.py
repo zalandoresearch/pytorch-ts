@@ -132,7 +132,7 @@ class PTSEstimator(Estimator):
 
         trained_net = self.trainer(
             net=net,
-            input_names=get_module_forward_input_names(trained_net),
+            input_names=get_module_forward_input_names(net),
             data_loader=training_data_loader,
         )
 
