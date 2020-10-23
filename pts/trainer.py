@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-from torch.optim.swa_utils import AveragedModel, SWALR
+from torch.optim.swa_utils import AveragedModel, SWALR, update_bn
 
 from tqdm import tqdm
 
@@ -92,6 +92,6 @@ class Trainer:
         
         writer.close()
 
-        torch.optim.swa_utils.update_bn(data_loader, swa_model)
+        update_bn(data_loader, swa_model)
 
         return swa_model
