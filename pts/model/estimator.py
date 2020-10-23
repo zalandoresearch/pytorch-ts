@@ -128,10 +128,10 @@ class PTSEstimator(Estimator):
         )
 
         # ensure that the training network is created on the same device
-        trained_net = self.create_training_network(self.trainer.device)
+        net = self.create_training_network(self.trainer.device)
 
-        self.trainer(
-            net=trained_net,
+        trained_net = self.trainer(
+            net=net,
             input_names=get_module_forward_input_names(trained_net),
             data_loader=training_data_loader,
         )

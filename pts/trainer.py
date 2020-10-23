@@ -35,6 +35,11 @@ class Trainer:
         optimizer = torch.optim.Adam(
             net.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay
         )
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
+        swa_epoch_start = int(epochs * 0.75)
+
+        swa_model = torch.optim.swa_utils.AveragedModel(net)
+        swa_scheduler = torch.optim.swa_utils.SWALR(optimizer, swa_lr=0.05)
 
         writer = SummaryWriter()
         #writer.add_graph(net)
@@ -69,6 +74,12 @@ class Trainer:
                     loss.backward()
                     optimizer.step()
 
+                    if epoch_no > swa_epoch_start:
+                        swa_model.update_parameters(net)
+                        swa_scheduler.step()
+                    else:
+                        scheduler.step()
+
                     if self.num_batches_per_epoch == batch_no:
                         for name, param in net.named_parameters():
                             writer.add_histogram(name, param.clone().cpu().data.numpy(), n_iter)
@@ -78,3 +89,7 @@ class Trainer:
             toc = time.time()
         
         writer.close()
+
+        torch.optim.swa_utils.update_bn(data_loader, swa_model)
+
+        return swa_model
