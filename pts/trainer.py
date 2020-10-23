@@ -35,8 +35,8 @@ class Trainer:
         optimizer = torch.optim.Adam(
             net.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay
         )
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
-        swa_epoch_start = int(epochs * 0.75)
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=self.epochs)
+        swa_epoch_start = int(self.epochs * 0.75)
 
         swa_model = torch.optim.swa_utils.AveragedModel(net)
         swa_scheduler = torch.optim.swa_utils.SWALR(optimizer, swa_lr=0.05)
