@@ -5,6 +5,8 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
+from torch.optim.swa_utils import AveragedModel, SWALR
+
 from tqdm import tqdm
 
 
@@ -38,8 +40,8 @@ class Trainer:
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=self.epochs)
         swa_epoch_start = int(self.epochs * 0.75)
 
-        swa_model = torch.optim.swa_utils.AveragedModel(net)
-        swa_scheduler = torch.optim.swa_utils.SWALR(optimizer, swa_lr=0.05)
+        swa_model = AveragedModel(net)
+        swa_scheduler = SWALR(optimizer, swa_lr=0.05)
 
         writer = SummaryWriter()
         #writer.add_graph(net)
