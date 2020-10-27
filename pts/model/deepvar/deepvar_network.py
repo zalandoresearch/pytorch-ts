@@ -422,7 +422,7 @@ class DeepVARTrainingNetwork(nn.Module):
 
 
 class DeepVARPredictionNetwork(DeepVARTrainingNetwork):
-    def __init__(self, num_parallel_samples: int, **kwargs) -> None:
+    def __init__(self, num_parallel_samples: int = 100, **kwargs) -> None:
         super().__init__(**kwargs)
         self.num_parallel_samples = num_parallel_samples
 
