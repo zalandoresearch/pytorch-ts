@@ -112,9 +112,9 @@ class WeekOfYear(TimeFeature):
 
     def __call__(self, index: pd.DatetimeIndex) -> np.ndarray:
         if self.normalized:
-            return index.weekofyear / 51.0 - 0.5
+            return pd.Int64Index(index.isocalendar().week) / 51.0 - 0.5
         else:
-            return index.weekofyear.map(float)
+            return pd.Int64Index(index.isocalendar().week).map(float)
 
 
 class FourierDateFeatures(TimeFeature):
