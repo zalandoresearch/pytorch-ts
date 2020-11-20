@@ -33,7 +33,7 @@ class Transformation(ABC):
         return data_it  # default is to pass through without estimation
 
     def chain(self, other: "Transformation") -> "Chain":
-        return Chain(self, other)
+        return Chain([self, other])
 
     def __add__(self, other: "Transformation") -> "Chain":
         return self.chain(other)
