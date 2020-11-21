@@ -16,6 +16,7 @@ from .distribution_output import (
     LowRankMultivariateNormalOutput,
     MultivariateNormalOutput,
     FlowOutput,
+    DiffusionOutput,
     ImplicitQuantileOutput,
 )
 from .feature import FeatureEmbedder, FeatureAssembler
