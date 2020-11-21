@@ -195,7 +195,6 @@ class GaussianDiffusion(nn.Module):
         )
 
     def p_losses(self, x_start, t, noise=None):
-        b, c, h, w = x_start.shape
         noise = default(noise, lambda: torch.randn_like(x_start))
 
         x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise)
