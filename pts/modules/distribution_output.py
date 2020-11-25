@@ -507,7 +507,7 @@ class FlowOutput(DistributionOutput):
     def event_shape(self) -> Tuple:
         return (self.dim,)
 
-class DifussionOutput(DistributionOutput):
+class DiffusionOutput(DistributionOutput):
     @validated()
     def __init__(self, diffusion, input_size, cond_size):
         self.args_dim = {"cond": cond_size}

@@ -43,7 +43,6 @@ class TimeGradEstimator(PTSEstimator):
         dropout_rate: float = 0.1,
         cardinality: List[int] = [1],
         embedding_dimension: int = 5,
-        hidden_size=100,
         conditioning_length: int = 200,
         timesteps: int = 1000, 
         loss_type:str = "l1",
@@ -71,7 +70,6 @@ class TimeGradEstimator(PTSEstimator):
         self.cardinality = cardinality
         self.embedding_dimension = embedding_dimension
 
-        self.hidden_size = hidden_size
         self.conditioning_length = conditioning_length
         self.timesteps = timesteps
         self.loss_type = loss_type
@@ -160,7 +158,6 @@ class TimeGradEstimator(PTSEstimator):
             loss_type=self.loss_type,
             lags_seq=self.lags_seq,
             scaling=self.scaling,
-            hidden_size=self.hidden_size,
             conditioning_length=self.conditioning_length,
         ).to(device)
 
@@ -186,7 +183,6 @@ class TimeGradEstimator(PTSEstimator):
             loss_type=self.loss_type,
             lags_seq=self.lags_seq,
             scaling=self.scaling,
-            hidden_size=self.hidden_size,
             conditioning_length=self.conditioning_length,
             num_parallel_samples=self.num_parallel_samples,
         ).to(device)

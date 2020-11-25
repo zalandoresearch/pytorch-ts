@@ -381,12 +381,12 @@ class TimeGradTrainingNetwork(nn.Module):
 
         distr_args = self.distr_args(rnn_outputs=rnn_outputs)
         if self.scaling:
-            self.flow.scale = scale
+            self.diffusion.scale = scale
 
         # we sum the last axis to have the same shape for all likelihoods
         # (batch_size, subseq_length, 1)
 
-        likelihoods = -self.flow.log_prob(target, distr_args).unsqueeze(-1)
+        likelihoods = self.diffusion.log_prob(target, distr_args).unsqueeze(-1)
 
         # assert_shape(likelihoods, (-1, seq_len, 1))
 
@@ -470,7 +470,7 @@ class TimeGradPredictionNetwork(TimeGradTrainingNetwork):
         repeated_time_feat = repeat(time_feat)
         repeated_scale = repeat(scale)
         if self.scaling:
-            self.flow.scale = repeated_scale
+            self.diffusion.scale = repeated_scale
         repeated_target_dimension_indicator = repeat(target_dimension_indicator)
 
         if self.cell_type == "LSTM":
@@ -502,7 +502,7 @@ class TimeGradPredictionNetwork(TimeGradTrainingNetwork):
             distr_args = self.distr_args(rnn_outputs=rnn_outputs)
 
             # (batch_size, 1, target_dim)
-            new_samples = self.flow.sample(cond=distr_args)
+            new_samples = self.diffusion.sample(cond=distr_args)
 
             # (batch_size, seq_len, target_dim)
             future_samples.append(new_samples)

@@ -15,9 +15,9 @@ def default(val, d):
 
 
 def extract(a, t, x_shape):
-    b, *_ = t.shape
-    out = a.gather(-1, t)
-    return out.reshape(b, *((1,) * (len(x_shape) - 1)))
+    B, T, *_ = t.shape
+    out = a.unsqueeze(-1).repeat(1,T).gather(0, t)
+    return out.reshape(B, T, *((1,) * (len(x_shape) - 2)))
 
 
 def noise_like(shape, device, repeat=False):
@@ -194,11 +194,11 @@ class GaussianDiffusion(nn.Module):
             + extract(self.sqrt_one_minus_alphas_cumprod, t, x_start.shape) * noise
         )
 
-    def p_losses(self, x_start, t, noise=None):
+    def p_losses(self, x_start, cond, t, noise=None):
         noise = default(noise, lambda: torch.randn_like(x_start))
 
         x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise)
-        x_recon = self.denoise_fn(x_noisy, t)
+        x_recon = self.denoise_fn(x_noisy, t, cond=cond)
 
         if self.loss_type == "l1":
             loss = (noise - x_recon).abs().mean()
@@ -209,7 +209,7 @@ class GaussianDiffusion(nn.Module):
 
         return loss
 
-    def log_prob(self, x, *args, **kwargs):
-        b, *_, device = *x.shape, x.device
-        t = torch.randint(0, self.num_timesteps, (b,), device=device).long()
-        return self.p_losses(x, t, *args, **kwargs)
+    def log_prob(self, x, cond, *args, **kwargs):
+        B, T, *_, device = *x.shape, x.device
+        t = torch.randint(0, self.num_timesteps, (B,T,), device=device).long()
+        return self.p_losses(x, cond, t, *args, **kwargs)

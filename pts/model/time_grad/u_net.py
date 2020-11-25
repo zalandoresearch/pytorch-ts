@@ -29,17 +29,18 @@ class SinusoidalPosEmb(nn.Module):
         half_dim = self.dim // 2
         emb = math.log(10000) / (half_dim - 1)
         emb = torch.exp(torch.arange(half_dim, device=device) * -emb)
-        emb = x[:, None] * emb[None, :]
-        emb = torch.cat((emb.sin(), emb.cos()), dim=-1)
-        return emb
+        #emb = x[:, None] * emb[None, :]
+        emb = x.unsqueeze(-1) * emb
+        return torch.cat((emb.sin(), emb.cos()), dim=-1)
 
 
 class UNet(nn.Module):
     def __init__(self, dim, cond_dim):
         super().__init__()
+        
         self.time_pos_emb = SinusoidalPosEmb(dim)
         self.mlp = nn.Sequential(
-            nn.Linear(dim, dim*4), 
+            nn.Linear((dim//2)*2, dim*4), 
             Mish(), 
             nn.Linear(dim*4, dim)
         )
@@ -53,7 +54,7 @@ class UNet(nn.Module):
 
         self.ups = nn.Sequential(
             Mish(),
-            nn.Linear(dim + cond_dim, dim//4),
+            nn.Linear(dim//4 + cond_dim, dim//4),
             Mish(),
             nn.Linear(dim//4, dim),
             Mish(),
