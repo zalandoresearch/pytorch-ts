@@ -58,6 +58,7 @@ class TimeGradTrainingNetwork(nn.Module):
 
         self.diffusion = GaussianDiffusion(
             self.denoise_fn,
+            input_size=target_dim,
             timesteps=timesteps,
             loss_type=loss_type,
         )

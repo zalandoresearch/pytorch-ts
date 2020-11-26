@@ -16,7 +16,7 @@ def default(val, d):
 
 def extract(a, t, x_shape):
     B, T, *_ = t.shape
-    out = a.unsqueeze(-1).repeat(1,T).gather(0, t)
+    out = a.unsqueeze(-1).repeat(1, T).gather(0, t)
     return out.reshape(B, T, *((1,) * (len(x_shape) - 2)))
 
 
@@ -42,9 +42,12 @@ def cosine_beta_schedule(timesteps, s=0.008):
 
 
 class GaussianDiffusion(nn.Module):
-    def __init__(self, denoise_fn, timesteps=1000, loss_type="l1", betas=None):
+    def __init__(
+        self, denoise_fn, input_size, timesteps=1000, loss_type="l1", betas=None
+    ):
         super().__init__()
         self.denoise_fn = denoise_fn
+        self.input_size = input_size
 
         if betas is not None:
             betas = (
@@ -106,6 +109,14 @@ class GaussianDiffusion(nn.Module):
             ),
         )
 
+    @property
+    def scale(self):
+        return self.__scale
+
+    @scale.setter
+    def scale(self, scale):
+        self.__scale = scale
+
     def q_mean_variance(self, x_start, t):
         mean = extract(self.sqrt_alphas_cumprod, t, x_start.shape) * x_start
         variance = extract(1.0 - self.alphas_cumprod, t, x_start.shape)
@@ -129,44 +140,69 @@ class GaussianDiffusion(nn.Module):
         )
         return posterior_mean, posterior_variance, posterior_log_variance_clipped
 
-    def p_mean_variance(self, x, t, clip_denoised: bool):
-        x_recon = self.predict_start_from_noise(x, t=t, noise=self.denoise_fn(x, t))
+    def p_mean_variance(self, x, cond, t, clip_denoised: bool):
+        x_recon = self.predict_start_from_noise(
+            x, t=t, noise=self.denoise_fn(x, t, cond=cond)
+        )
 
         if clip_denoised:
             x_recon.clamp_(-1.0, 1.0)
 
         model_mean, posterior_variance, posterior_log_variance = self.q_posterior(
-            x_start=x_recon, x_t=x, t=t
+            x_start=x_recon,
+            x_t=x,
+            t=t,
         )
         return model_mean, posterior_variance, posterior_log_variance
 
     @torch.no_grad()
-    def p_sample(self, x, t, clip_denoised=True, repeat_noise=False):
-        b, *_, device = *x.shape, x.device
+    def p_sample(self, x, cond, t, clip_denoised=True, repeat_noise=False):
+        B, T, *_, device = *x.shape, x.device
         model_mean, _, model_log_variance = self.p_mean_variance(
-            x=x, t=t, clip_denoised=clip_denoised
+            x=x, cond=cond, t=t, clip_denoised=clip_denoised
         )
         noise = noise_like(x.shape, device, repeat_noise)
+
         # no noise when t == 0
-        nonzero_mask = (1 - (t == 0).float()).reshape(b, *((1,) * (len(x.shape) - 1)))
+        nonzero_mask = (1 - (t == 0).float()).reshape(
+            B, T, *((1,) * (len(x.shape) - 2))
+        )
         return model_mean + nonzero_mask * (0.5 * model_log_variance).exp() * noise
 
     @torch.no_grad()
-    def p_sample_loop(self, shape):
+    def p_sample_loop(self, sample_shape, cond):
         device = self.betas.device
 
-        b = shape[0]
-        img = torch.randn(shape, device=device)
+        B, T, *_ = sample_shape
+        img = torch.randn(sample_shape, device=device)
 
         for i in reversed(range(0, self.num_timesteps)):
             img = self.p_sample(
-                img, torch.full((b,), i, device=device, dtype=torch.long)
+                img,
+                cond,
+                torch.full(
+                    (
+                        B,
+                        T,
+                    ),
+                    i,
+                    device=device,
+                    dtype=torch.long,
+                ),
             )
         return img
 
     @torch.no_grad()
-    def sample(self, image_size, batch_size=16):
-        return self.p_sample_loop((batch_size, 3, image_size, image_size))
+    def sample(self, sample_shape=torch.Size(), cond=None):
+        if cond is not None:
+            shape = cond.shape[:-1] + (self.input_size,)
+        else:
+            shape = sample_shape
+        x_hat = self.p_sample_loop(shape, cond)
+
+        if self.scale is not None:
+            x_hat *= self.scale
+        return x_hat
 
     @torch.no_grad()
     def interpolate(self, x1, x2, t=None, lam=0.5):
@@ -210,6 +246,16 @@ class GaussianDiffusion(nn.Module):
         return loss
 
     def log_prob(self, x, cond, *args, **kwargs):
+        if self.scale is not None:
+            x /= self.scale
         B, T, *_, device = *x.shape, x.device
-        t = torch.randint(0, self.num_timesteps, (B,T,), device=device).long()
+        t = torch.randint(
+            0,
+            self.num_timesteps,
+            (
+                B,
+                T,
+            ),
+            device=device,
+        ).long()
         return self.p_losses(x, cond, t, *args, **kwargs)
