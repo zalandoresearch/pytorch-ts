@@ -48,6 +48,7 @@ class GaussianDiffusion(nn.Module):
         super().__init__()
         self.denoise_fn = denoise_fn
         self.input_size = input_size
+        self.__scale = None
 
         if betas is not None:
             betas = (
@@ -237,9 +238,11 @@ class GaussianDiffusion(nn.Module):
         x_recon = self.denoise_fn(x_noisy, t, cond=cond)
 
         if self.loss_type == "l1":
-            loss = (noise - x_recon).abs().mean()
+            loss = F.l1_loss(x_recon, noise)
         elif self.loss_type == "l2":
-            loss = F.mse_loss(noise, x_recon)
+            loss = F.mse_loss(x_recon, noise)
+        elif self.loss_type == "huber":
+            loss = F.smooth_l1_loss(x_recon, noise)
         else:
             raise NotImplementedError()
 
