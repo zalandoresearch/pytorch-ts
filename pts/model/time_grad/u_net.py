@@ -20,43 +20,50 @@ class Mish(nn.Module):
 
 
 class SinusoidalPosEmb(nn.Module):
-    def __init__(self, dim):
+    def __init__(self, dim, linear_scale=5000):
         super().__init__()
         self.dim = dim
+        self.linear_scale = linear_scale
 
-    def forward(self, x):
-        device = x.device
+    def forward(self, noise_level):
         half_dim = self.dim // 2
-        emb = math.log(10000) / (half_dim - 1)
-        emb = torch.exp(torch.arange(half_dim, device=device) * -emb)
-        #emb = x[:, None] * emb[None, :]
-        emb = x.unsqueeze(-1) * emb
-        return torch.cat((emb.sin(), emb.cos()), dim=-1)
+        exponents = torch.arange(half_dim, dtype=torch.float32).to(noise_level) / float(
+            half_dim
+        )
+        exponents = 1e-4 ** exponents
+        exponents = (
+            self.linear_scale * noise_level.unsqueeze(-1) * exponents.unsqueeze(0)
+        )
+        return torch.cat((exponents.sin(), exponents.cos()), dim=-1)
 
 
 class UNet(nn.Module):
     def __init__(self, dim, cond_dim):
         super().__init__()
-        
+
         self.time_pos_emb = SinusoidalPosEmb(dim)
         self.mlp = nn.Sequential(
-            nn.Linear((dim//2)*2, dim*4), 
-            Mish(), 
-            nn.Linear(dim*4, dim)
+            nn.Linear((dim // 2) * 2, dim * 2),
+            Mish(),
+            nn.Linear(dim * 2, dim * 2),
+            Mish(),
+            nn.Linear(dim * 2, dim),
         )
 
         self.downs = nn.Sequential(
             Mish(),
-            nn.Linear(dim, dim//4),
+            nn.Linear(dim, dim // 2),
             Mish(),
-            nn.Linear(dim//4, dim//4),
+            nn.Linear(dim // 2, dim // 2),
         )
 
         self.ups = nn.Sequential(
             Mish(),
-            nn.Linear(dim//4 + cond_dim, dim//4),
+            nn.Linear(dim // 2 + cond_dim, dim // 4),
             Mish(),
-            nn.Linear(dim//4, dim),
+            nn.Linear(dim // 4, dim // 2),
+            Mish(),
+            nn.Linear(dim // 2, dim),
             Mish(),
         )
 
@@ -69,7 +76,6 @@ class UNet(nn.Module):
         h = torch.cat((h, cond), -1)
 
         return self.ups(h)
-
 
 
 # class UNet(nn.Module):
