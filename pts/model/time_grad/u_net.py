@@ -108,7 +108,7 @@ class DiffusionEmbedding(nn.Module):
 
 
 class ResidualBlock(nn.Module):
-    def __init__(self, target_dim, hidden_size, residual_channels, dilation):
+    def __init__(self, hidden_size, residual_channels, dilation):
         super().__init__()
         self.dilated_conv = nn.Conv1d(
             residual_channels,
@@ -117,12 +117,12 @@ class ResidualBlock(nn.Module):
             padding=dilation,
             dilation=dilation,
         )
-        self.diffusion_projection = nn.Linear(hidden_size, target_dim)
+        self.diffusion_projection = nn.Linear(hidden_size, residual_channels)
         self.conditioner_projection = nn.Conv1d(1, 2 * residual_channels, 1)
         self.output_projection = nn.Conv1d(residual_channels, 2 * residual_channels, 1)
 
     def forward(self, x, conditioner, diffusion_step):
-        diffusion_step = self.diffusion_projection(diffusion_step)
+        diffusion_step = self.diffusion_projection(diffusion_step).unsqueeze(-1)
         conditioner = self.conditioner_projection(conditioner)
 
 
@@ -173,7 +173,7 @@ class TimeDiff(nn.Module):
         residual_layers=8,
         residual_channels=16,
         dilation_cycle_length=2,
-        residual_hidden=32,
+        residual_hidden=64,
     ):
         super().__init__()
         self.input_projection = nn.Conv1d(1, residual_channels, 1)
@@ -184,7 +184,6 @@ class TimeDiff(nn.Module):
         self.residual_layers = nn.ModuleList(
             [
                 ResidualBlock(
-                    target_dim=target_dim,
                     residual_channels=residual_channels,
                     dilation=2 ** (i % dilation_cycle_length),
                     hidden_size=residual_hidden,
@@ -197,20 +196,18 @@ class TimeDiff(nn.Module):
         nn.init.zeros_(self.output_projection.weight)
 
     def forward(self, inputs, time, cond):
-        B, T, C = inputs.shape
-        x = self.input_projection(inputs.reshape(-1, 1, C))
+        x = self.input_projection(inputs)
         x = F.elu(x)
 
         diffusion_step = self.diffusion_embedding(time)
-        cond_up = self.cond_upsampler(cond.reshape(B * T, 1, -1))
-
+        cond_up = self.cond_upsampler(cond)
         skip = []
         for layer in self.residual_layers:
-            x, skip_connection = layer(x, cond_up, diffusion_step.reshape(B*T, 1, -1))
+            x, skip_connection = layer(x, cond_up, diffusion_step)
             skip.append(skip_connection)
 
         x = torch.sum(torch.stack(skip), dim=0) / math.sqrt(len(self.residual_layers))
         x = self.skip_projection(x)
         x = F.elu(x)
         x = self.output_projection(x)
-        return x.reshape(B, T, C)
+        return x
