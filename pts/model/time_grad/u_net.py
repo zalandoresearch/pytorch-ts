@@ -5,152 +5,212 @@ from torch import nn
 import torch.nn.functional as F
 
 
-@torch.jit.script
-def mish(input):
-    """
-    Applies the mish function element-wise:
-    mish(x) = x * tanh(softplus(x)) = x * tanh(ln(1 + exp(x)))
-    """
-    return input * torch.tanh(F.softplus(input))
+# @torch.jit.script
+# def mish(input):
+#     """
+#     Applies the mish function element-wise:
+#     mish(x) = x * tanh(softplus(x)) = x * tanh(ln(1 + exp(x)))
+#     """
+#     return input * torch.tanh(F.softplus(input))
 
 
-class Mish(nn.Module):
-    def forward(self, x):
-        return mish(x)
+# class Mish(nn.Module):
+#     def forward(self, x):
+#         return mish(x)
 
 
-class SinusoidalPosEmb(nn.Module):
-    def __init__(self, dim, linear_scale=5000):
-        super().__init__()
-        self.dim = dim
-        self.linear_scale = linear_scale
+# class SinusoidalPosEmb(nn.Module):
+#     def __init__(self, dim, linear_scale=5000):
+#         super().__init__()
+#         self.dim = dim
+#         self.linear_scale = linear_scale
 
-    def forward(self, noise_level):
-        half_dim = self.dim // 2
-        exponents = torch.arange(half_dim, dtype=torch.float32).to(noise_level) / float(
-            half_dim
-        )
-        exponents = 1e-4 ** exponents
-        exponents = (
-            self.linear_scale * noise_level.unsqueeze(-1) * exponents.unsqueeze(0)
-        )
-        return torch.cat((exponents.sin(), exponents.cos()), dim=-1)
-
-
-class UNet(nn.Module):
-    def __init__(self, dim, cond_dim):
-        super().__init__()
-
-        self.time_pos_emb = SinusoidalPosEmb(dim)
-        self.mlp = nn.Sequential(
-            nn.Linear((dim // 2) * 2, dim * 2),
-            Mish(),
-            nn.Linear(dim * 2, dim * 2),
-            Mish(),
-            nn.Linear(dim * 2, dim),
-        )
-
-        self.downs = nn.Sequential(
-            Mish(),
-            nn.Linear(dim, dim // 2),
-            Mish(),
-            nn.Linear(dim // 2, dim // 2),
-        )
-
-        self.ups = nn.Sequential(
-            Mish(),
-            nn.Linear(dim // 2 + cond_dim, dim // 4),
-            Mish(),
-            nn.Linear(dim // 4, dim // 2),
-            Mish(),
-            nn.Linear(dim // 2, dim),
-            Mish(),
-        )
-
-    def forward(self, x, time, cond):
-        t = self.time_pos_emb(time)
-        t = self.mlp(t)
-
-        h = self.downs(x + t)
-
-        h = torch.cat((h, cond), -1)
-
-        return self.ups(h)
+#     def forward(self, noise_level):
+#         half_dim = self.dim // 2
+#         exponents = torch.arange(half_dim, dtype=torch.float32).to(noise_level) / float(
+#             half_dim
+#         )
+#         exponents = 1e-4 ** exponents
+#         exponents = (
+#             self.linear_scale * noise_level.unsqueeze(-1) * exponents.unsqueeze(0)
+#         )
+#         return torch.cat((exponents.sin(), exponents.cos()), dim=-1)
 
 
 # class UNet(nn.Module):
-#     def __init__(self, dim, out_dim=None, dim_mults=(1, 2, 4, 8), groups=8):
+#     def __init__(self, dim, cond_dim, time_emb_dim=4):
 #         super().__init__()
-#         dims = [3, *map(lambda m: dim * m, dim_mults)]
-#         in_out = list(zip(dims[:-1], dims[1:]))
 
-#         self.time_pos_emb = SinusoidalPosEmb(dim)
+#         self.time_pos_emb = SinusoidalPosEmb(time_emb_dim)
 #         self.mlp = nn.Sequential(
-#             nn.Linear(dim, dim * 4), Mish(), nn.Linear(dim * 4, dim)
+#             nn.Linear(time_emb_dim, dim // 2),
+#             Mish(),
+#             nn.Linear(dim // 2, dim),
 #         )
 
-#         self.downs = nn.ModuleList([])
-#         self.ups = nn.ModuleList([])
-#         num_resolutions = len(in_out)
+#         self.downs = nn.Sequential(
+#             Mish(),
+#             nn.Linear(dim, dim),
+#             Mish(),
+#             nn.Linear(dim, dim//2),
+#             Mish(),
+#             nn.Linear(dim//2, dim//2),
+#         )
 
-#         for ind, (dim_in, dim_out) in enumerate(in_out):
-#             is_last = ind >= (num_resolutions - 1)
+#         self.ups = nn.Sequential(
+#             Mish(),
+#             nn.Linear(dim//2 + cond_dim, dim // 2),
+#             Mish(),
+#             nn.Linear(dim // 2, dim//2),
+#             Mish(),
+#             nn.Linear(dim // 2, dim),
+#             Mish(),
+#             nn.Linear(dim, dim),
+#             Mish(),
+#             nn.Linear(dim, dim),
+#             Mish(),
+#         )
 
-#             self.downs.append(
-#                 nn.ModuleList(
-#                     [
-#                         ResnetBlock(dim_in, dim_out, time_emb_dim=dim),
-#                         ResnetBlock(dim_out, dim_out, time_emb_dim=dim),
-#                         Residual(Rezero(LinearAttention(dim_out))),
-#                         Downsample(dim_out) if not is_last else nn.Identity(),
-#                     ]
-#                 )
-#             )
-
-#         mid_dim = dims[-1]
-#         self.mid_block1 = ResnetBlock(mid_dim, mid_dim, time_emb_dim=dim)
-#         self.mid_attn = Residual(Rezero(LinearAttention(mid_dim)))
-#         self.mid_block2 = ResnetBlock(mid_dim, mid_dim, time_emb_dim=dim)
-
-#         for ind, (dim_in, dim_out) in enumerate(reversed(in_out[1:])):
-#             is_last = ind >= (num_resolutions - 1)
-
-#             self.ups.append(
-#                 nn.ModuleList(
-#                     [
-#                         ResnetBlock(dim_out * 2, dim_in, time_emb_dim=dim),
-#                         ResnetBlock(dim_in, dim_in, time_emb_dim=dim),
-#                         Residual(Rezero(LinearAttention(dim_in))),
-#                         Upsample(dim_in) if not is_last else nn.Identity(),
-#                     ]
-#                 )
-#             )
-
-#         out_dim = default(out_dim, 3)
-#         self.final_conv = nn.Sequential(Block(dim, dim), nn.Conv2d(dim, out_dim, 1))
-
-#     def forward(self, x, time, hidden=None):
+#     def forward(self, x, time, cond):
 #         t = self.time_pos_emb(time)
 #         t = self.mlp(t)
 
-#         h = []
+#         h = self.downs(x + t)
 
-#         for resnet, resnet2, attn, downsample in self.downs:
-#             x = resnet(x, t)
-#             x = resnet2(x, t)
-#             x = attn(x)
-#             h.append(x)
-#             x = downsample(x)
+#         h = torch.cat((h, cond), -1)
 
-#         x = self.mid_block1(x, t)
-#         x = self.mid_attn(x)
-#         x = self.mid_block2(x, t)
+#         return self.ups(h)
 
-#         for resnet, resnet2, attn, upsample in self.ups:
-#             x = torch.cat((x, h.pop()), dim=1)
-#             x = resnet(x, t)
-#             x = resnet2(x, t)
-#             x = attn(x)
-#             x = upsample(x)
 
-#         return self.final_conv(x)
+class DiffusionEmbedding(nn.Module):
+    def __init__(self, dim, proj_dim, max_steps=2000):
+        super().__init__()
+        self.register_buffer(
+            "embedding", self._build_embedding(dim, max_steps), persistent=False
+        )
+        self.projection1 = nn.Linear(dim * 2, proj_dim)
+        self.projection2 = nn.Linear(proj_dim, proj_dim)
+
+    def forward(self, diffusion_step):
+        x = self.embedding[diffusion_step]
+        x = self.projection1(x)
+        x = x * torch.sigmoid(x)
+        x = self.projection2(x)
+        x = x * torch.sigmoid(x)
+        return x
+
+    def _build_embedding(self, dim, max_steps):
+        steps = torch.arange(max_steps).unsqueeze(1)  # [T,1]
+        dims = torch.arange(dim).unsqueeze(0)  # [1,dim]
+        table = steps * 10.0 ** (dims * 4.0 / dim)  # [T,dim]
+        table = torch.cat([torch.sin(table), torch.cos(table)], dim=1)
+        return table
+
+
+class ResidualBlock(nn.Module):
+    def __init__(self, target_dim, hidden_size, residual_channels, dilation):
+        super().__init__()
+        self.dilated_conv = nn.Conv1d(
+            residual_channels,
+            2 * residual_channels,
+            3,
+            padding=dilation,
+            dilation=dilation,
+        )
+        self.diffusion_projection = nn.Linear(hidden_size, target_dim)
+        self.conditioner_projection = nn.Conv1d(1, 2 * residual_channels, 1)
+        self.output_projection = nn.Conv1d(residual_channels, 2 * residual_channels, 1)
+
+    def forward(self, x, conditioner, diffusion_step):
+        diffusion_step = self.diffusion_projection(diffusion_step)
+        conditioner = self.conditioner_projection(conditioner)
+
+
+        y = x + diffusion_step
+        y = self.dilated_conv(y) + conditioner
+
+        gate, filter = torch.chunk(y, 2, dim=1)
+        y = torch.sigmoid(gate) * torch.tanh(filter)
+
+        y = self.output_projection(y)
+        residual, skip = torch.chunk(y, 2, dim=1)
+        return (x + residual) / math.sqrt(2.0), skip
+
+
+# class CondUpsampler(nn.Module):
+#     def __init__(self, kernel_size=4, stride=2, padding=1):
+#         super().__init__()
+#         self.conv1 = nn.Conv1d(
+#             1, 1, kernel_size, stride=stride, padding=padding
+#         )
+#         self.conv2 = nn.Conv1d(
+#             1, 1, kernel_size, stride=stride, padding=padding
+#         )
+
+#     def forward(self, x):
+#         x = self.conv1(x)
+#         x = F.leaky_relu(x, 0.4)
+#         x = self.conv2(x)
+#         x = F.leaky_relu(x, 0.4)
+#         return x
+
+class CondUpsampler(nn.Module):
+    def __init__(self, cond_length, target_dim):
+        super().__init__()
+        self.linear = nn.Linear(cond_length, target_dim)
+
+    def forward(self, x):
+        x = self.linear(x)
+        x = F.elu(x)
+        return x
+
+
+class TimeDiff(nn.Module):
+    def __init__(
+        self,
+        target_dim,
+        time_emb_dim=16,
+        residual_layers=8,
+        residual_channels=16,
+        dilation_cycle_length=2,
+        residual_hidden=32,
+    ):
+        super().__init__()
+        self.input_projection = nn.Conv1d(1, residual_channels, 1)
+        self.diffusion_embedding = DiffusionEmbedding(
+            time_emb_dim, proj_dim=residual_hidden
+        )
+        self.cond_upsampler = CondUpsampler(target_dim=target_dim, cond_length=200)
+        self.residual_layers = nn.ModuleList(
+            [
+                ResidualBlock(
+                    target_dim=target_dim,
+                    residual_channels=residual_channels,
+                    dilation=2 ** (i % dilation_cycle_length),
+                    hidden_size=residual_hidden,
+                )
+                for i in range(residual_layers)
+            ]
+        )
+        self.skip_projection = nn.Conv1d(residual_channels, residual_channels, 1)
+        self.output_projection = nn.Conv1d(residual_channels, 1, 1)
+        nn.init.zeros_(self.output_projection.weight)
+
+    def forward(self, inputs, time, cond):
+        B, T, C = inputs.shape
+        x = self.input_projection(inputs.reshape(-1, 1, C))
+        x = F.elu(x)
+
+        diffusion_step = self.diffusion_embedding(time)
+        cond_up = self.cond_upsampler(cond.reshape(B * T, 1, -1))
+
+        skip = []
+        for layer in self.residual_layers:
+            x, skip_connection = layer(x, cond_up, diffusion_step.reshape(B*T, 1, -1))
+            skip.append(skip_connection)
+
+        x = torch.sum(torch.stack(skip), dim=0) / math.sqrt(len(self.residual_layers))
+        x = self.skip_projection(x)
+        x = F.elu(x)
+        x = self.output_projection(x)
+        return x.reshape(B, T, C)

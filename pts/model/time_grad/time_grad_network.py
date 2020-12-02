@@ -8,7 +8,7 @@ from pts.core.component import validated
 from pts.model import weighted_average
 from pts.modules import GaussianDiffusion, DiffusionOutput, MeanScaler, NOPScaler
 
-from .u_net import UNet
+from .u_net import TimeDiff
 
 class TimeGradTrainingNetwork(nn.Module):
 
@@ -54,7 +54,7 @@ class TimeGradTrainingNetwork(nn.Module):
             batch_first=True,
         )
 
-        self.denoise_fn = UNet(dim=self.target_dim, cond_dim=conditioning_length)
+        self.denoise_fn = TimeDiff(target_dim=target_dim)
 
         self.diffusion = GaussianDiffusion(
             self.denoise_fn,
