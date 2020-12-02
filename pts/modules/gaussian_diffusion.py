@@ -110,6 +110,14 @@ class GaussianDiffusion(nn.Module):
             ),
         )
 
+    @property
+    def scale(self):
+        return self.__scale
+
+    @scale.setter
+    def scale(self, scale):
+        self.__scale = scale
+
     def q_mean_variance(self, x_start, t):
         mean = extract(self.sqrt_alphas_cumprod, t, x_start.shape) * x_start
         variance = extract(1.0 - self.alphas_cumprod, t, x_start.shape)
@@ -177,7 +185,7 @@ class GaussianDiffusion(nn.Module):
             # TODO reshape cond to (B*T, 1, -1)
         else:
             shape = sample_shape
-        x_hat = self.p_sample_loop(shape, cond) # TODO reshape x_hat to (B,T,-1)
+        x_hat = self.p_sample_loop(shape, cond)  # TODO reshape x_hat to (B,T,-1)
 
         if self.scale is not None:
             x_hat *= self.scale
