@@ -83,7 +83,7 @@ import torch.nn.functional as F
 
 
 class DiffusionEmbedding(nn.Module):
-    def __init__(self, dim, proj_dim, max_steps=2000):
+    def __init__(self, dim, proj_dim, max_steps=1000):
         super().__init__()
         self.register_buffer(
             "embedding", self._build_embedding(dim, max_steps), persistent=False
@@ -125,7 +125,6 @@ class ResidualBlock(nn.Module):
         diffusion_step = self.diffusion_projection(diffusion_step).unsqueeze(-1)
         conditioner = self.conditioner_projection(conditioner)
 
-
         y = x + diffusion_step
         y = self.dilated_conv(y) + conditioner
 
@@ -154,14 +153,16 @@ class ResidualBlock(nn.Module):
 #         x = F.leaky_relu(x, 0.4)
 #         return x
 
+
 class CondUpsampler(nn.Module):
     def __init__(self, cond_length, target_dim):
         super().__init__()
         self.linear = nn.Linear(cond_length, target_dim)
 
     def forward(self, x):
+        x = F.leaky_relu(x, 0.4)
         x = self.linear(x)
-        x = F.elu(x)
+        x = F.leaky_relu(x, 0.4)
         return x
 
 
@@ -169,6 +170,7 @@ class TimeDiff(nn.Module):
     def __init__(
         self,
         target_dim,
+        cond_length,
         time_emb_dim=16,
         residual_layers=8,
         residual_channels=16,
@@ -180,7 +182,9 @@ class TimeDiff(nn.Module):
         self.diffusion_embedding = DiffusionEmbedding(
             time_emb_dim, proj_dim=residual_hidden
         )
-        self.cond_upsampler = CondUpsampler(target_dim=target_dim, cond_length=200)
+        self.cond_upsampler = CondUpsampler(
+            target_dim=target_dim, cond_length=cond_length
+        )
         self.residual_layers = nn.ModuleList(
             [
                 ResidualBlock(

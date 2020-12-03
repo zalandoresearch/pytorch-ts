@@ -155,7 +155,7 @@ class GaussianDiffusion(nn.Module):
         return model_mean, posterior_variance, posterior_log_variance
 
     @torch.no_grad()
-    def p_sample(self, x, cond, t, clip_denoised=True, repeat_noise=False):
+    def p_sample(self, x, cond, t, clip_denoised=False, repeat_noise=False):
         b, *_, device = *x.shape, x.device
         model_mean, _, model_log_variance = self.p_mean_variance(
             x=x, cond=cond, t=t, clip_denoised=clip_denoised
