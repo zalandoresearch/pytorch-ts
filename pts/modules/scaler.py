@@ -37,7 +37,7 @@ class Scaler(ABC, nn.Module):
         Tensor
             Tensor containing the "scaled" data, shape: (N, T, C) or (N, C, T).
         Tensor
-            Tensor containing the scale, of shape (N, C) if ``keepdim == False``, 
+            Tensor containing the scale, of shape (N, C) if ``keepdim == False``,
             and shape (N, 1, C) or (N, C, 1) if ``keepdim == True``.
         """
 

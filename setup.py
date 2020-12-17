@@ -16,7 +16,8 @@ setup(
     zip_safe=True,
     python_requires=">=3.6",
     install_requires = [
-        'torch>=1.5.0',
+        'torch>=1.7.0',
+        'glounts>=0.6.4',
         'holidays',
         'numpy',
         'pandas>=1.1',
@@ -24,7 +25,6 @@ setup(
         'tqdm',
         'pydantic',
         'matplotlib',
-        'python-rapidjson',
         'tensorboard',
     ],
 

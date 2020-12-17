@@ -164,6 +164,7 @@ class NBEATSEnsembleEstimator(Estimator):
     **kwargs
         Arguments passed down to the individual estimators.
     """
+
     def __init__(
         self,
         freq: str,

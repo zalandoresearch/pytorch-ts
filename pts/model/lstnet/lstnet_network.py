@@ -110,7 +110,7 @@ class LSTNetBase(nn.Module):
     ) -> torch.Tensor:
         scaled_past_target, scale = self.scaler(
             past_target[..., -self.context_length :],  # [B, C, T]
-            past_observed_values[..., -self.context_length :]  # [B, C, T]
+            past_observed_values[..., -self.context_length :],  # [B, C, T]
         )
 
         # CNN
@@ -121,7 +121,7 @@ class LSTNetBase(nn.Module):
         # RNN
         r = c.permute(2, 0, 1)  # [F (T), B, C]
         _, r = self.rnn(r)  # [1, B, H]
-        r = self.dropout(r.squeeze(0)) # [B, H]
+        r = self.dropout(r.squeeze(0))  # [B, H]
 
         # Skip-RNN
         skip_c = c[..., -self.conv_skip * self.skip_size :]
@@ -174,7 +174,7 @@ class LSTNetTrain(LSTNetBase):
         if self.horizon:
             future_target = future_target[..., -1:]
 
-        loss = self.loss_fn(ret*scale, future_target)
+        loss = self.loss_fn(ret * scale, future_target)
         return loss
 
 
@@ -183,6 +183,6 @@ class LSTNetPredict(LSTNetBase):
         self, past_target: torch.Tensor, past_observed_values: torch.Tensor
     ) -> torch.Tensor:
         ret, scale = super().forward(past_target, past_observed_values)
-        ret = (ret*scale).permute(0, 2, 1)
+        ret = (ret * scale).permute(0, 2, 1)
 
         return ret.unsqueeze(1)

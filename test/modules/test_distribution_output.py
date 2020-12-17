@@ -17,8 +17,8 @@ from torch.nn.utils import clip_grad_norm_
 from torch.optim import SGD
 from torch.utils.data import TensorDataset, DataLoader
 
+from gluonts.torch.modules.distribution_output import DistributionOutput
 from pts.modules import (
-    DistributionOutput,
     StudentTOutput,
     BetaOutput,
     NegativeBinomialOutput,

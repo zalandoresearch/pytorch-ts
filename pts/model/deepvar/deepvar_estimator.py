@@ -10,7 +10,7 @@ from pts.feature import (
     fourier_time_features_from_frequency_str,
     get_fourier_lags_for_frequency,
 )
-from pts.model import PTSEstimator, PTSPredictor, copy_parameters
+from pts.model import PyTorchEstimator, PyTorchPredictor, copy_parameters
 from pts.modules import DistributionOutput, LowRankMultivariateNormalOutput
 from pts.transform import (
     Transformation,
@@ -34,7 +34,7 @@ from pts.transform import (
 from .deepvar_network import DeepVARTrainingNetwork, DeepVARPredictionNetwork
 
 
-class DeepVAREstimator(PTSEstimator):
+class DeepVAREstimator(PyTorchEstimator):
     def __init__(
         self,
         input_size: int,
@@ -199,7 +199,9 @@ class DeepVAREstimator(PTSEstimator):
                     field_name="target_dimension_indicator",
                     target_field=FieldName.TARGET,
                 ),
-                AsNumpyArray(field=FieldName.FEAT_STATIC_CAT, expected_ndim=1, dtype=np.long),
+                AsNumpyArray(
+                    field=FieldName.FEAT_STATIC_CAT, expected_ndim=1, dtype=np.long
+                ),
                 AsNumpyArray(field=FieldName.FEAT_STATIC_REAL, expected_ndim=1),
                 InstanceSplitter(
                     target_field=FieldName.TARGET,
@@ -242,7 +244,7 @@ class DeepVAREstimator(PTSEstimator):
         transformation: Transformation,
         trained_network: DeepVARTrainingNetwork,
         device: torch.device,
-    ) -> PTSPredictor:
+    ) -> PyTorchPredictor:
         prediction_network = DeepVARPredictionNetwork(
             input_size=self.input_size,
             target_dim=self.target_dim,
@@ -263,7 +265,7 @@ class DeepVAREstimator(PTSEstimator):
 
         copy_parameters(trained_network, prediction_network)
 
-        return PTSPredictor(
+        return PyTorchPredictor(
             input_transform=transformation,
             prediction_net=prediction_network,
             batch_size=self.trainer.batch_size,

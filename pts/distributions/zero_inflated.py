@@ -118,7 +118,10 @@ class ZeroInflatedNegativeBinomial(ZeroInflatedDistribution):
 
     def __init__(self, gate, total_count, probs=None, logits=None, validate_args=None):
         base_dist = NegativeBinomial(
-            total_count=total_count, probs=probs, logits=logits, validate_args=False,
+            total_count=total_count,
+            probs=probs,
+            logits=logits,
+            validate_args=False,
         )
         base_dist._validate_args = validate_args
 

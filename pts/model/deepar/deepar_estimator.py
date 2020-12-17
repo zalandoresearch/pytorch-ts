@@ -1,19 +1,17 @@
+from pts.model.utils import get_module_forward_input_names
 from typing import List, Optional
 
 import numpy as np
 import torch
 import torch.nn as nn
 
-from pts import Trainer
-from pts.dataset import FieldName
-from pts.feature import (
+from gluonts.dataset.field_names import FieldName
+from gluonts.time_feature import (
     TimeFeature,
     get_lags_for_frequency,
     time_features_from_frequency_str,
 )
-from pts.model import PTSEstimator, Predictor, PTSPredictor, copy_parameters
-from pts.modules import DistributionOutput, StudentTOutput
-from pts.transform import (
+from gluonts.transform import (
     Transformation,
     Chain,
     RemoveFields,
@@ -26,10 +24,19 @@ from pts.transform import (
     InstanceSplitter,
     ExpectedNumInstanceSampler,
 )
+from gluonts.torch.support.util import copy_parameters
+from gluonts.torch.model.predictor import PyTorchPredictor
+from gluonts.torch.modules.distribution_output import DistributionOutput
+from gluonts.model.predictor import Predictor
+
+from pts import Trainer
+from pts.model import PyTorchEstimator
+from pts.modules import StudentTOutput
+
 from .deepar_network import DeepARTrainingNetwork, DeepARPredictionNetwork
 
 
-class DeepAREstimator(PTSEstimator):
+class DeepAREstimator(PyTorchEstimator):
     def __init__(
         self,
         freq: str,
@@ -115,10 +122,14 @@ class DeepAREstimator(PTSEstimator):
             )
             + [
                 AsNumpyArray(
-                    field=FieldName.FEAT_STATIC_CAT, expected_ndim=1, dtype=np.long,
+                    field=FieldName.FEAT_STATIC_CAT,
+                    expected_ndim=1,
+                    dtype=np.long,
                 ),
                 AsNumpyArray(
-                    field=FieldName.FEAT_STATIC_REAL, expected_ndim=1, dtype=self.dtype,
+                    field=FieldName.FEAT_STATIC_REAL,
+                    expected_ndim=1,
+                    dtype=self.dtype,
                 ),
                 AsNumpyArray(
                     field=FieldName.TARGET,
@@ -218,13 +229,14 @@ class DeepAREstimator(PTSEstimator):
         ).to(device)
 
         copy_parameters(trained_network, prediction_network)
+        input_names = get_module_forward_input_names(prediction_network)
 
-        return PTSPredictor(
+        return PyTorchPredictor(
             input_transform=transformation,
+            input_names=input_names,
             prediction_net=prediction_network,
             batch_size=self.trainer.batch_size,
             freq=self.freq,
             prediction_length=self.prediction_length,
             device=device,
-            dtype=self.dtype,
         )

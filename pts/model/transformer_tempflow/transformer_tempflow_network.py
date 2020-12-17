@@ -3,12 +3,11 @@ from typing import List, Optional, Tuple
 import torch
 import torch.nn as nn
 
-from pts.core.component import validated
+from gluonts.core.component import validated
 from pts.modules import RealNVP, MAF, FlowOutput, MeanScaler, NOPScaler
 
 
 class TransformerTempFlowTrainingNetwork(nn.Module):
-
     @validated()
     def __init__(
         self,
@@ -61,7 +60,10 @@ class TransformerTempFlowTrainingNetwork(nn.Module):
             activation=act_type,
         )
 
-        flow_cls = {"RealNVP": RealNVP, "MAF": MAF,}[flow_type]
+        flow_cls = {
+            "RealNVP": RealNVP,
+            "MAF": MAF,
+        }[flow_type]
         self.flow = flow_cls(
             input_size=target_dim,
             n_blocks=n_blocks,
@@ -146,9 +148,7 @@ class TransformerTempFlowTrainingNetwork(nn.Module):
         future_time_feat: Optional[torch.Tensor],
         future_target_cdf: Optional[torch.Tensor],
         target_dimension_indicator: torch.Tensor,
-    ) -> Tuple[
-        torch.Tensor, torch.Tensor, torch.Tensor,
-    ]:
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor,]:
         """
         Unrolls the RNN encoder over past and, if present, future data.
         Returns outputs and state of the encoder, plus the scale of
@@ -204,7 +204,10 @@ class TransformerTempFlowTrainingNetwork(nn.Module):
             subsequences_length = self.context_length
         else:
             time_feat = torch.cat(
-                (past_time_feat[:, -self.context_length :, ...], future_time_feat,),
+                (
+                    past_time_feat[:, -self.context_length :, ...],
+                    future_time_feat,
+                ),
                 dim=1,
             )
             sequence = torch.cat((past_target_cdf, future_target_cdf), dim=1)
@@ -516,7 +519,12 @@ class TransformerTempFlowPredictionNetwork(TransformerTempFlowTrainingNetwork):
 
         # (batch_size, num_samples, prediction_length, target_dim)
         return samples.reshape(
-            (-1, self.num_parallel_samples, self.prediction_length, self.target_dim,)
+            (
+                -1,
+                self.num_parallel_samples,
+                self.prediction_length,
+                self.target_dim,
+            )
         )
 
     def forward(

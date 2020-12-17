@@ -5,7 +5,7 @@ import torch.nn as nn
 
 from pts import Trainer
 from pts.dataset import FieldName
-from pts.model import PTSEstimator, Predictor, PTSPredictor, copy_parameters
+from pts.model import PyTorchEstimator, Predictor, PyTorchPredictor, copy_parameters
 from pts.transform import (
     InstanceSplitter,
     Transformation,
@@ -20,7 +20,7 @@ from .n_beats_network import (
 )
 
 
-class NBEATSEstimator(PTSEstimator):
+class NBEATSEstimator(PyTorchEstimator):
     def __init__(
         self,
         freq: str,
@@ -124,10 +124,14 @@ class NBEATSEstimator(PTSEstimator):
     # conditioning part and a to-predict part, for each training example.
     def create_transformation(self) -> Transformation:
         return Chain(
-            [   RemoveFields(
-                    field_names=[FieldName.FEAT_STATIC_REAL, 
-                        FieldName.FEAT_DYNAMIC_REAL, 
-                        FieldName.FEAT_DYNAMIC_CAT]),
+            [
+                RemoveFields(
+                    field_names=[
+                        FieldName.FEAT_STATIC_REAL,
+                        FieldName.FEAT_DYNAMIC_REAL,
+                        FieldName.FEAT_DYNAMIC_CAT,
+                    ]
+                ),
                 InstanceSplitter(
                     target_field=FieldName.TARGET,
                     is_pad_field=FieldName.IS_PAD,
@@ -137,11 +141,11 @@ class NBEATSEstimator(PTSEstimator):
                     past_length=self.context_length,
                     future_length=self.prediction_length,
                     time_series_fields=[],
-                )
+                ),
             ]
         )
-    
-    def create_training_network(self, device: torch.device) ->  NBEATSTrainingNetwork:
+
+    def create_training_network(self, device: torch.device) -> NBEATSTrainingNetwork:
         return NBEATSTrainingNetwork(
             prediction_length=self.prediction_length,
             context_length=self.context_length,
@@ -156,10 +160,9 @@ class NBEATSEstimator(PTSEstimator):
             freq=self.freq,
         ).to(device)
 
-    
     def create_predictor(
-        self, 
-        transformation: Transformation, 
+        self,
+        transformation: Transformation,
         trained_network: nn.Module,
         device: torch.device,
     ) -> Predictor:
@@ -172,12 +175,12 @@ class NBEATSEstimator(PTSEstimator):
             num_block_layers=self.num_block_layers,
             expansion_coefficient_lengths=self.expansion_coefficient_lengths,
             sharing=self.sharing,
-            stack_types=self.stack_types
+            stack_types=self.stack_types,
         ).to(device)
 
         copy_parameters(trained_network, prediction_network)
 
-        return PTSPredictor(
+        return PyTorchPredictor(
             input_transform=transformation,
             prediction_net=prediction_network,
             batch_size=self.trainer.batch_size,

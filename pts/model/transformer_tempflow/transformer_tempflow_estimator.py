@@ -9,7 +9,7 @@ from pts.feature import (
     fourier_time_features_from_frequency_str,
     get_fourier_lags_for_frequency,
 )
-from pts.model import PTSEstimator, PTSPredictor, copy_parameters
+from pts.model import PyTorchEstimator, PyTorchPredictor, copy_parameters
 from pts.transform import (
     Transformation,
     Chain,
@@ -24,10 +24,13 @@ from pts.transform import (
     SetFieldIfNotPresent,
     TargetDimIndicator,
 )
-from .transformer_tempflow_network import TransformerTempFlowTrainingNetwork, TransformerTempFlowPredictionNetwork
+from .transformer_tempflow_network import (
+    TransformerTempFlowTrainingNetwork,
+    TransformerTempFlowPredictionNetwork,
+)
 
 
-class TransformerTempFlowEstimator(PTSEstimator):
+class TransformerTempFlowEstimator(PyTorchEstimator):
     def __init__(
         self,
         input_size: int,
@@ -52,7 +55,6 @@ class TransformerTempFlowEstimator(PTSEstimator):
         n_hidden=2,
         conditioning_length: int = 200,
         dequantize: bool = False,
-
         scaling: bool = True,
         pick_incomplete: bool = False,
         lags_seq: Optional[List[int]] = None,
@@ -108,10 +110,16 @@ class TransformerTempFlowEstimator(PTSEstimator):
     def create_transformation(self) -> Transformation:
         return Chain(
             [
-                AsNumpyArray(field=FieldName.TARGET, expected_ndim=2,),
+                AsNumpyArray(
+                    field=FieldName.TARGET,
+                    expected_ndim=2,
+                ),
                 # maps the target to (1, T)
                 # if the target data is uni dimensional
-                ExpandDimArray(field=FieldName.TARGET, axis=None,),
+                ExpandDimArray(
+                    field=FieldName.TARGET,
+                    axis=None,
+                ),
                 AddObservedValuesIndicator(
                     target_field=FieldName.TARGET,
                     output_field=FieldName.OBSERVED_VALUES,
@@ -156,7 +164,9 @@ class TransformerTempFlowEstimator(PTSEstimator):
             ]
         )
 
-    def create_training_network(self, device: torch.device) -> TransformerTempFlowTrainingNetwork:
+    def create_training_network(
+        self, device: torch.device
+    ) -> TransformerTempFlowTrainingNetwork:
         return TransformerTempFlowTrainingNetwork(
             input_size=self.input_size,
             target_dim=self.target_dim,
@@ -187,7 +197,7 @@ class TransformerTempFlowEstimator(PTSEstimator):
         transformation: Transformation,
         trained_network: TransformerTempFlowTrainingNetwork,
         device: torch.device,
-    ) -> PTSPredictor:
+    ) -> PyTorchPredictor:
         prediction_network = TransformerTempFlowPredictionNetwork(
             input_size=self.input_size,
             target_dim=self.target_dim,
@@ -216,7 +226,7 @@ class TransformerTempFlowEstimator(PTSEstimator):
 
         copy_parameters(trained_network, prediction_network)
 
-        return PTSPredictor(
+        return PyTorchPredictor(
             input_transform=transformation,
             prediction_net=prediction_network,
             batch_size=self.trainer.batch_size,

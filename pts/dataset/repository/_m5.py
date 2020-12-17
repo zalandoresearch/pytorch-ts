@@ -6,12 +6,13 @@ from functools import lru_cache
 import numpy as np
 import pandas as pd
 
-from pts.dataset import FieldName
-from pts.feature import CustomDateFeatureSet, squared_exponential_kernel
-from ._util import metadata, save_to_file
+from gluonts.dataset.field_names import FieldName
+from gluonts.dataset.repository._util import metadata, save_to_file
+from gluonts.time_feature.holiday import squared_exponential_kernel
+from pts.feature import CustomDateFeatureSet
 
 
-def generate_m5_dataset(
+def generate_pts_m5_dataset(
     dataset_path: Path,
     pandas_freq: str,
     prediction_length: int = 28,
@@ -46,7 +47,7 @@ def generate_m5_dataset(
     )
     sales_train_evaluation.sort_index(inplace=True)
 
-    sell_prices = pd.read_csv(sell_prices_path, index_col=['item_id', 'store_id'])
+    sell_prices = pd.read_csv(sell_prices_path, index_col=["item_id", "store_id"])
     sell_prices.sort_index(inplace=True)
 
     @lru_cache(maxsize=None)
@@ -161,16 +162,22 @@ def generate_m5_dataset(
             "WI": snap_WI_feature,
         }[state_id]
 
-        time_series["target"] = item.iloc[start_index:1913].values.astype(np.float32).tolist()
-        time_series["feat_dynamic_real"] = np.concatenate(
-            (
-                np.expand_dims(sell_price.iloc[start_index:1913].values, 0),
-                event_1_feature[:, start_index:1913],
-                event_2_feature[:, start_index:1913],
-                snap_feature[:, start_index:1913],
-            ),
-            0,
-        ).astype(np.float32).tolist()
+        time_series["target"] = (
+            item.iloc[start_index:1913].values.astype(np.float32).tolist()
+        )
+        time_series["feat_dynamic_real"] = (
+            np.concatenate(
+                (
+                    np.expand_dims(sell_price.iloc[start_index:1913].values, 0),
+                    event_1_feature[:, start_index:1913],
+                    event_2_feature[:, start_index:1913],
+                    snap_feature[:, start_index:1913],
+                ),
+                0,
+            )
+            .astype(np.float32)
+            .tolist()
+        )
 
         train_ds.append(time_series.copy())
 
@@ -222,16 +229,22 @@ def generate_m5_dataset(
             "WI": snap_WI_feature,
         }[state_id]
 
-        time_series["target"] = item.iloc[start_index:1941].values.astype(np.float32).tolist()
-        time_series["feat_dynamic_real"] = np.concatenate(
-            (
-                np.expand_dims(sell_price.iloc[start_index:1941].values, 0),
-                event_1_feature[:, start_index:1941],
-                event_2_feature[:, start_index:1941],
-                snap_feature[:, start_index:1941],
-            ),
-            0,
-        ).astype(np.float32).tolist()
+        time_series["target"] = (
+            item.iloc[start_index:1941].values.astype(np.float32).tolist()
+        )
+        time_series["feat_dynamic_real"] = (
+            np.concatenate(
+                (
+                    np.expand_dims(sell_price.iloc[start_index:1941].values, 0),
+                    event_1_feature[:, start_index:1941],
+                    event_2_feature[:, start_index:1941],
+                    snap_feature[:, start_index:1941],
+                ),
+                0,
+            )
+            .astype(np.float32)
+            .tolist()
+        )
 
         test_ds.append(time_series.copy())
 

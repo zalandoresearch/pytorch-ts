@@ -11,13 +11,14 @@ from torch.nn.utils import clip_grad_norm_
 from torch.optim import SGD
 from torch.utils.data import TensorDataset, DataLoader
 
+from gluonts.dataset.repository.datasets import get_dataset
+from gluonts.evaluation import Evaluator
+from gluonts.evaluation.backtest import make_evaluation_predictions
+from gluonts.torch.modules.distribution_output import DistributionOutput
 from pts import Trainer
-from pts.dataset.repository import get_dataset
-from pts.evaluation import make_evaluation_predictions, Evaluator
 from pts.model.deepar import DeepAREstimator
 from pts.model.simple_feedforward import SimpleFeedForwardEstimator
 from pts.modules import (
-    DistributionOutput,
     ImplicitQuantileOutput
 )
 
@@ -172,7 +173,7 @@ def test_training_with_implicit_quantile_output():
     )
     forecasts = list(forecast_it)
     tss = list(ts_it)
-    evaluator = Evaluator()
+    evaluator = Evaluator(num_workers=0)
     agg_metrics, item_metrics = evaluator(iter(tss), iter(forecasts), num_series=len(dataset.test))
 
     assert agg_metrics["MSE"] > 0
@@ -220,7 +221,7 @@ def test_instanciation_of_args_proj():
     )
     forecasts = list(forecast_it)
     tss = list(ts_it)
-    evaluator = Evaluator()
+    evaluator = Evaluator(num_workers=0)
     agg_metrics, item_metrics = evaluator(iter(tss), iter(forecasts), num_series=len(dataset.test))
     assert distr_output.method_calls == 2
 

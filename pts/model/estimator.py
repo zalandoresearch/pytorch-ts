@@ -1,73 +1,38 @@
-# Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License").
-# You may not use this file except in compliance with the License.
-# A copy of the License is located at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# or in the "license" file accompanying this file. This file is distributed
-# on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
-# express or implied. See the License for the specific language governing
-# permissions and limitations under the License.
-
-
-from abc import ABC, abstractmethod
-from typing import NamedTuple
+from typing import NamedTuple, Optional
+from functools import partial
 
 import numpy as np
+
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader
+
+from gluonts.core.component import validated
+from gluonts.dataset.common import Dataset
+from gluonts.dataset.loader import TrainDataLoader, ValidationDataLoader
+from gluonts.model.estimator import Estimator
+from gluonts.torch.model.predictor import PyTorchPredictor
+from gluonts.torch.batchify import batchify
+from gluonts.transform import SelectFields, Transformation
 
 from pts import Trainer
-from pts.dataset import Dataset, TransformedIterableDataset
-from pts.transform import Transformation
-from .predictor import Predictor
-from .utils import get_module_forward_input_names
-
-
-class Estimator(ABC):
-    prediction_length: int
-    freq: str
-
-    @abstractmethod
-    def train(self, training_data: Dataset) -> Predictor:
-        pass
-
-
-class DummyEstimator(Estimator):
-    """
-    An `Estimator` that, upon training, simply returns a pre-constructed
-    `Predictor`.
-
-    Parameters
-    ----------
-    predictor_cls
-        `Predictor` class to instantiate.
-    **kwargs
-        Keyword arguments to pass to the predictor constructor.
-    """
-
-    def __init__(self, predictor_cls: type, **kwargs) -> None:
-        self.predictor = predictor_cls(**kwargs)
-
-    def train(self, training_data: Dataset) -> Predictor:
-        return self.predictor
+from pts.model import get_module_forward_input_names
 
 
 class TrainOutput(NamedTuple):
     transformation: Transformation
     trained_net: nn.Module
-    predictor: Predictor
+    predictor: PyTorchPredictor
 
 
-class PTSEstimator(Estimator):
-    def __init__(self, trainer: Trainer, dtype: np.dtype = np.float32) -> None:
+class PyTorchEstimator(Estimator):
+    @validated()
+    def __init__(
+        self, trainer: Trainer, lead_time: int = 0, dtype: np.dtype = np.float32
+    ) -> None:
+        super().__init__(lead_time=lead_time)
         self.trainer = trainer
         self.dtype = dtype
 
-    @abstractmethod
     def create_transformation(self) -> Transformation:
         """
         Create and return the transformation needed for training and inference.
@@ -78,9 +43,8 @@ class PTSEstimator(Estimator):
             The transformation that will be applied entry-wise to datasets,
             at training and inference time.
         """
-        pass
+        raise NotImplementedError
 
-    @abstractmethod
     def create_training_network(self, device: torch.device) -> nn.Module:
         """
         Create and return the network used for training (i.e., computing the
@@ -91,15 +55,14 @@ class PTSEstimator(Estimator):
         nn.Module
             The network that computes the loss given input data.
         """
-        pass
+        raise NotImplementedError
 
-    @abstractmethod
     def create_predictor(
         self,
         transformation: Transformation,
         trained_network: nn.Module,
         device: torch.device,
-    ) -> Predictor:
+    ) -> PyTorchPredictor:
         """
         Create and return a predictor object.
 
@@ -108,32 +71,56 @@ class PTSEstimator(Estimator):
         Predictor
             A predictor wrapping a `nn.Module` used for inference.
         """
-        pass
+        raise NotImplementedError
 
-    def train_model(self, training_data: Dataset) -> TrainOutput:
+    def train_model(
+        self,
+        training_data: Dataset,
+        validation_data: Optional[Dataset] = None,
+        num_workers: Optional[int] = None,
+        num_prefetch: Optional[int] = None,
+        shuffle_buffer_length: Optional[int] = None,
+        **kwargs,
+    ) -> TrainOutput:
         transformation = self.create_transformation()
-        transformation.estimate(iter(training_data))
 
-        training_iter_dataset = TransformedIterableDataset(
-            dataset=training_data,
-            is_train=True,
-            transform=transformation
-        )
-
-        training_data_loader = DataLoader(
-            training_iter_dataset,
-            batch_size=self.trainer.batch_size,
-            num_workers=self.trainer.num_workers,
-            pin_memory=self.trainer.pin_memory
-        )
-
-        # ensure that the training network is created on the same device
         trained_net = self.create_training_network(self.trainer.device)
+
+        input_names = get_module_forward_input_names(trained_net)
+
+        training_data_loader = TrainDataLoader(
+            dataset=training_data,
+            transform=transformation + SelectFields(input_names),
+            batch_size=self.trainer.batch_size,
+            stack_fn=partial(
+                batchify,
+                device=self.trainer.device,
+            ),
+            num_workers=num_workers,
+            num_prefetch=num_prefetch,
+            shuffle_buffer_length=shuffle_buffer_length,
+            **kwargs,
+        )
+
+        validation_data_loader = None
+        if validation_data is not None:
+            validation_data_loader = ValidationDataLoader(
+                dataset=validation_data,
+                transform=transformation + SelectFields(input_names),
+                batch_size=self.trainer.batch_size,
+                stack_fn=partial(
+                    batchify,
+                    device=self.trainer.device,
+                ),
+                num_workers=num_workers,
+                num_prefetch=num_prefetch,
+                **kwargs,
+            )
 
         self.trainer(
             net=trained_net,
-            input_names=get_module_forward_input_names(trained_net),
-            data_loader=training_data_loader,
+            train_iter=training_data_loader,
+            validation_iter=validation_data_loader,
         )
 
         return TrainOutput(
@@ -144,5 +131,20 @@ class PTSEstimator(Estimator):
             ),
         )
 
-    def train(self, training_data: Dataset) -> Predictor:
-        return self.train_model(training_data).predictor
+    def train(
+        self,
+        training_data: Dataset,
+        validation_data: Optional[Dataset] = None,
+        num_workers: Optional[int] = None,
+        num_prefetch: Optional[int] = None,
+        shuffle_buffer_length: Optional[int] = None,
+        **kwargs,
+    ) -> PyTorchPredictor:
+        return self.train_model(
+            training_data,
+            validation_data,
+            num_workers,
+            num_prefetch,
+            shuffle_buffer_length,
+            **kwargs,
+        ).predictor

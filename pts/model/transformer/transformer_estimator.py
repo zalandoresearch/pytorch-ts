@@ -11,7 +11,7 @@ from pts.feature import (
     fourier_time_features_from_frequency_str,
     get_fourier_lags_for_frequency,
 )
-from pts.model import PTSEstimator, Predictor, PTSPredictor, copy_parameters
+from pts.model import PyTorchEstimator, Predictor, PyTorchPredictor, copy_parameters
 from pts.modules import DistributionOutput, StudentTOutput
 from pts.transform import (
     Transformation,
@@ -32,7 +32,7 @@ from .transformer_network import (
 )
 
 
-class TransformerEstimator(PTSEstimator):
+class TransformerEstimator(PyTorchEstimator):
     def __init__(
         self,
         input_size: int,
@@ -75,7 +75,9 @@ class TransformerEstimator(PTSEstimator):
         self.embedding_dimension = embedding_dimension
         self.num_parallel_samples = num_parallel_samples
         self.lags_seq = (
-            lags_seq if lags_seq is not None else get_fourier_lags_for_frequency(freq_str=freq)
+            lags_seq
+            if lags_seq is not None
+            else get_fourier_lags_for_frequency(freq_str=freq)
         )
         self.time_features = (
             time_features
@@ -117,7 +119,9 @@ class TransformerEstimator(PTSEstimator):
                     field=FieldName.FEAT_STATIC_CAT, expected_ndim=1, dtype=np.long
                 ),
                 AsNumpyArray(
-                    field=FieldName.FEAT_STATIC_REAL, expected_ndim=1, dtype=self.dtype,
+                    field=FieldName.FEAT_STATIC_REAL,
+                    expected_ndim=1,
+                    dtype=self.dtype,
                 ),
                 AsNumpyArray(
                     field=FieldName.TARGET,
@@ -220,7 +224,7 @@ class TransformerEstimator(PTSEstimator):
 
         copy_parameters(trained_network, prediction_network)
 
-        return PTSPredictor(
+        return PyTorchPredictor(
             input_transform=transformation,
             prediction_net=prediction_network,
             batch_size=self.trainer.batch_size,

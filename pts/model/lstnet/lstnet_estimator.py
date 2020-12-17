@@ -6,7 +6,7 @@ import torch.nn as nn
 
 from pts import Trainer
 from pts.dataset import FieldName
-from pts.model import PTSEstimator, Predictor, PTSPredictor, copy_parameters
+from pts.model import PyTorchEstimator, Predictor, PyTorchPredictor, copy_parameters
 from pts.transform import (
     InstanceSplitter,
     Transformation,
@@ -19,7 +19,7 @@ from pts.transform import (
 from .lstnet_network import LSTNetTrain, LSTNetPredict
 
 
-class LSTNetEstimator(PTSEstimator):
+class LSTNetEstimator(PyTorchEstimator):
     def __init__(
         self,
         freq: str,
@@ -110,7 +110,7 @@ class LSTNetEstimator(PTSEstimator):
         transformation: Transformation,
         trained_network: LSTNetTrain,
         device: torch.device,
-    ) -> PTSPredictor:
+    ) -> PyTorchPredictor:
         prediction_network = LSTNetPredict(
             num_series=self.num_series,
             channels=self.channels,
@@ -131,7 +131,7 @@ class LSTNetEstimator(PTSEstimator):
 
         copy_parameters(trained_network, prediction_network)
 
-        return PTSPredictor(
+        return PyTorchPredictor(
             input_transform=transformation,
             prediction_net=prediction_network,
             batch_size=self.trainer.batch_size,

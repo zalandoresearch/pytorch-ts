@@ -258,7 +258,8 @@ class NBEATSNetwork(nn.Module):
         flag = denominator == 0
 
         return (200 / self.prediction_length) * torch.mean(
-            (torch.abs(future_target - forecast) * torch.logical_not(flag)) / (denominator + flag),
+            (torch.abs(future_target - forecast) * torch.logical_not(flag))
+            / (denominator + flag),
             dim=1,
         )
 
@@ -269,7 +270,8 @@ class NBEATSNetwork(nn.Module):
         flag = denominator == 0
 
         return (100 / self.prediction_length) * torch.mean(
-            (torch.abs(future_target - forecast) * torch.logical_not(flag)) / (denominator + flag),
+            (torch.abs(future_target - forecast) * torch.logical_not(flag))
+            / (denominator + flag),
             dim=1,
         )
 
@@ -292,9 +294,10 @@ class NBEATSNetwork(nn.Module):
         )
         flag = seasonal_error == 0
 
-        return (torch.mean(torch.abs(future_target - forecast), dim=1) * torch.logical_not(flag)) / (
-            seasonal_error + flag
-        )
+        return (
+            torch.mean(torch.abs(future_target - forecast), dim=1)
+            * torch.logical_not(flag)
+        ) / (seasonal_error + flag)
 
 
 class NBEATSTrainingNetwork(NBEATSNetwork):
@@ -342,4 +345,3 @@ class NBEATSPredictionNetwork(NBEATSNetwork):
         forecasts = super().forward(past_target=past_target)
 
         return forecasts.unsqueeze(1)
-
