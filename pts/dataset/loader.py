@@ -26,9 +26,10 @@ class TransformedIterableDataset(IterableDataset):
 
     def __iter__(self):
         if self.shuffle_buffer_length is None:
-            return self.transformed_dataset
+            return self.transformed_dataset.__iter__()
         else:
-            return PseudoShuffled(
+            shuffled = PseudoShuffled(
                 self.transformed_dataset,
                 shuffle_buffer_length=self.shuffle_buffer_length,
             )
+            return shuffled.__iter__()
