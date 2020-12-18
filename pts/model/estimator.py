@@ -5,10 +5,11 @@ import numpy as np
 
 import torch
 import torch.nn as nn
+from torch.utils import data
+from torch.utils.data import DataLoader
 
 from gluonts.core.component import validated
 from gluonts.dataset.common import Dataset
-from gluonts.dataset.loader import TrainDataLoader, ValidationDataLoader
 from gluonts.model.estimator import Estimator
 from gluonts.torch.model.predictor import PyTorchPredictor
 from gluonts.torch.batchify import batchify
@@ -16,6 +17,7 @@ from gluonts.transform import SelectFields, Transformation
 
 from pts import Trainer
 from pts.model import get_module_forward_input_names
+from pts.dataset.loader import TransformedIterableDataset
 
 
 class TrainOutput(NamedTuple):
@@ -78,7 +80,7 @@ class PyTorchEstimator(Estimator):
         training_data: Dataset,
         validation_data: Optional[Dataset] = None,
         num_workers: Optional[int] = None,
-        num_prefetch: Optional[int] = None,
+        prefetch_factor: Optional[int] = 2,
         shuffle_buffer_length: Optional[int] = None,
         **kwargs,
     ) -> TrainOutput:
@@ -88,32 +90,33 @@ class PyTorchEstimator(Estimator):
 
         input_names = get_module_forward_input_names(trained_net)
 
-        training_data_loader = TrainDataLoader(
+        training_iter_dataset = TransformedIterableDataset(
             dataset=training_data,
             transform=transformation + SelectFields(input_names),
-            batch_size=self.trainer.batch_size,
-            stack_fn=partial(
-                batchify,
-                device=self.trainer.device,
-            ),
-            num_workers=num_workers,
-            num_prefetch=num_prefetch,
+            is_train=True,
             shuffle_buffer_length=shuffle_buffer_length,
+        )
+
+        training_data_loader = DataLoader(
+            training_iter_dataset,
+            batch_size=self.trainer.batch_size,
+            num_workers=num_workers,
+            prefetch_factor=prefetch_factor,
             **kwargs,
         )
 
         validation_data_loader = None
         if validation_data is not None:
-            validation_data_loader = ValidationDataLoader(
+            validation_iter_dataset = TransformedIterableDataset(
                 dataset=validation_data,
                 transform=transformation + SelectFields(input_names),
+                is_train=True,
+            )
+            validation_data_loader = DataLoader(
+                validation_iter_dataset,
                 batch_size=self.trainer.batch_size,
-                stack_fn=partial(
-                    batchify,
-                    device=self.trainer.device,
-                ),
                 num_workers=num_workers,
-                num_prefetch=num_prefetch,
+                prefetch_factor=prefetch_factor,
                 **kwargs,
             )
 
@@ -128,7 +131,7 @@ class PyTorchEstimator(Estimator):
             trained_net=trained_net,
             predictor=self.create_predictor(
                 transformation, trained_net, self.trainer.device
-            ),
+            )
         )
 
     def train(

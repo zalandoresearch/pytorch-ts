@@ -5,9 +5,9 @@ from tqdm import tqdm
 
 import torch
 import torch.nn as nn
+from torch.utils.data import DataLoader
 
 from gluonts.core.component import validated
-from gluonts.dataset.loader import TrainDataLoader, ValidationDataLoader
 
 
 class Trainer:
@@ -35,8 +35,8 @@ class Trainer:
     def __call__(
         self,
         net: nn.Module,
-        train_iter: TrainDataLoader,
-        validation_iter: Optional[ValidationDataLoader] = None,
+        train_iter: DataLoader,
+        validation_iter: Optional[DataLoader] = None,
     ) -> None:
         optimizer = torch.optim.Adam(
             net.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay
@@ -50,9 +50,9 @@ class Trainer:
             with tqdm(train_iter) as it:
                 for batch_no, data_entry in enumerate(it, start=1):
                     optimizer.zero_grad()
-                    #inputs = [data_entry[k].to(self.device) for k in input_names]
+                    inputs = [v.to(self.device) for v in data_entry.values()]
 
-                    output = net(*data_entry.values())
+                    output = net(*inputs)
                     if isinstance(output, (list, tuple)):
                         loss = output[0]
                     else:
@@ -67,7 +67,7 @@ class Trainer:
                         refresh=False,
                     )
                     n_iter = epoch_no * self.num_batches_per_epoch + batch_no
-                    #.add_scalar("Loss/train", loss.item(), n_iter)
+                    # .add_scalar("Loss/train", loss.item(), n_iter)
 
                     loss.backward()
                     optimizer.step()
@@ -82,4 +82,4 @@ class Trainer:
             # mark epoch end time and log time cost of current epoch
             toc = time.time()
 
-        #writer.close()
+        # writer.close()
