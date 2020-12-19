@@ -131,7 +131,7 @@ class PyTorchEstimator(Estimator):
             trained_net=trained_net,
             predictor=self.create_predictor(
                 transformation, trained_net, self.trainer.device
-            )
+            ),
         )
 
     def train(

@@ -7,6 +7,7 @@ from gluonts.dataset.common import Dataset
 from gluonts.transform import Transformation, TransformedDataset
 from gluonts.itertools import Cyclic, PseudoShuffled
 
+
 class TransformedIterableDataset(IterableDataset):
     def __init__(
         self,
@@ -26,10 +27,10 @@ class TransformedIterableDataset(IterableDataset):
 
     def __iter__(self):
         if self.shuffle_buffer_length is None:
-            return self.transformed_dataset.__iter__()
+            return iter(self.transformed_dataset)
         else:
             shuffled = PseudoShuffled(
                 self.transformed_dataset,
                 shuffle_buffer_length=self.shuffle_buffer_length,
             )
-            return shuffled.__iter__()
+            return iter(shuffled)
