@@ -1,4 +1,4 @@
-from typing import Callable, Iterable, Iterator, List, Optional
+from typing import Optional
 import itertools
 
 from torch.utils.data import IterableDataset

@@ -80,7 +80,7 @@ class PyTorchEstimator(Estimator):
         training_data: Dataset,
         validation_data: Optional[Dataset] = None,
         num_workers: Optional[int] = None,
-        prefetch_factor: Optional[int] = 2,
+        prefetch_factor: int = 2,
         shuffle_buffer_length: Optional[int] = None,
         **kwargs,
     ) -> TrainOutput:
@@ -139,15 +139,15 @@ class PyTorchEstimator(Estimator):
         training_data: Dataset,
         validation_data: Optional[Dataset] = None,
         num_workers: Optional[int] = None,
-        num_prefetch: Optional[int] = None,
+        prefetch_factor: int = 2,
         shuffle_buffer_length: Optional[int] = None,
         **kwargs,
     ) -> PyTorchPredictor:
         return self.train_model(
             training_data,
             validation_data,
-            num_workers,
-            num_prefetch,
-            shuffle_buffer_length,
+            num_workers=num_workers,
+            prefetch_factor=prefetch_factor,
+            shuffle_buffer_length=shuffle_buffer_length,
             **kwargs,
         ).predictor

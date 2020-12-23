@@ -17,8 +17,6 @@ class Trainer:
         epochs: int = 100,
         batch_size: int = 32,
         num_batches_per_epoch: int = 50,
-        num_workers: int = 4,
-        pin_memory: bool = False,
         learning_rate: float = 1e-3,
         weight_decay: float = 1e-6,
         device: Optional[Union[torch.device, str]] = None,
@@ -29,8 +27,6 @@ class Trainer:
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
         self.device = device
-        self.num_workers = num_workers
-        self.pin_memory = pin_memory
 
     def __call__(
         self,
