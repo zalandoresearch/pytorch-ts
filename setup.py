@@ -26,6 +26,7 @@ setup(
         'pydantic',
         'matplotlib',
         'tensorboard',
+        'wandb',
     ],
 
     test_suite='tests',
