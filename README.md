@@ -63,7 +63,7 @@ estimator = DeepAREstimator(freq="5min",
                             input_size=43,
                             trainer=Trainer(epochs=10,
                                             device=device))
-predictor = estimator.train(training_data=training_data, num_workers=4, num_prefetch=2)
+predictor = estimator.train(training_data=training_data, num_workers=4)
 ```
 ```
     45it [00:01, 37.60it/s, avg_epoch_loss=4.64, epoch=0]
