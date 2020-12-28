@@ -4,8 +4,9 @@ import torch
 import torch.nn as nn
 
 from gluonts.core.component import validated
+from gluonts.torch.modules.distribution_output import DistributionOutput
 from pts.model import weighted_average
-from pts.modules import DistributionOutput, MeanScaler, NOPScaler, FeatureEmbedder
+from pts.modules import MeanScaler, NOPScaler, FeatureEmbedder
 
 
 class DeepVARTrainingNetwork(nn.Module):

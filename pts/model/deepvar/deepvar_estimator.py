@@ -3,34 +3,38 @@ from typing import List, Optional, Callable
 import numpy as np
 import torch
 
-from pts import Trainer
-from pts.dataset import FieldName
-from pts.feature import (
-    TimeFeature,
-    fourier_time_features_from_frequency_str,
-    get_fourier_lags_for_frequency,
-)
-from pts.model import PyTorchEstimator, PyTorchPredictor, copy_parameters
-from pts.modules import DistributionOutput, LowRankMultivariateNormalOutput
-from pts.transform import (
-    Transformation,
-    Chain,
-    RemoveFields,
-    InstanceSplitter,
-    ExpectedNumInstanceSampler,
-    CDFtoGaussianTransform,
-    cdf_to_gaussian_forward_transform,
-    RenameFields,
-    AsNumpyArray,
-    ExpandDimArray,
+from gluonts.dataset.field_names import FieldName
+from gluonts.time_feature import TimeFeature
+from gluonts.torch.modules.distribution_output import DistributionOutput
+from gluonts.torch.support.util import copy_parameters
+from gluonts.torch.model.predictor import PyTorchPredictor
+from gluonts.model.predictor import Predictor
+from gluonts.transform import (
     AddObservedValuesIndicator,
     AddTimeFeatures,
-    AddAgeFeature,
-    VstackFeatures,
-    SetFieldIfNotPresent,
+    AsNumpyArray,
+    CDFtoGaussianTransform,
+    Chain,
+    ExpandDimArray,
+    ExpectedNumInstanceSampler,
+    InstanceSplitter,
+    RenameFields,
     SetField,
     TargetDimIndicator,
+    Transformation,
+    VstackFeatures,
+    RemoveFields,
+    AddAgeFeature,
+    cdf_to_gaussian_forward_transform,
 )
+from pts import Trainer
+from pts.model.utils import get_module_forward_input_names
+from pts.feature import (
+    fourier_time_features_from_frequency,
+    lags_for_fourier_time_features_from_frequency
+)
+from pts.model import PyTorchEstimator
+from pts.modules import LowRankMultivariateNormalOutput
 from .deepvar_network import DeepVARTrainingNetwork, DeepVARPredictionNetwork
 
 
@@ -100,13 +104,13 @@ class DeepVAREstimator(PyTorchEstimator):
         self.lags_seq = (
             lags_seq
             if lags_seq is not None
-            else get_fourier_lags_for_frequency(freq_str=freq)
+            else lags_for_fourier_time_features_from_frequency(freq_str=freq)
         )
 
         self.time_features = (
             time_features
             if time_features is not None
-            else fourier_time_features_from_frequency_str(self.freq)
+            else fourier_time_features_from_frequency(self.freq)
         )
 
         self.history_length = self.context_length + max(self.lags_seq)
@@ -184,7 +188,6 @@ class DeepVAREstimator(PyTorchEstimator):
                     output_field=FieldName.FEAT_AGE,
                     pred_length=self.prediction_length,
                     log_scale=True,
-                    dtype=self.dtype,
                 ),
                 VstackFeatures(
                     output_field=FieldName.FEAT_TIME,
@@ -244,7 +247,7 @@ class DeepVAREstimator(PyTorchEstimator):
         transformation: Transformation,
         trained_network: DeepVARTrainingNetwork,
         device: torch.device,
-    ) -> PyTorchPredictor:
+    ) -> Predictor:
         prediction_network = DeepVARPredictionNetwork(
             input_size=self.input_size,
             target_dim=self.target_dim,
@@ -264,13 +267,14 @@ class DeepVAREstimator(PyTorchEstimator):
         ).to(device)
 
         copy_parameters(trained_network, prediction_network)
+        input_names = get_module_forward_input_names(prediction_network)
 
         return PyTorchPredictor(
             input_transform=transformation,
+            input_names=input_names,
             prediction_net=prediction_network,
             batch_size=self.trainer.batch_size,
             freq=self.freq,
             prediction_length=self.prediction_length,
             device=device,
-            output_transform=self.output_transform,
         )
