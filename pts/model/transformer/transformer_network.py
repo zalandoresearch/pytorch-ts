@@ -4,7 +4,8 @@ import torch
 import torch.nn as nn
 
 from gluonts.core.component import validated
-from pts.modules import DistributionOutput, MeanScaler, NOPScaler, FeatureEmbedder
+from gluonts.torch.modules.distribution_output import DistributionOutput
+from pts.modules import MeanScaler, NOPScaler, FeatureEmbedder
 
 
 def prod(xs):
