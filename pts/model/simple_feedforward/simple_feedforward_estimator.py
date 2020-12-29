@@ -19,6 +19,7 @@ from gluonts.transform import (
     InstanceSplitter,
     ExpectedNumInstanceSampler,
 )
+from pts.model.utils import get_module_forward_input_names
 from pts import Trainer
 from pts.model import PyTorchEstimator
 from pts.modules import StudentTOutput
@@ -158,7 +159,7 @@ class SimpleFeedForwardEstimator(PyTorchEstimator):
         transformation: Transformation,
         trained_network: nn.Module,
         device: torch.device,
-    ) -> PyTorchPredictor:
+    ) -> Predictor:
         prediction_network = SimpleFeedForwardPredictionNetwork(
             num_hidden_dimensions=self.num_hidden_dimensions,
             prediction_length=self.prediction_length,
@@ -170,9 +171,11 @@ class SimpleFeedForwardEstimator(PyTorchEstimator):
         ).to(device)
 
         copy_parameters(trained_network, prediction_network)
+        input_names = get_module_forward_input_names(prediction_network)
 
         return PyTorchPredictor(
             input_transform=transformation,
+            input_names=input_names,
             prediction_net=prediction_network,
             batch_size=self.trainer.batch_size,
             freq=self.freq,
