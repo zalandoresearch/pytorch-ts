@@ -12,7 +12,6 @@ from gluonts.core.component import validated
 from gluonts.dataset.common import Dataset
 from gluonts.model.estimator import Estimator
 from gluonts.torch.model.predictor import PyTorchPredictor
-from gluonts.torch.batchify import batchify
 from gluonts.transform import SelectFields, Transformation
 
 from pts import Trainer

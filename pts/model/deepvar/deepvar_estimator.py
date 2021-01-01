@@ -277,4 +277,5 @@ class DeepVAREstimator(PyTorchEstimator):
             freq=self.freq,
             prediction_length=self.prediction_length,
             device=device,
+            output_transform=self.output_transform,
         )
