@@ -5,9 +5,13 @@ from typing import List, Optional, Iterator
 
 import numpy as np
 
+from gluonts.dataset.field_names import FieldName
+from gluonts.dataset.common import Dataset
+from gluonts.model.predictor import Predictor
+from gluonts.model.forecast import Forecast, SampleForecast
+
+from pts.model import PyTorchEstimator
 from pts import Trainer
-from pts.dataset import Dataset, FieldName
-from pts.model import Predictor, SampleForecast, Forecast, Estimator
 from .n_beats_estimator import NBEATSEstimator
 from .n_beats_network import VALID_LOSS_FUNCTIONS
 
@@ -89,7 +93,7 @@ class NBEATSEnsemblePredictor(Predictor):
             )
 
 
-class NBEATSEnsembleEstimator(Estimator):
+class NBEATSEnsembleEstimator(PyTorchEstimator):
     """
     An ensemble N-BEATS Estimator (approximately) as described
     in the paper:  https://arxiv.org/abs/1905.10437.
