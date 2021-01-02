@@ -2,15 +2,12 @@ from typing import List, Optional
 
 import torch
 
-from pts import Trainer
-from pts.dataset import FieldName
-from pts.feature import (
-    TimeFeature,
-    fourier_time_features_from_frequency_str,
-    get_fourier_lags_for_frequency,
-)
-from pts.model import PyTorchEstimator, PyTorchPredictor, copy_parameters
-from pts.transform import (
+from gluonts.dataset.field_names import FieldName
+from gluonts.time_feature import TimeFeature
+from gluonts.torch.support.util import copy_parameters
+from gluonts.torch.model.predictor import PyTorchPredictor
+from gluonts.model.predictor import Predictor
+from gluonts.transform import (
     Transformation,
     Chain,
     InstanceSplitter,
@@ -24,6 +21,15 @@ from pts.transform import (
     SetFieldIfNotPresent,
     TargetDimIndicator,
 )
+
+from pts import Trainer
+from pts.model import PyTorchEstimator
+from pts.model.utils import get_module_forward_input_names
+from pts.feature import (
+    fourier_time_features_from_frequency,
+    lags_for_fourier_time_features_from_frequency,
+)
+
 from .transformer_tempflow_network import (
     TransformerTempFlowTrainingNetwork,
     TransformerTempFlowPredictionNetwork,
@@ -94,13 +100,13 @@ class TransformerTempFlowEstimator(PyTorchEstimator):
         self.lags_seq = (
             lags_seq
             if lags_seq is not None
-            else get_fourier_lags_for_frequency(freq_str=freq)
+            else lags_for_fourier_time_features_from_frequency(freq_str=freq)
         )
 
         self.time_features = (
             time_features
             if time_features is not None
-            else fourier_time_features_from_frequency_str(self.freq)
+            else fourier_time_features_from_frequency(self.freq)
         )
 
         self.history_length = self.context_length + max(self.lags_seq)
@@ -197,7 +203,7 @@ class TransformerTempFlowEstimator(PyTorchEstimator):
         transformation: Transformation,
         trained_network: TransformerTempFlowTrainingNetwork,
         device: torch.device,
-    ) -> PyTorchPredictor:
+    ) -> Predictor:
         prediction_network = TransformerTempFlowPredictionNetwork(
             input_size=self.input_size,
             target_dim=self.target_dim,
@@ -225,13 +231,14 @@ class TransformerTempFlowEstimator(PyTorchEstimator):
         ).to(device)
 
         copy_parameters(trained_network, prediction_network)
+        input_names = get_module_forward_input_names(prediction_network)
 
         return PyTorchPredictor(
             input_transform=transformation,
+            input_names=input_names,
             prediction_net=prediction_network,
             batch_size=self.trainer.batch_size,
             freq=self.freq,
             prediction_length=self.prediction_length,
             device=device,
-            output_transform=None,
         )

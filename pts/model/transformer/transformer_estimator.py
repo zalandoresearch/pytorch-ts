@@ -23,6 +23,7 @@ from gluonts.transform  import (
     VstackFeatures,
     SetField,
 )
+
 from pts import Trainer
 from pts.model.utils import get_module_forward_input_names
 from pts.feature import (
@@ -31,6 +32,7 @@ from pts.feature import (
 )
 from pts.model import PyTorchEstimator
 from pts.modules import StudentTOutput
+
 from .transformer_network import (
     TransformerTrainingNetwork,
     TransformerPredictionNetwork,

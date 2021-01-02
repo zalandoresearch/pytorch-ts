@@ -14,9 +14,11 @@ from gluonts.transform import (
     RemoveFields,
     ExpectedNumInstanceSampler,
 )
+
 from pts import Trainer
 from pts.model import PyTorchEstimator
 from pts.model.utils import get_module_forward_input_names
+
 from .n_beats_network import (
     NBEATSPredictionNetwork,
     NBEATSTrainingNetwork,
