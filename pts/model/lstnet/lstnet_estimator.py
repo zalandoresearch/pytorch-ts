@@ -4,18 +4,22 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from pts import Trainer
-from pts.dataset import FieldName
-from pts.model import PyTorchEstimator, Predictor, PyTorchPredictor, copy_parameters
-from pts.transform import (
+from gluonts.dataset.field_names import FieldName
+from gluonts.torch.support.util import copy_parameters
+from pts.model.utils import get_module_forward_input_names
+from gluonts.torch.model.predictor import PyTorchPredictor
+from gluonts.model.predictor import Predictor
+from gluonts.transform import (
     InstanceSplitter,
     Transformation,
     Chain,
-    RemoveFields,
     ExpectedNumInstanceSampler,
     AddObservedValuesIndicator,
     AsNumpyArray,
 )
+from pts.model import PyTorchEstimator
+from pts import Trainer
+
 from .lstnet_network import LSTNetTrain, LSTNetPredict
 
 
@@ -130,9 +134,11 @@ class LSTNetEstimator(PyTorchEstimator):
         ).to(device)
 
         copy_parameters(trained_network, prediction_network)
+        input_names = get_module_forward_input_names(prediction_network)
 
         return PyTorchPredictor(
             input_transform=transformation,
+            input_names=input_names,
             prediction_net=prediction_network,
             batch_size=self.trainer.batch_size,
             freq=self.freq,
