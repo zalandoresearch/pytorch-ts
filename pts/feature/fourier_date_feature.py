@@ -47,6 +47,7 @@ class FourierDateFeatures(TimeFeature):
         steps = [x * 2.0 * np.pi / num_values for x in values]
         return np.vstack([np.cos(steps), np.sin(steps)])
 
+
 def fourier_time_features_from_frequency(freq_str: str) -> List[TimeFeature]:
     offset = to_offset(freq_str)
     multiple, granularity = offset.n, offset.name

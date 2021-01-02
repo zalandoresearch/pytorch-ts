@@ -3,8 +3,7 @@ from typing import List, Optional, Tuple
 import torch
 import torch.nn as nn
 
-from gluonts.core.component import 
-
+from gluonts.core.component import validated
 from pts.modules import RealNVP, MAF, FlowOutput, MeanScaler, NOPScaler
 
 

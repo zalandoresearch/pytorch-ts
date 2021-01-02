@@ -10,7 +10,7 @@ from gluonts.torch.modules.distribution_output import DistributionOutput
 from gluonts.torch.support.util import copy_parameters
 from gluonts.torch.model.predictor import PyTorchPredictor
 from gluonts.model.predictor import Predictor
-from gluonts.transform  import (
+from gluonts.transform import (
     Transformation,
     Chain,
     InstanceSplitter,
@@ -205,7 +205,7 @@ class TransformerEstimator(PyTorchEstimator):
     def create_predictor(
         self,
         transformation: Transformation,
-        trained_network:TransformerTrainingNetwork,
+        trained_network: TransformerTrainingNetwork,
         device: torch.device,
     ) -> Predictor:
 

@@ -35,7 +35,11 @@ def weighted_average(
     """
     if weights is not None:
         weighted_tensor = torch.where(weights != 0, x * weights, torch.zeros_like(x))
-        sum_weights = torch.clamp(weights.sum(dim=dim) if dim else weights.sum(), min=1.0)
-        return (weighted_tensor.sum(dim=dim) if dim else weighted_tensor.sum())/ sum_weights
+        sum_weights = torch.clamp(
+            weights.sum(dim=dim) if dim else weights.sum(), min=1.0
+        )
+        return (
+            weighted_tensor.sum(dim=dim) if dim else weighted_tensor.sum()
+        ) / sum_weights
     else:
         return x.mean(dim=dim)

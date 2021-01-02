@@ -26,7 +26,7 @@ from gluonts.transform import (
 from pts import Trainer
 from pts.feature import (
     fourier_time_features_from_frequency,
-    lags_for_fourier_time_features_from_frequency
+    lags_for_fourier_time_features_from_frequency,
 )
 from pts.model.utils import get_module_forward_input_names
 from pts.model import PyTorchEstimator
