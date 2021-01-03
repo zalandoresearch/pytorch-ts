@@ -91,9 +91,10 @@ class Trainer:
 
                     loss.backward()
                     nn.utils.clip_grad_norm_(net.parameters(), self.clip_gradient)
-                    lr_scheduler.step(loss)
+                    optimizer.step()
 
                     if self.num_batches_per_epoch == batch_no:
+                        lr_scheduler.step(avg_epoch_loss / batch_no)
                         break
 
             # mark epoch end time and log time cost of current epoch
