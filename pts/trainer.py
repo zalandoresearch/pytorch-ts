@@ -6,6 +6,8 @@ import wandb
 
 import torch
 import torch.nn as nn
+from torch.optim import AdamW
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
 
 from gluonts.core.component import validated
@@ -20,6 +22,10 @@ class Trainer:
         num_batches_per_epoch: int = 50,
         learning_rate: float = 1e-3,
         weight_decay: float = 1e-6,
+        learning_rate_decay_factor: float = 0.5,
+        patience: int = 10,
+        minimum_learning_rate: float = 5e-5,
+        clip_gradient: float = 10.0,
         device: Optional[Union[torch.device, str]] = None,
         **kwargs,
     ) -> None:
@@ -28,6 +34,10 @@ class Trainer:
         self.num_batches_per_epoch = num_batches_per_epoch
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
+        self.learning_rate_decay_factor = learning_rate_decay_factor
+        self.patience = patience
+        self.minimum_learning_rate = minimum_learning_rate
+        self.clip_gradient = clip_gradient
         self.device = device
         wandb.init(**kwargs)
 
@@ -39,8 +49,18 @@ class Trainer:
     ) -> None:
         wandb.watch(net, log="all", log_freq=self.num_batches_per_epoch)
 
-        optimizer = torch.optim.Adam(
-            net.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay
+        optimizer = AdamW(
+            net.parameters(),
+            lr=self.learning_rate, 
+            weight_decay=self.weight_decay
+        )
+
+        lr_scheduler = ReduceLROnPlateau(
+            optimizer, 
+            mode='min',
+            factor=self.learning_rate_decay_factor, 
+            patience=self.patience,
+            min_lr=self.minimum_learning_rate,
         )
 
         for epoch_no in range(self.epochs):
@@ -70,7 +90,8 @@ class Trainer:
                     wandb.log({"loss": loss.item()})
 
                     loss.backward()
-                    optimizer.step()
+                    nn.utils.clip_grad_norm_(net.parameters(), self.clip_gradient)
+                    lr_scheduler.step(loss)
 
                     if self.num_batches_per_epoch == batch_no:
                         break
