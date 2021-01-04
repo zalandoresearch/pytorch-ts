@@ -7,8 +7,8 @@ import wandb
 
 import torch
 import torch.nn as nn
-from torch.optim import AdamW
-from torch.optim.lr_scheduler import ReduceLROnPlateau, OneCycleLR
+from torch.optim import Adam
+from torch.optim.lr_scheduler import OneCycleLR
 from torch.utils.data import DataLoader
 
 from gluonts.core.component import validated
@@ -46,7 +46,7 @@ class Trainer:
     ) -> None:
         wandb.watch(net, log="all", log_freq=self.num_batches_per_epoch)
 
-        optimizer = AdamW(
+        optimizer = Adam(
             net.parameters(),
             lr=self.learning_rate, 
             weight_decay=self.weight_decay
