@@ -4,8 +4,10 @@ import torch
 import torch.nn as nn
 from torch.distributions import Distribution
 
-from pts.core.component import validated
-from pts.modules import MeanScaler, NOPScaler, DistributionOutput, LambdaLayer
+from gluonts.core.component import validated
+from gluonts.torch.modules.distribution_output import DistributionOutput
+from gluonts.torch.modules.lambda_layer import LambdaLayer
+from pts.modules import MeanScaler, NOPScaler
 
 
 class SimpleFeedForwardNetworkBase(nn.Module):
@@ -35,6 +37,7 @@ class SimpleFeedForwardNetworkBase(nn.Module):
         Distribution to fit.
     kwargs
     """
+
     @validated()
     def __init__(
         self,
@@ -60,7 +63,7 @@ class SimpleFeedForwardNetworkBase(nn.Module):
             if i == 0:
                 input_size = context_length
             else:
-                input_size = dims[i-1]
+                input_size = dims[i - 1]
             modules += [nn.Linear(input_size, units), nn.ReLU()]
             if self.batch_normalization:
                 modules.append(nn.BatchNorm1d(units))
@@ -83,7 +86,7 @@ class SimpleFeedForwardNetworkBase(nn.Module):
             past_target,
             torch.ones_like(past_target),  # TODO: pass the actual observed here
         )
-        
+
         mlp_outputs = self.mlp(scaled_target)
         distr_args = self.distr_args_proj(mlp_outputs)
         return self.distr_output.distribution(

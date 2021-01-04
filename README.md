@@ -17,10 +17,11 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import torch
 
-from pts.dataset import ListDataset
+from gluonts.dataset.common import ListDataset
+from gluonts.dataset.util import to_pandas
+
 from pts.model.deepar import DeepAREstimator
 from pts import Trainer
-from pts.dataset import to_pandas
 ```
 
 This simple example illustrates how to train a model on some data, and then use it to make predictions. As a first step, we need to collect some data: in this example we will use the volume of tweets mentioning the AMZN ticker symbol.
@@ -62,7 +63,7 @@ estimator = DeepAREstimator(freq="5min",
                             input_size=43,
                             trainer=Trainer(epochs=10,
                                             device=device))
-predictor = estimator.train(training_data=training_data)
+predictor = estimator.train(training_data=training_data, num_workers=4)
 ```
 ```
     45it [00:01, 37.60it/s, avg_epoch_loss=4.64, epoch=0]

@@ -3,9 +3,10 @@ from typing import List, Optional, Tuple, Union
 import torch
 import torch.nn as nn
 
-from pts.core.component import validated
+from gluonts.core.component import validated
+from gluonts.torch.modules.distribution_output import DistributionOutput
 from pts.model import weighted_average
-from pts.modules import DistributionOutput, MeanScaler, NOPScaler, FeatureEmbedder
+from pts.modules import MeanScaler, NOPScaler, FeatureEmbedder
 
 
 class DeepVARTrainingNetwork(nn.Module):
@@ -250,7 +251,10 @@ class DeepVARTrainingNetwork(nn.Module):
             subsequences_length = self.context_length
         else:
             time_feat = torch.cat(
-                (past_time_feat[:, -self.context_length :, ...], future_time_feat,),
+                (
+                    past_time_feat[:, -self.context_length :, ...],
+                    future_time_feat,
+                ),
                 dim=1,
             )
             sequence = torch.cat((past_target_cdf, future_target_cdf), dim=1)
@@ -285,7 +289,9 @@ class DeepVARTrainingNetwork(nn.Module):
         return outputs, states, scale, lags_scaled, inputs
 
     def distr(
-        self, rnn_outputs: torch.Tensor, scale: torch.Tensor,
+        self,
+        rnn_outputs: torch.Tensor,
+        scale: torch.Tensor,
     ):
         """
         Returns the distribution of DeepVAR with respect to the RNN outputs.
@@ -382,7 +388,8 @@ class DeepVARTrainingNetwork(nn.Module):
         # put together target sequence
         # (batch_size, seq_len, target_dim)
         target = torch.cat(
-            (past_target_cdf[:, -self.context_length :, ...], future_target_cdf), dim=1,
+            (past_target_cdf[:, -self.context_length :, ...], future_target_cdf),
+            dim=1,
         )
 
         # assert_shape(target, (-1, seq_len, self.target_dim))
@@ -507,7 +514,8 @@ class DeepVARPredictionNetwork(DeepVARTrainingNetwork):
             )
 
             distr, distr_args = self.distr(
-                rnn_outputs=rnn_outputs, scale=repeated_scale,
+                rnn_outputs=rnn_outputs,
+                scale=repeated_scale,
             )
 
             # (batch_size, 1, target_dim)
@@ -524,7 +532,12 @@ class DeepVARPredictionNetwork(DeepVARTrainingNetwork):
 
         # (batch_size, num_samples, prediction_length, target_dim)
         return samples.reshape(
-            (-1, self.num_parallel_samples, self.prediction_length, self.target_dim,)
+            (
+                -1,
+                self.num_parallel_samples,
+                self.prediction_length,
+                self.target_dim,
+            )
         )
 
     def forward(

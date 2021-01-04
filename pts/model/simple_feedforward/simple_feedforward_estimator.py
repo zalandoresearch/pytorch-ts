@@ -3,29 +3,41 @@ from typing import List, Optional
 import torch
 import torch.nn as nn
 
-from pts import Trainer
-from pts.dataset import FieldName
-from pts.model import PTSEstimator, PTSPredictor, copy_parameters
-from pts.modules import DistributionOutput, StudentTOutput
-from pts.transform import (
+from gluonts.torch.support.util import copy_parameters
+from gluonts.torch.model.predictor import PyTorchPredictor
+from gluonts.torch.modules.distribution_output import DistributionOutput
+from gluonts.model.predictor import Predictor
+from gluonts.dataset.field_names import FieldName
+from gluonts.time_feature import (
+    TimeFeature,
+    get_lags_for_frequency,
+    time_features_from_frequency_str,
+)
+from gluonts.transform import (
     Transformation,
     Chain,
     InstanceSplitter,
     ExpectedNumInstanceSampler,
 )
+
+from pts.model.utils import get_module_forward_input_names
+from pts import Trainer
+from pts.model import PyTorchEstimator
+from pts.modules import StudentTOutput
+
 from .simple_feedforward_network import (
     SimpleFeedForwardTrainingNetwork,
     SimpleFeedForwardPredictionNetwork,
 )
 
 
-class SimpleFeedForwardEstimator(PTSEstimator):
+class SimpleFeedForwardEstimator(PyTorchEstimator):
     """
     SimpleFeedForwardEstimator shows how to build a simple MLP model predicting
     the next target time-steps given the previous ones.
 
     Given that we want to define a pytorch model trainable by SGD, we inherit the
-    parent class `PTSEstimator` that handles most of the logic for fitting a
+    parent class `PyTorchEstimator` that handles most of the logic for fitting a
     neural-network.
 
     We thus only have to define:
@@ -148,7 +160,7 @@ class SimpleFeedForwardEstimator(PTSEstimator):
         transformation: Transformation,
         trained_network: nn.Module,
         device: torch.device,
-    ) -> PTSPredictor:
+    ) -> Predictor:
         prediction_network = SimpleFeedForwardPredictionNetwork(
             num_hidden_dimensions=self.num_hidden_dimensions,
             prediction_length=self.prediction_length,
@@ -160,9 +172,11 @@ class SimpleFeedForwardEstimator(PTSEstimator):
         ).to(device)
 
         copy_parameters(trained_network, prediction_network)
+        input_names = get_module_forward_input_names(prediction_network)
 
-        return PTSPredictor(
+        return PyTorchPredictor(
             input_transform=transformation,
+            input_names=input_names,
             prediction_net=prediction_network,
             batch_size=self.trainer.batch_size,
             freq=self.freq,

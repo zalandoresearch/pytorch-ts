@@ -4,22 +4,27 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from pts import Trainer
-from pts.dataset import FieldName
-from pts.model import PTSEstimator, Predictor, PTSPredictor, copy_parameters
-from pts.transform import (
+from gluonts.dataset.field_names import FieldName
+from gluonts.torch.support.util import copy_parameters
+from gluonts.torch.model.predictor import PyTorchPredictor
+from gluonts.model.predictor import Predictor
+from gluonts.transform import (
     InstanceSplitter,
     Transformation,
     Chain,
-    RemoveFields,
     ExpectedNumInstanceSampler,
     AddObservedValuesIndicator,
     AsNumpyArray,
 )
+
+from pts.model import PyTorchEstimator
+from pts import Trainer
+from pts.model.utils import get_module_forward_input_names
+
 from .lstnet_network import LSTNetTrain, LSTNetPredict
 
 
-class LSTNetEstimator(PTSEstimator):
+class LSTNetEstimator(PyTorchEstimator):
     def __init__(
         self,
         freq: str,
@@ -81,7 +86,7 @@ class LSTNetEstimator(PTSEstimator):
                     time_series_fields=[FieldName.OBSERVED_VALUES],
                     past_length=self.context_length,
                     future_length=self.future_length,
-                    time_first=False,
+                    output_NTC=False,
                 ),
             ]
         )
@@ -110,7 +115,7 @@ class LSTNetEstimator(PTSEstimator):
         transformation: Transformation,
         trained_network: LSTNetTrain,
         device: torch.device,
-    ) -> PTSPredictor:
+    ) -> PyTorchPredictor:
         prediction_network = LSTNetPredict(
             num_series=self.num_series,
             channels=self.channels,
@@ -130,9 +135,11 @@ class LSTNetEstimator(PTSEstimator):
         ).to(device)
 
         copy_parameters(trained_network, prediction_network)
+        input_names = get_module_forward_input_names(prediction_network)
 
-        return PTSPredictor(
+        return PyTorchPredictor(
             input_transform=transformation,
+            input_names=input_names,
             prediction_net=prediction_network,
             batch_size=self.trainer.batch_size,
             freq=self.freq,

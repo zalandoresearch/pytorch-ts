@@ -52,6 +52,6 @@ class QuantileLayer(nn.Module):
         integers = torch.repeat_interleave(
             torch.arange(0, self.n_cos_embedding).unsqueeze(dim=0),
             repeats=tau.shape[-1],
-            dim=0
+            dim=0,
         ).to(tau.device)
         return torch.cos(pi * tau.unsqueeze(dim=-1) * integers)

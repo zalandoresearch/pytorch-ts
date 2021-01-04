@@ -2,15 +2,13 @@ from typing import List, Optional
 
 import torch
 
-from pts import Trainer
-from pts.dataset import FieldName
-from pts.feature import (
-    TimeFeature,
-    fourier_time_features_from_frequency_str,
-    get_fourier_lags_for_frequency,
-)
-from pts.model import PTSEstimator, PTSPredictor, copy_parameters
-from pts.transform import (
+from gluonts.dataset.field_names import FieldName
+from gluonts.time_feature import TimeFeature
+from gluonts.torch.model.predictor import PyTorchPredictor
+from gluonts.torch.support.util import copy_parameters
+from gluonts.model.predictor import Predictor
+from gluonts.torch.model.predictor import PyTorchPredictor
+from gluonts.transform import (
     Transformation,
     Chain,
     InstanceSplitter,
@@ -24,10 +22,19 @@ from pts.transform import (
     SetFieldIfNotPresent,
     TargetDimIndicator,
 )
+
+from pts import Trainer
+from pts.feature import (
+    fourier_time_features_from_frequency,
+    lags_for_fourier_time_features_from_frequency,
+)
+from pts.model.utils import get_module_forward_input_names
+from pts.model import PyTorchEstimator
+
 from .tempflow_network import TempFlowTrainingNetwork, TempFlowPredictionNetwork
 
 
-class TempFlowEstimator(PTSEstimator):
+class TempFlowEstimator(PyTorchEstimator):
     def __init__(
         self,
         input_size: int,
@@ -49,7 +56,6 @@ class TempFlowEstimator(PTSEstimator):
         n_hidden=2,
         conditioning_length: int = 200,
         dequantize: bool = False,
-
         scaling: bool = True,
         pick_incomplete: bool = False,
         lags_seq: Optional[List[int]] = None,
@@ -84,13 +90,13 @@ class TempFlowEstimator(PTSEstimator):
         self.lags_seq = (
             lags_seq
             if lags_seq is not None
-            else get_fourier_lags_for_frequency(freq_str=freq)
+            else lags_for_fourier_time_features_from_frequency(freq_str=freq)
         )
 
         self.time_features = (
             time_features
             if time_features is not None
-            else fourier_time_features_from_frequency_str(self.freq)
+            else fourier_time_features_from_frequency(self.freq)
         )
 
         self.history_length = self.context_length + max(self.lags_seq)
@@ -100,10 +106,16 @@ class TempFlowEstimator(PTSEstimator):
     def create_transformation(self) -> Transformation:
         return Chain(
             [
-                AsNumpyArray(field=FieldName.TARGET, expected_ndim=2,),
+                AsNumpyArray(
+                    field=FieldName.TARGET,
+                    expected_ndim=2,
+                ),
                 # maps the target to (1, T)
                 # if the target data is uni dimensional
-                ExpandDimArray(field=FieldName.TARGET, axis=None,),
+                ExpandDimArray(
+                    field=FieldName.TARGET,
+                    axis=None,
+                ),
                 AddObservedValuesIndicator(
                     target_field=FieldName.TARGET,
                     output_field=FieldName.OBSERVED_VALUES,
@@ -176,7 +188,7 @@ class TempFlowEstimator(PTSEstimator):
         transformation: Transformation,
         trained_network: TempFlowTrainingNetwork,
         device: torch.device,
-    ) -> PTSPredictor:
+    ) -> Predictor:
         prediction_network = TempFlowPredictionNetwork(
             input_size=self.input_size,
             target_dim=self.target_dim,
@@ -201,13 +213,14 @@ class TempFlowEstimator(PTSEstimator):
         ).to(device)
 
         copy_parameters(trained_network, prediction_network)
+        input_names = get_module_forward_input_names(prediction_network)
 
-        return PTSPredictor(
+        return PyTorchPredictor(
             input_transform=transformation,
+            input_names=input_names,
             prediction_net=prediction_network,
             batch_size=self.trainer.batch_size,
             freq=self.freq,
             prediction_length=self.prediction_length,
             device=device,
-            output_transform=None,
         )
