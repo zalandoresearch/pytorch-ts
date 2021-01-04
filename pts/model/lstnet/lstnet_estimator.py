@@ -86,7 +86,7 @@ class LSTNetEstimator(PyTorchEstimator):
                     time_series_fields=[FieldName.OBSERVED_VALUES],
                     past_length=self.context_length,
                     future_length=self.future_length,
-                    time_first=False,
+                    output_NTC=False,
                 ),
             ]
         )
