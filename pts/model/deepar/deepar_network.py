@@ -5,9 +5,10 @@ import torch
 import torch.nn as nn
 from torch.distributions import Distribution
 
-from pts.core.component import validated
+from gluonts.core.component import validated
+from gluonts.torch.modules.distribution_output import DistributionOutput
 from pts.model import weighted_average
-from pts.modules import DistributionOutput, MeanScaler, NOPScaler, FeatureEmbedder
+from pts.modules import MeanScaler, NOPScaler, FeatureEmbedder
 
 
 def prod(xs):
@@ -18,7 +19,6 @@ def prod(xs):
 
 
 class DeepARNetwork(nn.Module):
-
     @validated()
     def __init__(
         self,
@@ -144,7 +144,7 @@ class DeepARNetwork(nn.Module):
                     past_time_feat[:, self.history_length - self.context_length :, ...],
                     future_time_feat,
                 ),
-                dim=1
+                dim=1,
             )
             sequence = torch.cat((past_target, future_target), dim=1)
             sequence_length = self.history_length + self.prediction_length
@@ -154,7 +154,7 @@ class DeepARNetwork(nn.Module):
             sequence=sequence,
             sequence_length=sequence_length,
             indices=self.lags_seq,
-            subsequences_length=subsequences_length
+            subsequences_length=subsequences_length,
         )
 
         # scale is computed on the context length last units of the past target

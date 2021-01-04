@@ -3,8 +3,9 @@ from typing import List, Optional, Tuple
 import torch
 import torch.nn as nn
 
-from pts.core.component import validated
-from pts.modules import DistributionOutput, MeanScaler, NOPScaler, FeatureEmbedder
+from gluonts.core.component import validated
+from gluonts.torch.modules.distribution_output import DistributionOutput
+from pts.modules import MeanScaler, NOPScaler, FeatureEmbedder
 
 
 def prod(xs):
@@ -15,7 +16,6 @@ def prod(xs):
 
 
 class TransformerNetwork(nn.Module):
-
     @validated()
     def __init__(
         self,
@@ -72,7 +72,8 @@ class TransformerNetwork(nn.Module):
         self.proj_dist_args = distr_output.get_args_proj(d_model)
 
         self.embedder = FeatureEmbedder(
-            cardinalities=cardinality, embedding_dims=embedding_dimension,
+            cardinalities=cardinality,
+            embedding_dims=embedding_dimension,
         )
 
         if scaling:
@@ -82,7 +83,8 @@ class TransformerNetwork(nn.Module):
 
         # mask
         self.register_buffer(
-            "tgt_mask", self.transformer.generate_square_subsequent_mask(prediction_length)
+            "tgt_mask",
+            self.transformer.generate_square_subsequent_mask(prediction_length),
         )
 
     @staticmethod
@@ -154,9 +156,7 @@ class TransformerNetwork(nn.Module):
         else:
             time_feat = torch.cat(
                 (
-                    past_time_feat[
-                        :, self.history_length - self.context_length :, ...
-                    ],
+                    past_time_feat[:, self.history_length - self.context_length :, ...],
                     future_time_feat,
                 ),
                 dim=1,
@@ -177,7 +177,7 @@ class TransformerNetwork(nn.Module):
         # scale shape is (batch_size, 1, *target_shape)
         _, scale = self.scaler(
             past_target[:, -self.context_length :, ...],
-            past_observed_values[:, -self.context_length :, ...]
+            past_observed_values[:, -self.context_length :, ...],
         )
         embedded_cat = self.embedder(feat_static_cat)
 

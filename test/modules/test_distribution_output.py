@@ -17,8 +17,8 @@ from torch.nn.utils import clip_grad_norm_
 from torch.optim import SGD
 from torch.utils.data import TensorDataset, DataLoader
 
+from gluonts.torch.modules.distribution_output import DistributionOutput
 from pts.modules import (
-    DistributionOutput,
     StudentTOutput,
     BetaOutput,
     NegativeBinomialOutput,
@@ -127,9 +127,7 @@ def test_neg_binomial(total_count_logit: Tuple[float, float]) -> None:
     total_counts = torch.zeros((NUM_SAMPLES,)) + total_count
     logits = torch.zeros((NUM_SAMPLES,)) + logit
 
-    neg_bin_distr = NegativeBinomial(
-        total_count=total_counts, logits=logits
-    )
+    neg_bin_distr = NegativeBinomial(total_count=total_counts, logits=logits)
     samples = neg_bin_distr.sample()
 
     init_biases = [
@@ -138,7 +136,10 @@ def test_neg_binomial(total_count_logit: Tuple[float, float]) -> None:
     ]
 
     total_count_hat, logit_hat = maximum_likelihood_estimate_sgd(
-        NegativeBinomialOutput(), samples, init_biases=init_biases, num_epochs=15,
+        NegativeBinomialOutput(),
+        samples,
+        init_biases=init_biases,
+        num_epochs=15,
     )
 
     assert (
@@ -201,7 +202,10 @@ def test_independent_normal() -> None:
     samples = distr.sample((num_samples,))
 
     loc_hat, diag_hat = maximum_likelihood_estimate_sgd(
-        NormalOutput(dim=dim), samples, learning_rate=0.01, num_epochs=10,
+        NormalOutput(dim=dim),
+        samples,
+        learning_rate=0.01,
+        num_epochs=10,
     )
 
     distr = Independent(

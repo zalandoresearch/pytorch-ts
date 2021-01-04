@@ -5,7 +5,11 @@ import torch.nn as nn
 
 
 class FeatureEmbedder(nn.Module):
-    def __init__(self, cardinalities: List[int], embedding_dims: List[int],) -> None:
+    def __init__(
+        self,
+        cardinalities: List[int],
+        embedding_dims: List[int],
+    ) -> None:
         super().__init__()
 
         self.__num_features = len(cardinalities)

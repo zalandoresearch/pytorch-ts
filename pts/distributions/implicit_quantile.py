@@ -2,10 +2,15 @@ import torch
 from torch.distributions import Distribution, TransformedDistribution, AffineTransform
 
 
-
 class ImplicitQuantile(Distribution):
-
-    def __init__(self, implicit_quantile_function, taus, nn_output, predicted_quantiles, validate_args=None):
+    def __init__(
+        self,
+        implicit_quantile_function,
+        taus,
+        nn_output,
+        predicted_quantiles,
+        validate_args=None,
+    ):
         self.predicted_quantiles = predicted_quantiles[0]
         self.taus = taus
         self.quantile_function = implicit_quantile_function
@@ -46,9 +51,8 @@ class ImplicitQuantile(Distribution):
     @staticmethod
     def quantile_loss(quantile_forecast, target, tau):
         return torch.abs(
-                (quantile_forecast - target)
-                * ((target <= quantile_forecast).float() - tau)
-            )
+            (quantile_forecast - target) * ((target <= quantile_forecast).float() - tau)
+        )
 
 
 class TransformedImplicitQuantile(TransformedDistribution):
@@ -63,4 +67,3 @@ class TransformedImplicitQuantile(TransformedDistribution):
             scale *= transform.scale
         p = self.base_dist.log_prob(x)
         return p * scale
-

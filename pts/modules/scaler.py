@@ -4,6 +4,8 @@ from typing import Tuple
 import torch
 import torch.nn as nn
 
+from gluonts.core.component import validated
+
 
 class Scaler(ABC, nn.Module):
     def __init__(self, keepdim: bool = False, time_first: bool = True):
@@ -37,7 +39,7 @@ class Scaler(ABC, nn.Module):
         Tensor
             Tensor containing the "scaled" data, shape: (N, T, C) or (N, C, T).
         Tensor
-            Tensor containing the scale, of shape (N, C) if ``keepdim == False``, 
+            Tensor containing the scale, of shape (N, C) if ``keepdim == False``,
             and shape (N, 1, C) or (N, C, 1) if ``keepdim == True``.
         """
 
@@ -68,6 +70,7 @@ class MeanScaler(Scaler):
         default scale that is used if the time series has only zeros.
     """
 
+    @validated()
     def __init__(self, minimum_scale: float = 1e-10, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.register_buffer("minimum_scale", torch.tensor(minimum_scale))
@@ -111,6 +114,7 @@ class NOPScaler(Scaler):
     no scaling is applied upon calling the ``NOPScaler``.
     """
 
+    @validated()
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 

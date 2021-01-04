@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='pytorchts',
-    version='0.2.0',
+    version='0.3.0',
     description="PyTorch Probabilistic Time Series Modeling framework",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
@@ -16,7 +16,8 @@ setup(
     zip_safe=True,
     python_requires=">=3.6",
     install_requires = [
-        'torch>=1.5.0',
+        'torch>=1.7.0',
+        'glounts>=0.6.5',
         'holidays',
         'numpy',
         'pandas>=1.1',
@@ -24,8 +25,8 @@ setup(
         'tqdm',
         'pydantic',
         'matplotlib',
-        'python-rapidjson',
         'tensorboard',
+        'wandb',
     ],
 
     test_suite='tests',

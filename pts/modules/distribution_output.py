@@ -19,7 +19,8 @@ from torch.distributions import (
     MultivariateNormal,
     TransformedDistribution,
     AffineTransform,
-    Poisson)
+    Poisson,
+)
 
 from pts.distributions import (
     ZeroInflatedPoisson,
@@ -29,79 +30,13 @@ from pts.distributions import (
     ImplicitQuantile,
     TransformedImplicitQuantile,
 )
-from pts.core.component import validated
+from gluonts.core.component import validated
+from gluonts.torch.modules.distribution_output import (
+    DistributionOutput,
+    LambdaLayer,
+    PtArgProj,
+)
 from pts.modules.iqn_modules import ImplicitQuantileModule
-from .lambda_layer import LambdaLayer
-
-
-class ArgProj(nn.Module):
-    def __init__(
-        self,
-        in_features: int,
-        args_dim: Dict[str, int],
-        domain_map: Callable[..., Tuple[torch.Tensor]],
-        dtype: np.dtype = np.float32,
-        prefix: Optional[str] = None,
-        **kwargs,
-    ):
-        super().__init__(**kwargs)
-        self.args_dim = args_dim
-        self.dtype = dtype
-        self.proj = nn.ModuleList(
-            [nn.Linear(in_features, dim) for dim in args_dim.values()]
-        )
-        self.domain_map = domain_map
-
-    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor]:
-        params_unbounded = [proj(x) for proj in self.proj]
-
-        return self.domain_map(*params_unbounded)
-
-
-class Output(ABC):
-    in_features: int
-    args_dim: Dict[str, int]
-    _dtype: np.dtype = np.float32
-
-    @property
-    def dtype(self):
-        return self._dtype
-
-    @dtype.setter
-    def dtype(self, dtype: np.dtype):
-        self._dtype = dtype
-
-    def get_args_proj(self, in_features: int, prefix: Optional[str] = None) -> ArgProj:
-        return ArgProj(
-            in_features=in_features,
-            args_dim=self.args_dim,
-            domain_map=LambdaLayer(self.domain_map),
-            prefix=prefix,
-            dtype=self.dtype,
-        )
-
-    @abstractclassmethod
-    def domain_map(cls, *args: torch.Tensor):
-        pass
-
-
-class DistributionOutput(Output, ABC):
-
-    distr_cls: type
-
-    @validated()
-    def __init__(self) -> None:
-        pass
-
-    def distribution(
-        self, distr_args, scale: Optional[torch.Tensor] = None
-    ) -> Distribution:
-
-        distr = self.distr_cls(*distr_args)
-        if scale is None:
-            return distr
-        else:
-            return TransformedDistribution(distr, [AffineTransform(loc=0, scale=scale)])
 
 
 class IndependentDistributionOutput(DistributionOutput):
@@ -364,7 +299,9 @@ class PiecewiseLinearOutput(DistributionOutput):
         return gamma.squeeze(axis=-1), slopes_proj, knot_spacings_proj
 
     def distribution(
-        self, distr_args, scale: Optional[torch.Tensor] = None,
+        self,
+        distr_args,
+        scale: Optional[torch.Tensor] = None,
     ) -> PiecewiseLinear:
         if scale is None:
             return self.distr_cls(*distr_args)
@@ -415,7 +352,11 @@ class NormalMixtureOutput(DistributionOutput):
 class LowRankMultivariateNormalOutput(DistributionOutput):
     @validated()
     def __init__(
-        self, dim: int, rank: int, sigma_init: float = 1.0, sigma_minimum: float = 1e-3,
+        self,
+        dim: int,
+        rank: int,
+        sigma_init: float = 1.0,
+        sigma_minimum: float = 1e-3,
     ) -> None:
         self.distr_cls = LowRankMultivariateNormal
         self.dim = dim
@@ -530,25 +471,16 @@ class DiffusionOutput(DistributionOutput):
     def event_shape(self) -> Tuple:
         return (self.dim,)
 
-class QuantileArgProj(ArgProj):
+class QuantilePtArgProj(PtArgProj):
     def __init__(
-            self,
-            in_features: int,
-            output_domain_cls: nn.Module,
-            args_dim: Dict[str, int],
-            domain_map: Callable[..., Tuple[torch.Tensor]],
-            dtype: np.dtype = np.float32,
-            prefix: Optional[str] = None,
-            **kwargs,
+        self,
+        in_features: int,
+        output_domain_cls: nn.Module,
+        args_dim: Dict[str, int],
+        domain_map: Callable[..., Tuple[torch.Tensor]],
+        **kwargs,
     ):
-        super().__init__(
-            in_features,
-            args_dim,
-            domain_map,
-            dtype,
-            prefix,
-            **kwargs
-        )
+        super().__init__(in_features, args_dim, domain_map, **kwargs)
         self.output_domain_cls = output_domain_cls
         self.proj = ImplicitQuantileModule(in_features, output_domain_cls)
 
@@ -557,8 +489,8 @@ class QuantileArgProj(ArgProj):
         forecast_length = x.shape[1]
         device = x.device
         taus = torch.rand(size=(batch_size, forecast_length), device=device)
-        self.register_buffer('taus', taus)
-        self.register_buffer('nn_ouput', x.clone().detach())
+        self.register_buffer("taus", taus)
+        self.register_buffer("nn_ouput", x.clone().detach())
         predicted_quantiles = self.proj(x, taus)
         return self.domain_map(predicted_quantiles)
 
@@ -570,6 +502,7 @@ class ImplicitQuantileOutput(IndependentDistributionOutput):
     output_domain_cls: type = nn.Module
     quantile_arg_proj: type = nn.Module
 
+    @validated()
     def __init__(self, output_domain: str) -> None:
         super().__init__()
         self.set_output_domain_map(output_domain)
@@ -581,14 +514,17 @@ class ImplicitQuantileOutput(IndependentDistributionOutput):
             "Positive": nn.Softplus,
             "Real": nn.Identity,
         }
-        assert output_domain in available_domain_map_cls.keys(), \
-            "Only the following output domains are allowed: {}".format(available_domain_map_cls.keys())
+        assert (
+            output_domain in available_domain_map_cls.keys()
+        ), "Only the following output domains are allowed: {}".format(
+            available_domain_map_cls.keys()
+        )
         output_domain_cls = available_domain_map_cls[output_domain]
         cls.output_domain_cls = output_domain_cls
 
     @classmethod
     def set_args_proj(cls):
-        cls.quantile_arg_proj = QuantileArgProj(
+        cls.quantile_arg_proj = QuantilePtArgProj(
             in_features=cls.in_features,
             output_domain_cls=cls.output_domain_cls,
             args_dim=cls.args_dim,
@@ -606,11 +542,13 @@ class ImplicitQuantileOutput(IndependentDistributionOutput):
             cls.set_args_proj()
         return cls.quantile_arg_proj
 
-    def get_args_proj(self, in_features: int, prefix: Optional[str] = None) :
+    def get_args_proj(self, in_features: int, prefix: Optional[str] = None):
         return self.args_proj(in_features)
 
     def distribution(
-            self, distr_args, scale: Optional[torch.Tensor] = None,
+        self,
+        distr_args,
+        scale: Optional[torch.Tensor] = None,
     ) -> ImplicitQuantile:
 
         args_proj = self.get_args_proj(self.in_features)
@@ -619,7 +557,8 @@ class ImplicitQuantileOutput(IndependentDistributionOutput):
             implicit_quantile_function=implicit_quantile_function,
             taus=list(args_proj.buffers())[0],
             nn_output=list(args_proj.buffers())[1],
-            predicted_quantiles=distr_args)
+            predicted_quantiles=distr_args,
+        )
         if scale is None:
             return distr
         else:
@@ -630,6 +569,3 @@ class ImplicitQuantileOutput(IndependentDistributionOutput):
     @property
     def event_shape(self) -> Tuple:
         return ()
-
-
-

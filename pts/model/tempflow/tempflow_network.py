@@ -3,13 +3,13 @@ from typing import List, Optional, Tuple, Union
 import torch
 import torch.nn as nn
 
-from pts.core.component import validated
+from gluonts.core.component import validated
+
 from pts.model import weighted_average
 from pts.modules import RealNVP, MAF, FlowOutput, MeanScaler, NOPScaler
 
 
 class TempFlowTrainingNetwork(nn.Module):
-
     @validated()
     def __init__(
         self,
@@ -55,7 +55,10 @@ class TempFlowTrainingNetwork(nn.Module):
             batch_first=True,
         )
 
-        flow_cls = {"RealNVP": RealNVP, "MAF": MAF,}[flow_type]
+        flow_cls = {
+            "RealNVP": RealNVP,
+            "MAF": MAF,
+        }[flow_type]
         self.flow = flow_cls(
             input_size=target_dim,
             n_blocks=n_blocks,
@@ -377,7 +380,8 @@ class TempFlowTrainingNetwork(nn.Module):
         # put together target sequence
         # (batch_size, seq_len, target_dim)
         target = torch.cat(
-            (past_target_cdf[:, -self.context_length :, ...], future_target_cdf), dim=1,
+            (past_target_cdf[:, -self.context_length :, ...], future_target_cdf),
+            dim=1,
         )
 
         # assert_shape(target, (-1, seq_len, self.target_dim))
@@ -519,7 +523,12 @@ class TempFlowPredictionNetwork(TempFlowTrainingNetwork):
 
         # (batch_size, num_samples, prediction_length, target_dim)
         return samples.reshape(
-            (-1, self.num_parallel_samples, self.prediction_length, self.target_dim,)
+            (
+                -1,
+                self.num_parallel_samples,
+                self.prediction_length,
+                self.target_dim,
+            )
         )
 
     def forward(
