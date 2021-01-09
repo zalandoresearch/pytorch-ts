@@ -83,7 +83,7 @@ import torch.nn.functional as F
 
 
 class DiffusionEmbedding(nn.Module):
-    def __init__(self, dim, proj_dim, max_steps=1000):
+    def __init__(self, dim, proj_dim, max_steps=500):
         super().__init__()
         self.register_buffer(
             "embedding", self._build_embedding(dim, max_steps), persistent=False
@@ -118,7 +118,7 @@ class ResidualBlock(nn.Module):
             dilation=dilation,
         )
         self.diffusion_projection = nn.Linear(hidden_size, residual_channels)
-        self.conditioner_projection = nn.Conv1d(1, 2 * residual_channels, 1)
+        self.conditioner_projection = nn.Conv1d(1, 2 * residual_channels, 1, padding=2)
         self.output_projection = nn.Conv1d(residual_channels, 2 * residual_channels, 1)
 
     def forward(self, x, conditioner, diffusion_step):
@@ -132,6 +132,7 @@ class ResidualBlock(nn.Module):
         y = torch.sigmoid(gate) * torch.tanh(filter)
 
         y = self.output_projection(y)
+        y = F.leaky_relu(y, 0.4)
         residual, skip = torch.chunk(y, 2, dim=1)
         return (x + residual) / math.sqrt(2.0), skip
 
@@ -173,12 +174,12 @@ class TimeDiff(nn.Module):
         cond_length,
         time_emb_dim=16,
         residual_layers=8,
-        residual_channels=16,
+        residual_channels=8,
         dilation_cycle_length=2,
         residual_hidden=64,
     ):
         super().__init__()
-        self.input_projection = nn.Conv1d(1, residual_channels, 1)
+        self.input_projection = nn.Conv1d(1, residual_channels, 1, padding=2)
         self.diffusion_embedding = DiffusionEmbedding(
             time_emb_dim, proj_dim=residual_hidden
         )
@@ -195,8 +196,8 @@ class TimeDiff(nn.Module):
                 for i in range(residual_layers)
             ]
         )
-        self.skip_projection = nn.Conv1d(residual_channels, residual_channels, 1)
-        self.output_projection = nn.Conv1d(residual_channels, 1, 1)
+        self.skip_projection = nn.Conv1d(residual_channels, residual_channels, 3)
+        self.output_projection = nn.Conv1d(residual_channels, 1, 3)
         nn.init.zeros_(self.output_projection.weight)
 
     def forward(self, inputs, time, cond):
@@ -212,6 +213,6 @@ class TimeDiff(nn.Module):
 
         x = torch.sum(torch.stack(skip), dim=0) / math.sqrt(len(self.residual_layers))
         x = self.skip_projection(x)
-        x = F.elu(x)
+        x = F.leaky_relu(x, 0.4)
         x = self.output_projection(x)
         return x
