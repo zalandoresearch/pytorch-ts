@@ -94,9 +94,9 @@ class DiffusionEmbedding(nn.Module):
     def forward(self, diffusion_step):
         x = self.embedding[diffusion_step]
         x = self.projection1(x)
-        x = x * torch.sigmoid(x)
+        x = F.silu(x)
         x = self.projection2(x)
-        x = x * torch.sigmoid(x)
+        x = F.silu(x)
         return x
 
     def _build_embedding(self, dim, max_steps):
@@ -116,9 +116,10 @@ class ResidualBlock(nn.Module):
             3,
             padding=dilation,
             dilation=dilation,
+            padding_mode='circular',
         )
         self.diffusion_projection = nn.Linear(hidden_size, residual_channels)
-        self.conditioner_projection = nn.Conv1d(1, 2 * residual_channels, 1, padding=2)
+        self.conditioner_projection = nn.Conv1d(1, 2 * residual_channels, 1, padding=2, padding_mode='circular')
         self.output_projection = nn.Conv1d(residual_channels, 2 * residual_channels, 1)
 
     def forward(self, x, conditioner, diffusion_step):
@@ -179,7 +180,7 @@ class TimeDiff(nn.Module):
         residual_hidden=64,
     ):
         super().__init__()
-        self.input_projection = nn.Conv1d(1, residual_channels, 1, padding=2)
+        self.input_projection = nn.Conv1d(1, residual_channels, 1, padding=2, padding_mode='circular')
         self.diffusion_embedding = DiffusionEmbedding(
             time_emb_dim, proj_dim=residual_hidden
         )
@@ -198,11 +199,12 @@ class TimeDiff(nn.Module):
         )
         self.skip_projection = nn.Conv1d(residual_channels, residual_channels, 3)
         self.output_projection = nn.Conv1d(residual_channels, 1, 3)
-        nn.init.zeros_(self.output_projection.weight)
+
+        nn.init.orthogonal_(self.output_projection.weight)
+        nn.init.zeros_(self.output_projection.bias)
 
     def forward(self, inputs, time, cond):
         x = self.input_projection(inputs)
-        x = F.elu(x)
 
         diffusion_step = self.diffusion_embedding(time)
         cond_up = self.cond_upsampler(cond)
@@ -212,6 +214,7 @@ class TimeDiff(nn.Module):
             skip.append(skip_connection)
 
         x = torch.sum(torch.stack(skip), dim=0) / math.sqrt(len(self.residual_layers))
+        x = F.leaky_relu(x, 0.4)
         x = self.skip_projection(x)
         x = F.leaky_relu(x, 0.4)
         x = self.output_projection(x)
