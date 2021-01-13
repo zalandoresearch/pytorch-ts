@@ -57,7 +57,8 @@ class GaussianDiffusion(nn.Module):
                 else betas
             )
         else:
-            betas = cosine_beta_schedule(timesteps)
+            betas = np.linspace(1e-4, 0.09, timesteps)
+            #betas = cosine_beta_schedule(timesteps)
 
         alphas = 1.0 - betas
         alphas_cumprod = np.cumprod(alphas, axis=0)

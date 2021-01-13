@@ -122,6 +122,9 @@ class ResidualBlock(nn.Module):
         self.conditioner_projection = nn.Conv1d(1, 2 * residual_channels, 1, padding=2, padding_mode='circular')
         self.output_projection = nn.Conv1d(residual_channels, 2 * residual_channels, 1)
 
+        nn.init.kaiming_normal_(self.conditioner_projection.weight)
+        nn.init.kaiming_normal_(self.output_projection.weight)
+
     def forward(self, x, conditioner, diffusion_step):
         diffusion_step = self.diffusion_projection(diffusion_step).unsqueeze(-1)
         conditioner = self.conditioner_projection(conditioner)
@@ -159,11 +162,13 @@ class ResidualBlock(nn.Module):
 class CondUpsampler(nn.Module):
     def __init__(self, cond_length, target_dim):
         super().__init__()
-        self.linear = nn.Linear(cond_length, target_dim)
+        self.linear1 = nn.Linear(cond_length, target_dim//2)
+        self.linear2 = nn.Linear(target_dim//2, target_dim)
 
     def forward(self, x):
+        x = self.linear1(x)
         x = F.leaky_relu(x, 0.4)
-        x = self.linear(x)
+        x = self.linear2(x)
         x = F.leaky_relu(x, 0.4)
         return x
 
@@ -200,11 +205,13 @@ class TimeDiff(nn.Module):
         self.skip_projection = nn.Conv1d(residual_channels, residual_channels, 3)
         self.output_projection = nn.Conv1d(residual_channels, 1, 3)
 
-        nn.init.orthogonal_(self.output_projection.weight)
+        nn.init.kaiming_normal_(self.input_projection.weight)
+        nn.init.kaiming_normal_(self.output_projection.weight)
         nn.init.zeros_(self.output_projection.bias)
 
     def forward(self, inputs, time, cond):
         x = self.input_projection(inputs)
+        x = F.leaky_relu(x, 0.4)
 
         diffusion_step = self.diffusion_embedding(time)
         cond_up = self.cond_upsampler(cond)
@@ -214,7 +221,6 @@ class TimeDiff(nn.Module):
             skip.append(skip_connection)
 
         x = torch.sum(torch.stack(skip), dim=0) / math.sqrt(len(self.residual_layers))
-        x = F.leaky_relu(x, 0.4)
         x = self.skip_projection(x)
         x = F.leaky_relu(x, 0.4)
         x = self.output_projection(x)
