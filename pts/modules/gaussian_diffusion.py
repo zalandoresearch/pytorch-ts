@@ -43,7 +43,14 @@ def cosine_beta_schedule(timesteps, s=0.008):
 
 class GaussianDiffusion(nn.Module):
     def __init__(
-        self, denoise_fn, input_size, timesteps=1000, loss_type="l1", betas=None
+        self,
+        denoise_fn,
+        input_size,
+        beta_end=0.1,
+        diff_steps=100,
+        loss_type="l2",
+        betas=None,
+        beta_schedule="linear",
     ):
         super().__init__()
         self.denoise_fn = denoise_fn
@@ -57,8 +64,20 @@ class GaussianDiffusion(nn.Module):
                 else betas
             )
         else:
-            betas = np.linspace(1e-4, 0.09, timesteps)
-            #betas = cosine_beta_schedule(timesteps)
+            if beta_schedule == "linear":
+                betas = np.linspace(1e-4, beta_end, diff_steps)
+            elif beta_schedule == "quad":
+                betas = np.linspace(1e-4 ** 0.5, beta_end ** 0.5, diff_steps) ** 2
+            elif beta_schedule == "const":
+                betas = beta_end * np.ones(diff_steps)
+            elif beta_schedule == "jsd":  # 1/T, 1/(T-1), 1/(T-2), ..., 1
+                betas = 1.0 / np.linspace(diff_steps, 1, diff_steps)
+            elif beta_schedule == "sigmoid":
+                betas = np.linspace(-6, 6, diff_steps)
+                betas = (beta_end - 1e-4) / (np.exp(-betas) + 1) + 1e-4
+            else:
+                raise NotImplementedError(beta_schedule)
+            # betas = cosine_beta_schedule(timesteps)
 
         alphas = 1.0 - betas
         alphas_cumprod = np.cumprod(alphas, axis=0)

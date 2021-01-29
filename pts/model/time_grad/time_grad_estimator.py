@@ -50,8 +50,10 @@ class TimeGradEstimator(PyTorchEstimator):
         cardinality: List[int] = [1],
         embedding_dimension: int = 5,
         conditioning_length: int = 100,
-        timesteps: int = 100, 
-        loss_type:str = "l1",
+        diff_steps: int = 100,
+        loss_type: str = "l2",
+        beta_end=0.1,
+        beta_schedule="linear",
         scaling: bool = True,
         pick_incomplete: bool = False,
         lags_seq: Optional[List[int]] = None,
@@ -77,8 +79,10 @@ class TimeGradEstimator(PyTorchEstimator):
         self.embedding_dimension = embedding_dimension
 
         self.conditioning_length = conditioning_length
-        self.timesteps = timesteps
+        self.diff_steps = diff_steps
         self.loss_type = loss_type
+        self.beta_end = beta_end
+        self.beta_schedule = beta_schedule
 
         self.lags_seq = (
             lags_seq
@@ -160,8 +164,10 @@ class TimeGradEstimator(PyTorchEstimator):
             dropout_rate=self.dropout_rate,
             cardinality=self.cardinality,
             embedding_dimension=self.embedding_dimension,
-            timesteps=self.timesteps,
+            diff_steps=self.diff_steps,
             loss_type=self.loss_type,
+            beta_end=self.beta_end,
+            beta_schedule=self.beta_schedule,
             lags_seq=self.lags_seq,
             scaling=self.scaling,
             conditioning_length=self.conditioning_length,
@@ -185,8 +191,10 @@ class TimeGradEstimator(PyTorchEstimator):
             dropout_rate=self.dropout_rate,
             cardinality=self.cardinality,
             embedding_dimension=self.embedding_dimension,
-            timesteps=self.timesteps,
+            diff_steps=self.diff_steps,
             loss_type=self.loss_type,
+            beta_end=self.beta_end,
+            beta_schedule=self.beta_schedule,
             lags_seq=self.lags_seq,
             scaling=self.scaling,
             conditioning_length=self.conditioning_length,

@@ -27,8 +27,10 @@ class TimeGradTrainingNetwork(nn.Module):
         lags_seq: List[int],
         target_dim: int,
         conditioning_length: int,
-        timesteps: int,
+        diff_steps: int,
         loss_type: str,
+        beta_end: float,
+        beta_schedule: str,
         cardinality: List[int] = [1],
         embedding_dimension: int = 1,
         scaling: bool = True,
@@ -62,8 +64,10 @@ class TimeGradTrainingNetwork(nn.Module):
         self.diffusion = GaussianDiffusion(
             self.denoise_fn,
             input_size=target_dim,
-            timesteps=timesteps,
+            diff_steps=diff_steps,
             loss_type=loss_type,
+            beta_end=beta_end,
+            beta_schedule=beta_schedule,
         )
 
         self.distr_output = DiffusionOutput(
@@ -378,8 +382,7 @@ class TimeGradTrainingNetwork(nn.Module):
         # put together target sequence
         # (batch_size, seq_len, target_dim)
         target = torch.cat(
-            (past_target_cdf[:, -self.context_length :, ...], future_target_cdf),
-            dim=1,
+            (past_target_cdf[:, -self.context_length :, ...], future_target_cdf), dim=1,
         )
 
         # assert_shape(target, (-1, seq_len, self.target_dim))
@@ -520,12 +523,7 @@ class TimeGradPredictionNetwork(TimeGradTrainingNetwork):
 
         # (batch_size, num_samples, prediction_length, target_dim)
         return samples.reshape(
-            (
-                -1,
-                self.num_parallel_samples,
-                self.prediction_length,
-                self.target_dim,
-            )
+            (-1, self.num_parallel_samples, self.prediction_length, self.target_dim,)
         )
 
     def forward(

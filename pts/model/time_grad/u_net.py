@@ -5,83 +5,6 @@ from torch import nn
 import torch.nn.functional as F
 
 
-# @torch.jit.script
-# def mish(input):
-#     """
-#     Applies the mish function element-wise:
-#     mish(x) = x * tanh(softplus(x)) = x * tanh(ln(1 + exp(x)))
-#     """
-#     return input * torch.tanh(F.softplus(input))
-
-
-# class Mish(nn.Module):
-#     def forward(self, x):
-#         return mish(x)
-
-
-# class SinusoidalPosEmb(nn.Module):
-#     def __init__(self, dim, linear_scale=5000):
-#         super().__init__()
-#         self.dim = dim
-#         self.linear_scale = linear_scale
-
-#     def forward(self, noise_level):
-#         half_dim = self.dim // 2
-#         exponents = torch.arange(half_dim, dtype=torch.float32).to(noise_level) / float(
-#             half_dim
-#         )
-#         exponents = 1e-4 ** exponents
-#         exponents = (
-#             self.linear_scale * noise_level.unsqueeze(-1) * exponents.unsqueeze(0)
-#         )
-#         return torch.cat((exponents.sin(), exponents.cos()), dim=-1)
-
-
-# class UNet(nn.Module):
-#     def __init__(self, dim, cond_dim, time_emb_dim=4):
-#         super().__init__()
-
-#         self.time_pos_emb = SinusoidalPosEmb(time_emb_dim)
-#         self.mlp = nn.Sequential(
-#             nn.Linear(time_emb_dim, dim // 2),
-#             Mish(),
-#             nn.Linear(dim // 2, dim),
-#         )
-
-#         self.downs = nn.Sequential(
-#             Mish(),
-#             nn.Linear(dim, dim),
-#             Mish(),
-#             nn.Linear(dim, dim//2),
-#             Mish(),
-#             nn.Linear(dim//2, dim//2),
-#         )
-
-#         self.ups = nn.Sequential(
-#             Mish(),
-#             nn.Linear(dim//2 + cond_dim, dim // 2),
-#             Mish(),
-#             nn.Linear(dim // 2, dim//2),
-#             Mish(),
-#             nn.Linear(dim // 2, dim),
-#             Mish(),
-#             nn.Linear(dim, dim),
-#             Mish(),
-#             nn.Linear(dim, dim),
-#             Mish(),
-#         )
-
-#     def forward(self, x, time, cond):
-#         t = self.time_pos_emb(time)
-#         t = self.mlp(t)
-
-#         h = self.downs(x + t)
-
-#         h = torch.cat((h, cond), -1)
-
-#         return self.ups(h)
-
-
 class DiffusionEmbedding(nn.Module):
     def __init__(self, dim, proj_dim, max_steps=500):
         super().__init__()
@@ -116,10 +39,12 @@ class ResidualBlock(nn.Module):
             3,
             padding=dilation,
             dilation=dilation,
-            padding_mode='circular',
+            padding_mode="circular",
         )
         self.diffusion_projection = nn.Linear(hidden_size, residual_channels)
-        self.conditioner_projection = nn.Conv1d(1, 2 * residual_channels, 1, padding=2, padding_mode='circular')
+        self.conditioner_projection = nn.Conv1d(
+            1, 2 * residual_channels, 1, padding=2, padding_mode="circular"
+        )
         self.output_projection = nn.Conv1d(residual_channels, 2 * residual_channels, 1)
 
         nn.init.kaiming_normal_(self.conditioner_projection.weight)
@@ -141,29 +66,11 @@ class ResidualBlock(nn.Module):
         return (x + residual) / math.sqrt(2.0), skip
 
 
-# class CondUpsampler(nn.Module):
-#     def __init__(self, kernel_size=4, stride=2, padding=1):
-#         super().__init__()
-#         self.conv1 = nn.Conv1d(
-#             1, 1, kernel_size, stride=stride, padding=padding
-#         )
-#         self.conv2 = nn.Conv1d(
-#             1, 1, kernel_size, stride=stride, padding=padding
-#         )
-
-#     def forward(self, x):
-#         x = self.conv1(x)
-#         x = F.leaky_relu(x, 0.4)
-#         x = self.conv2(x)
-#         x = F.leaky_relu(x, 0.4)
-#         return x
-
-
 class CondUpsampler(nn.Module):
     def __init__(self, cond_length, target_dim):
         super().__init__()
-        self.linear1 = nn.Linear(cond_length, target_dim//2)
-        self.linear2 = nn.Linear(target_dim//2, target_dim)
+        self.linear1 = nn.Linear(cond_length, target_dim // 2)
+        self.linear2 = nn.Linear(target_dim // 2, target_dim)
 
     def forward(self, x):
         x = self.linear1(x)
@@ -185,7 +92,9 @@ class TimeDiff(nn.Module):
         residual_hidden=64,
     ):
         super().__init__()
-        self.input_projection = nn.Conv1d(1, residual_channels, 1, padding=2, padding_mode='circular')
+        self.input_projection = nn.Conv1d(
+            1, residual_channels, 1, padding=2, padding_mode="circular"
+        )
         self.diffusion_embedding = DiffusionEmbedding(
             time_emb_dim, proj_dim=residual_hidden
         )
@@ -206,8 +115,8 @@ class TimeDiff(nn.Module):
         self.output_projection = nn.Conv1d(residual_channels, 1, 3)
 
         nn.init.kaiming_normal_(self.input_projection.weight)
-        nn.init.kaiming_normal_(self.output_projection.weight)
-        nn.init.zeros_(self.output_projection.bias)
+        nn.init.kaiming_normal_(self.skip_projection.weight)
+        nn.init.zeros_(self.output_projection.weight)
 
     def forward(self, inputs, time, cond):
         x = self.input_projection(inputs)
