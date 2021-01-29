@@ -75,9 +75,10 @@ class GaussianDiffusion(nn.Module):
             elif beta_schedule == "sigmoid":
                 betas = np.linspace(-6, 6, diff_steps)
                 betas = (beta_end - 1e-4) / (np.exp(-betas) + 1) + 1e-4
+            elif beta_schedule == "cosine":
+                betas = cosine_beta_schedule(diff_steps)
             else:
                 raise NotImplementedError(beta_schedule)
-            # betas = cosine_beta_schedule(timesteps)
 
         alphas = 1.0 - betas
         alphas_cumprod = np.cumprod(alphas, axis=0)
