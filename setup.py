@@ -26,6 +26,7 @@ setup(
         'matplotlib',
         'python-rapidjson',
         'tensorboard',
+        'numba',
     ],
 
     test_suite='tests',
