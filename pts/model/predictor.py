@@ -175,7 +175,7 @@ class PTSPredictor(Predictor):
         model_name = 'prediction_net'
         with (path / f"{model_name}-network.json").open("r") as fp:
             prediction_net = load_json(fp.read())
-            prediction_net.load_state_dict(torch.load(path / "prediction_net"))
+            prediction_net.load_state_dict(torch.load(path / "prediction_net", map_location=device))
 
         # input_names is derived from the prediction_net
         if "input_names" in parameters:
