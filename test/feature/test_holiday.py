@@ -19,7 +19,7 @@ from pandas.tseries.holiday import Holiday
 
 
 # First-party imports
-from pts.feature.holiday import (
+from gluonts.time_feature.holiday import (
     CHRISTMAS_DAY,
     CHRISTMAS_EVE,
     COLUMBUS_DAY,
@@ -42,9 +42,8 @@ from pts.feature.holiday import (
     SpecialDateFeatureSet,
     squared_exponential_kernel,
     exponential_kernel,
-    CustomDateFeatureSet,
-    CustomHolidayFeatureSet,
 )
+from pts.feature.holiday import CustomDateFeatureSet, CustomHolidayFeatureSet
 
 test_dates = {
     NEW_YEARS_DAY: [

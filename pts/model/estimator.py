@@ -46,6 +46,18 @@ class PyTorchEstimator(Estimator):
         """
         raise NotImplementedError
 
+    def create_instance_splitter(self, mode: str) -> Transformation:
+        """
+        Create and return the instance splitter needed for training, validation or testing.
+
+        Returns
+        -------
+        Transformation
+            The InstanceSplitter that will be applied entry-wise to datasets,
+            at training, validation and inference time based on mode.
+        """
+        raise NotImplementedError
+
     def create_training_network(self, device: torch.device) -> nn.Module:
         """
         Create and return the network used for training (i.e., computing the
@@ -81,6 +93,7 @@ class PyTorchEstimator(Estimator):
         num_workers: int = 0,
         prefetch_factor: int = 2,
         shuffle_buffer_length: Optional[int] = None,
+        cache_data: bool = False,
         **kwargs,
     ) -> TrainOutput:
         transformation = self.create_transformation()
@@ -88,12 +101,15 @@ class PyTorchEstimator(Estimator):
         trained_net = self.create_training_network(self.trainer.device)
 
         input_names = get_module_forward_input_names(trained_net)
-
+        training_instance_splitter = self.create_instance_splitter("training")
         training_iter_dataset = TransformedIterableDataset(
             dataset=training_data,
-            transform=transformation + SelectFields(input_names),
+            transform=transformation
+            + training_instance_splitter
+            + SelectFields(input_names),
             is_train=True,
             shuffle_buffer_length=shuffle_buffer_length,
+            cache_data=cache_data,
         )
 
         training_data_loader = DataLoader(
@@ -106,10 +122,14 @@ class PyTorchEstimator(Estimator):
 
         validation_data_loader = None
         if validation_data is not None:
+            validation_instance_splitter = self.create_instance_splitter("validation")
             validation_iter_dataset = TransformedIterableDataset(
                 dataset=validation_data,
-                transform=transformation + SelectFields(input_names),
+                transform=transformation
+                + validation_instance_splitter
+                + SelectFields(input_names),
                 is_train=True,
+                cache_data=cache_data,
             )
             validation_data_loader = DataLoader(
                 validation_iter_dataset,
@@ -140,6 +160,7 @@ class PyTorchEstimator(Estimator):
         num_workers: int = 0,
         prefetch_factor: int = 2,
         shuffle_buffer_length: Optional[int] = None,
+        cache_data: bool = False,
         **kwargs,
     ) -> PyTorchPredictor:
         return self.train_model(
@@ -148,5 +169,6 @@ class PyTorchEstimator(Estimator):
             num_workers=num_workers,
             prefetch_factor=prefetch_factor,
             shuffle_buffer_length=shuffle_buffer_length,
+            cache_data=cache_data,
             **kwargs,
         ).predictor

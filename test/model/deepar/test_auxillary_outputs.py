@@ -17,7 +17,7 @@ import torch
 
 from gluonts.dataset.artificial import constant_dataset
 from gluonts.dataset.loader import TrainDataLoader
-from gluonts.torch.batchify import batchify 
+from gluonts.torch.batchify import batchify
 
 from pts import Trainer
 from pts.model import get_module_forward_input_names
@@ -50,7 +50,8 @@ def test_distribution():
 
     training_data_loader = TrainDataLoader(
         train_ds,
-        transform=train_output.transformation,
+        transform=train_output.transformation
+        + estimator.create_instance_splitter("training"),
         batch_size=batch_size,
         num_batches_per_epoch=estimator.trainer.num_batches_per_epoch,
         stack_fn=batchify,
@@ -65,4 +66,8 @@ def test_distribution():
             *[data_entry[k] for k in input_names]
         )
 
-        assert distr.sample((num_samples,)).shape == (num_samples, batch_size, seq_len,)
+        assert distr.sample((num_samples,)).shape == (
+            num_samples,
+            batch_size,
+            seq_len,
+        )

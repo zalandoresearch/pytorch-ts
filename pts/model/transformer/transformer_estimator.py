@@ -4,6 +4,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+from gluonts.core.component import validated
 from gluonts.dataset.field_names import FieldName
 from gluonts.time_feature import TimeFeature
 from gluonts.torch.modules.distribution_output import DistributionOutput
@@ -14,6 +15,9 @@ from gluonts.transform import (
     Transformation,
     Chain,
     InstanceSplitter,
+    InstanceSampler,
+    ValidationSplitSampler,
+    TestSplitSampler,
     ExpectedNumInstanceSampler,
     RemoveFields,
     AddAgeFeature,
@@ -40,6 +44,7 @@ from .transformer_network import (
 
 
 class TransformerEstimator(PyTorchEstimator):
+    @validated()
     def __init__(
         self,
         input_size: int,
@@ -101,6 +106,11 @@ class TransformerEstimator(PyTorchEstimator):
         self.num_encoder_layers = num_encoder_layers
         self.num_decoder_layers = num_decoder_layers
 
+        self.train_sampler = ExpectedNumInstanceSampler(
+            num_instances=1.0, min_future=prediction_length
+        )
+        self.validation_sampler = ValidationSplitSampler(min_future=prediction_length)
+
     def create_transformation(self) -> Transformation:
         remove_field_names = [
             FieldName.FEAT_DYNAMIC_CAT,
@@ -161,20 +171,30 @@ class TransformerEstimator(PyTorchEstimator):
                         else []
                     ),
                 ),
-                InstanceSplitter(
-                    target_field=FieldName.TARGET,
-                    is_pad_field=FieldName.IS_PAD,
-                    start_field=FieldName.START,
-                    forecast_start_field=FieldName.FORECAST_START,
-                    train_sampler=ExpectedNumInstanceSampler(num_instances=1),
-                    past_length=self.history_length,
-                    future_length=self.prediction_length,
-                    time_series_fields=[
-                        FieldName.FEAT_TIME,
-                        FieldName.OBSERVED_VALUES,
-                    ],
-                ),
             ]
+        )
+
+    def create_instance_splitter(self, mode: str):
+        assert mode in ["training", "validation", "test"]
+
+        instance_sampler = {
+            "training": self.train_sampler,
+            "validation": self.validation_sampler,
+            "test": TestSplitSampler(),
+        }[mode]
+
+        return InstanceSplitter(
+            target_field=FieldName.TARGET,
+            is_pad_field=FieldName.IS_PAD,
+            start_field=FieldName.START,
+            forecast_start_field=FieldName.FORECAST_START,
+            instance_sampler=instance_sampler,
+            past_length=self.history_length,
+            future_length=self.prediction_length,
+            time_series_fields=[
+                FieldName.FEAT_TIME,
+                FieldName.OBSERVED_VALUES,
+            ],
         )
 
     def create_training_network(
@@ -231,9 +251,10 @@ class TransformerEstimator(PyTorchEstimator):
 
         copy_parameters(trained_network, prediction_network)
         input_names = get_module_forward_input_names(prediction_network)
+        prediction_splitter = self._create_instance_splitter("test")
 
         return PyTorchPredictor(
-            input_transform=transformation,
+            input_transform=transformation + prediction_splitter,
             input_names=input_names,
             prediction_net=prediction_network,
             batch_size=self.trainer.batch_size,
