@@ -143,7 +143,7 @@ class TimeGradEstimator(PyTorchEstimator):
                 AsNumpyArray(field=FieldName.FEAT_STATIC_CAT, expected_ndim=1),
             ]
         )
-    
+
     def create_instance_splitter(self, mode: str):
         assert mode in ["training", "validation", "test"]
 
@@ -161,17 +161,14 @@ class TimeGradEstimator(PyTorchEstimator):
             instance_sampler=instance_sampler,
             past_length=self.history_length,
             future_length=self.prediction_length,
-            time_series_fields=[
-                FieldName.FEAT_TIME,
-                FieldName.OBSERVED_VALUES,
-            ],
+            time_series_fields=[FieldName.FEAT_TIME, FieldName.OBSERVED_VALUES,],
         ) + (
             RenameFields(
                 {
                     f"past_{FieldName.TARGET}": f"past_{FieldName.TARGET}_cdf",
                     f"future_{FieldName.TARGET}": f"future_{FieldName.TARGET}_cdf",
                 }
-            ),
+            )
         )
 
     def create_training_network(self, device: torch.device) -> TimeGradTrainingNetwork:
