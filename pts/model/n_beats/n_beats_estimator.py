@@ -3,12 +3,16 @@ from typing import List, Optional
 import torch
 import torch.nn as nn
 
+from gluonts.core.component import validated
 from gluonts.dataset.field_names import FieldName
 from gluonts.model.predictor import Predictor
 from gluonts.torch.model.predictor import PyTorchPredictor
 from gluonts.torch.support.util import copy_parameters
 from gluonts.transform import (
     InstanceSplitter,
+    ValidationSplitSampler,
+    TestSplitSampler,
+    AddObservedValuesIndicator,
     Transformation,
     Chain,
     RemoveFields,
@@ -26,7 +30,8 @@ from .n_beats_network import (
 )
 
 
-class NBEATSEstimator(PyTorchEstimator):
+class NBEATSEstimato
+    @validated()
     def __init__(
         self,
         freq: str,
@@ -97,6 +102,11 @@ class NBEATSEstimator(PyTorchEstimator):
             invalidation_message=f"Values of 'stack_types' should be one of {VALID_N_BEATS_STACK_TYPES}",
         )
 
+        self.train_sampler = ExpectedNumInstanceSampler(
+            num_instances=1.0, min_future=prediction_length
+        )
+        self.validation_sampler = ValidationSplitSampler(min_future=prediction_length)
+
     def _validate_nbeats_argument(
         self,
         argument_value,
@@ -138,17 +148,32 @@ class NBEATSEstimator(PyTorchEstimator):
                         FieldName.FEAT_DYNAMIC_CAT,
                     ]
                 ),
-                InstanceSplitter(
+                AddObservedValuesIndicator(
                     target_field=FieldName.TARGET,
-                    is_pad_field=FieldName.IS_PAD,
-                    start_field=FieldName.START,
-                    forecast_start_field=FieldName.FORECAST_START,
-                    train_sampler=ExpectedNumInstanceSampler(num_instances=1),
-                    past_length=self.context_length,
-                    future_length=self.prediction_length,
-                    time_series_fields=[],
+                    output_field=FieldName.OBSERVED_VALUES,
+                    dtype=self.dtype,
                 ),
             ]
+        )
+
+    def create_instance_splitter(self, mode: str):
+        assert mode in ["training", "validation", "test"]
+
+        instance_sampler = {
+            "training": self.train_sampler,
+            "validation": self.validation_sampler,
+            "test": TestSplitSampler(),
+        }[mode]
+
+        return InstanceSplitter(
+            target_field=FieldName.TARGET,
+            is_pad_field=FieldName.IS_PAD,
+            start_field=FieldName.START,
+            forecast_start_field=FieldName.FORECAST_START,
+            instance_sampler=instance_sampler,
+            past_length=self.context_length,
+            future_length=self.prediction_length,
+            time_series_fields=[FieldName.OBSERVED_VALUES],
         )
 
     def create_training_network(self, device: torch.device) -> NBEATSTrainingNetwork:
@@ -186,9 +211,10 @@ class NBEATSEstimator(PyTorchEstimator):
 
         copy_parameters(trained_network, prediction_network)
         input_names = get_module_forward_input_names(prediction_network)
+        prediction_splitter = self.create_instance_splitter("test")
 
         return PyTorchPredictor(
-            input_transform=transformation,
+            input_transform=transformation + prediction_splitter,
             input_names=input_names,
             prediction_net=prediction_network,
             batch_size=self.trainer.batch_size,

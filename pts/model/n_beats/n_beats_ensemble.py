@@ -5,6 +5,7 @@ from typing import List, Optional, Iterator
 
 import numpy as np
 
+from gluonts.core.component import validated
 from gluonts.dataset.field_names import FieldName
 from gluonts.dataset.common import Dataset
 from gluonts.model.predictor import Predictor
@@ -168,7 +169,7 @@ class NBEATSEnsembleEstimator(PyTorchEstimator):
     **kwargs
         Arguments passed down to the individual estimators.
     """
-
+    @validted()
     def __init__(
         self,
         freq: str,

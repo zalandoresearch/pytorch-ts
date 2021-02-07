@@ -2,6 +2,7 @@ from typing import List, Optional
 
 import torch
 
+from gluonts.core.component import validated
 from gluonts.dataset.field_names import FieldName
 from gluonts.time_feature import TimeFeature
 from gluonts.torch.model.predictor import PyTorchPredictor
@@ -12,6 +13,8 @@ from gluonts.transform import (
     Transformation,
     Chain,
     InstanceSplitter,
+    ValidationSplitSampler,
+    TestSplitSampler,
     ExpectedNumInstanceSampler,
     RenameFields,
     AsNumpyArray,
@@ -35,6 +38,7 @@ from .tempflow_network import TempFlowTrainingNetwork, TempFlowPredictionNetwork
 
 
 class TempFlowEstimator(PyTorchEstimator):
+    @validated()
     def __init__(
         self,
         input_size: int,
@@ -103,6 +107,17 @@ class TempFlowEstimator(PyTorchEstimator):
         self.pick_incomplete = pick_incomplete
         self.scaling = scaling
 
+        self.train_sampler = ExpectedNumInstanceSampler(
+            num_instances=1.0,
+            min_past=0 if pick_incomplete else self.history_length,
+            min_future=prediction_length,
+        )
+
+        self.validation_sampler = ValidationSplitSampler(
+            min_past=0 if pick_incomplete else self.history_length,
+            min_future=prediction_length,
+        )
+
     def create_transformation(self) -> Transformation:
         return Chain(
             [
@@ -137,27 +152,37 @@ class TempFlowEstimator(PyTorchEstimator):
                     target_field=FieldName.TARGET,
                 ),
                 AsNumpyArray(field=FieldName.FEAT_STATIC_CAT, expected_ndim=1),
-                InstanceSplitter(
-                    target_field=FieldName.TARGET,
-                    is_pad_field=FieldName.IS_PAD,
-                    start_field=FieldName.START,
-                    forecast_start_field=FieldName.FORECAST_START,
-                    train_sampler=ExpectedNumInstanceSampler(num_instances=1),
-                    past_length=self.history_length,
-                    future_length=self.prediction_length,
-                    time_series_fields=[
-                        FieldName.FEAT_TIME,
-                        FieldName.OBSERVED_VALUES,
-                    ],
-                    pick_incomplete=self.pick_incomplete,
-                ),
-                RenameFields(
-                    {
-                        f"past_{FieldName.TARGET}": f"past_{FieldName.TARGET}_cdf",
-                        f"future_{FieldName.TARGET}": f"future_{FieldName.TARGET}_cdf",
-                    }
-                ),
             ]
+        )
+
+    def create_instance_splitter(self, mode: str):
+        assert mode in ["training", "validation", "test"]
+
+        instance_sampler = {
+            "training": self.train_sampler,
+            "validation": self.validation_sampler,
+            "test": TestSplitSampler(),
+        }[mode]
+
+        return InstanceSplitter(
+            target_field=FieldName.TARGET,
+            is_pad_field=FieldName.IS_PAD,
+            start_field=FieldName.START,
+            forecast_start_field=FieldName.FORECAST_START,
+            instance_sampler=instance_sampler,
+            past_length=self.history_length,
+            future_length=self.prediction_length,
+            time_series_fields=[
+                FieldName.FEAT_TIME,
+                FieldName.OBSERVED_VALUES,
+            ],
+        ) + (
+            RenameFields(
+                {
+                    f"past_{FieldName.TARGET}": f"past_{FieldName.TARGET}_cdf",
+                    f"future_{FieldName.TARGET}": f"future_{FieldName.TARGET}_cdf",
+                }
+            ),
         )
 
     def create_training_network(self, device: torch.device) -> TempFlowTrainingNetwork:
@@ -214,9 +239,10 @@ class TempFlowEstimator(PyTorchEstimator):
 
         copy_parameters(trained_network, prediction_network)
         input_names = get_module_forward_input_names(prediction_network)
+        prediction_splitter = self.create_instance_splitter("test")
 
         return PyTorchPredictor(
-            input_transform=transformation,
+            input_transform=transformation + prediction_splitter,
             input_names=input_names,
             prediction_net=prediction_network,
             batch_size=self.trainer.batch_size,

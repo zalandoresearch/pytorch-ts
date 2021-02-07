@@ -17,12 +17,14 @@ import numpy as np
 import pandas as pd
 
 # First-party imports
-from pts.dataset.artificial import constant_dataset
-from pts.dataset import TrainDatasets, MultivariateGrouper
-from pts.evaluation import backtest_metrics
+from gluonts.dataset.artificial import constant_dataset
+from gluonts.dataset.common import TrainDatasets
+from gluonts.dataset.multivariate_grouper import MultivariateGrouper
+from gluonts.evaluation import MultivariateEvaluator
+from gluonts.evaluation.backtest import make_evaluation_predictions
+
 from pts.model.lstnet import LSTNetEstimator
 from pts import Trainer
-from pts.evaluation import MultivariateEvaluator, make_evaluation_predictions
 
 
 NUM_SERIES = 10
@@ -60,7 +62,7 @@ def test_lstnet(skip_size, ar_window, horizon, prediction_length):
         freq=freq,
         horizon=horizon,
         prediction_length=prediction_length,
-        trainer=Trainer(epochs=1, batch_size=2, learning_rate=0.01,),
+        trainer=Trainer(epochs=3, batch_size=2, learning_rate=0.01,),
     )
 
     predictor = estimator.train(dataset.train)

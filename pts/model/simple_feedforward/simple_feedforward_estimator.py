@@ -3,6 +3,7 @@ from typing import List, Optional
 import torch
 import torch.nn as nn
 
+from gluonts.core.component import validated
 from gluonts.torch.support.util import copy_parameters
 from gluonts.torch.model.predictor import PyTorchPredictor
 from gluonts.torch.modules.distribution_output import DistributionOutput
@@ -18,6 +19,8 @@ from gluonts.transform import (
     Chain,
     InstanceSplitter,
     ExpectedNumInstanceSampler,
+    ValidationSplitSampler,
+    TestSplitSampler,
 )
 
 from pts.model.utils import get_module_forward_input_names
@@ -83,7 +86,7 @@ class SimpleFeedForwardEstimator(PyTorchEstimator):
         Number of evaluation samples per time series to increase parallelism during inference.
         This is a model optimization that does not affect the accuracy (default: 100)
     """
-
+    @validated()
     def __init__(
         self,
         freq: str,
@@ -116,6 +119,11 @@ class SimpleFeedForwardEstimator(PyTorchEstimator):
         self.mean_scaling = mean_scaling
         self.num_parallel_samples = num_parallel_samples
 
+        self.train_sampler = ExpectedNumInstanceSampler(
+            num_instances=1, min_future=prediction_length
+        )
+        self.validation_sampler = ValidationSplitSampler(min_future=prediction_length)
+
     # here we do only a simple operation to convert the input data to a form
     # that can be digested by our model by only splitting the target in two, a
     # conditioning part and a to-predict part, for each training example.
@@ -123,19 +131,25 @@ class SimpleFeedForwardEstimator(PyTorchEstimator):
     # transformation that includes time features, age feature, observed values
     # indicator, etc.
     def create_transformation(self) -> Transformation:
-        return Chain(
-            [
-                InstanceSplitter(
-                    target_field=FieldName.TARGET,
-                    is_pad_field=FieldName.IS_PAD,
-                    start_field=FieldName.START,
-                    forecast_start_field=FieldName.FORECAST_START,
-                    train_sampler=ExpectedNumInstanceSampler(num_instances=1),
-                    past_length=self.context_length,
-                    future_length=self.prediction_length,
-                    time_series_fields=[],  # [FieldName.FEAT_DYNAMIC_REAL]
-                )
-            ]
+        return Chain([])
+
+    def create_instance_splitter(self, mode: str):
+        assert mode in ["training", "validation", "test"]
+        instance_sampler = {
+            "training": self.train_sampler,
+            "validation": self.validation_sampler,
+            "test": TestSplitSampler(),
+        }[mode]
+
+        return InstanceSplitter(
+            target_field=FieldName.TARGET,
+            is_pad_field=FieldName.IS_PAD,
+            start_field=FieldName.START,
+            forecast_start_field=FieldName.FORECAST_START,
+            instance_sampler=instance_sampler,
+            past_length=self.context_length,
+            future_length=self.prediction_length,
+            time_series_fields=[],  # [FieldName.FEAT_DYNAMIC_REAL]
         )
 
     # defines the network, we get to see one batch to initialize it.
@@ -161,6 +175,8 @@ class SimpleFeedForwardEstimator(PyTorchEstimator):
         trained_network: nn.Module,
         device: torch.device,
     ) -> Predictor:
+        prediction_splitter = self.create_instance_splitter("test")
+
         prediction_network = SimpleFeedForwardPredictionNetwork(
             num_hidden_dimensions=self.num_hidden_dimensions,
             prediction_length=self.prediction_length,
@@ -175,7 +191,7 @@ class SimpleFeedForwardEstimator(PyTorchEstimator):
         input_names = get_module_forward_input_names(prediction_network)
 
         return PyTorchPredictor(
-            input_transform=transformation,
+            input_transform=transformation + prediction_splitter,
             input_names=input_names,
             prediction_net=prediction_network,
             batch_size=self.trainer.batch_size,

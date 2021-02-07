@@ -19,11 +19,8 @@ import torch
 from torch.distributions import Uniform
 
 # First-party imports
-from pts.model import (
-    QuantileForecast,
-    SampleForecast,
-    DistributionForecast,
-)
+from gluonts.model.forecast import SampleForecast
+from gluonts.torch.model.forecast import DistributionForecast
 
 QUANTILES = np.arange(1, 100) / 100
 SAMPLES = np.arange(101).reshape(101, 1) / 100
@@ -31,12 +28,6 @@ START_DATE = pd.Timestamp(2017, 1, 1, 12)
 FREQ = "1D"
 
 FORECASTS = {
-    "QuantileForecast": QuantileForecast(
-        forecast_arrays=QUANTILES.reshape(-1, 1),
-        start_date=START_DATE,
-        forecast_keys=np.array(QUANTILES, str),
-        freq=FREQ,
-    ),
     "SampleForecast": SampleForecast(samples=SAMPLES, start_date=START_DATE, freq=FREQ),
     "DistributionForecast": DistributionForecast(
         distribution=Uniform(low=torch.zeros(1), high=torch.ones(1)),
