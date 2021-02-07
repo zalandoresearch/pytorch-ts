@@ -9,7 +9,7 @@ from gluonts.core.component import validated
 from pts.model import weighted_average
 from pts.modules import GaussianDiffusion, DiffusionOutput, MeanScaler, NOPScaler
 
-from .u_net import TimeDiff
+from .epsilon_theta import EpsilonTheta
 
 
 class TimeGradTrainingNetwork(nn.Module):
@@ -57,7 +57,7 @@ class TimeGradTrainingNetwork(nn.Module):
             batch_first=True,
         )
 
-        self.denoise_fn = TimeDiff(
+        self.denoise_fn = EpsilonTheta(
             target_dim=target_dim, cond_length=conditioning_length
         )
 
