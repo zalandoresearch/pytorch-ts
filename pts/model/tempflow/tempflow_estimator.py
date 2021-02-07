@@ -182,7 +182,7 @@ class TempFlowEstimator(PyTorchEstimator):
                     f"past_{FieldName.TARGET}": f"past_{FieldName.TARGET}_cdf",
                     f"future_{FieldName.TARGET}": f"future_{FieldName.TARGET}_cdf",
                 }
-            ),
+            )
         )
 
     def create_training_network(self, device: torch.device) -> TempFlowTrainingNetwork:
