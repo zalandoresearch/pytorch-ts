@@ -17,7 +17,7 @@ setup(
     python_requires=">=3.6",
     install_requires = [
         'torch>=1.7.0',
-        'gluonts@git+https://git@github.com/awslabs/gluon-ts#egg=gluonts',
+        'gluonts@git+https://github.com/awslabs/gluon-ts.git@master#egg=gluonts',
         'holidays',
         'numpy',
         'pandas>=1.1',
