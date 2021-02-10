@@ -448,6 +448,7 @@ class FlowOutput(DistributionOutput):
     def event_shape(self) -> Tuple:
         return (self.dim,)
 
+
 class DiffusionOutput(DistributionOutput):
     @validated()
     def __init__(self, diffusion, input_size, cond_size):
@@ -470,6 +471,7 @@ class DiffusionOutput(DistributionOutput):
     @property
     def event_shape(self) -> Tuple:
         return (self.dim,)
+
 
 class QuantilePtArgProj(PtArgProj):
     def __init__(

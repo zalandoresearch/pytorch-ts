@@ -47,9 +47,7 @@ class Trainer:
         wandb.watch(net, log="all", log_freq=self.num_batches_per_epoch)
 
         optimizer = Adam(
-            net.parameters(),
-            lr=self.learning_rate, 
-            weight_decay=self.weight_decay
+            net.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay
         )
 
         lr_scheduler = OneCycleLR(
@@ -88,7 +86,7 @@ class Trainer:
                     loss.backward()
                     if self.clip_gradient is not None:
                         nn.utils.clip_grad_norm_(net.parameters(), self.clip_gradient)
-                    
+
                     optimizer.step()
                     lr_scheduler.step()
 

@@ -116,10 +116,16 @@ class TimeGradEstimator(PyTorchEstimator):
     def create_transformation(self) -> Transformation:
         return Chain(
             [
-                AsNumpyArray(field=FieldName.TARGET, expected_ndim=2,),
+                AsNumpyArray(
+                    field=FieldName.TARGET,
+                    expected_ndim=2,
+                ),
                 # maps the target to (1, T)
                 # if the target data is uni dimensional
-                ExpandDimArray(field=FieldName.TARGET, axis=None,),
+                ExpandDimArray(
+                    field=FieldName.TARGET,
+                    axis=None,
+                ),
                 AddObservedValuesIndicator(
                     target_field=FieldName.TARGET,
                     output_field=FieldName.OBSERVED_VALUES,
@@ -161,7 +167,10 @@ class TimeGradEstimator(PyTorchEstimator):
             instance_sampler=instance_sampler,
             past_length=self.history_length,
             future_length=self.prediction_length,
-            time_series_fields=[FieldName.FEAT_TIME, FieldName.OBSERVED_VALUES,],
+            time_series_fields=[
+                FieldName.FEAT_TIME,
+                FieldName.OBSERVED_VALUES,
+            ],
         ) + (
             RenameFields(
                 {
