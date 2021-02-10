@@ -30,7 +30,7 @@ from .n_beats_network import (
 )
 
 
-class NBEATSEstimato
+class NBEATSEstimator:
     @validated()
     def __init__(
         self,
