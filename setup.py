@@ -17,7 +17,7 @@ setup(
     python_requires=">=3.6",
     install_requires = [
         'torch>=1.7.0',
-        'gluonts@git+https://github.com/awslabs/gluon-ts.git@master#egg=gluonts',
+        'gluonts',
         'holidays',
         'numpy',
         'pandas>=1.1',
@@ -28,7 +28,9 @@ setup(
         'tensorboard',
         'wandb',
     ],
-
+    dependency_links=[
+        'git+https://github.com/awslabs/gluon-ts.git@master#egg=gluonts'
+    ],
     test_suite='tests',
     tests_require = [
         'flake8',
