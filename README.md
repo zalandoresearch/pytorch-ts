@@ -125,3 +125,15 @@ We have implemented the following model using this framework:
     eprint = {2002.06103},
 }
 ```
+
+* [Autoregressive Denoising Diffusion Models for Multivariate Probabilistic Time Series Forecasting
+](https://arxiv.org/abs/2101.12072)
+```tex
+@article{rasul2020timegrad,
+    Author = {Kashif Rasul, Calvin Seward, Ingmar Schuster, Roland Vollgraf}
+    Title = {Autoregressive Denoising Diffusion Models for Multivariate Probabilistic Time Series Forecasting},
+    Year = {2021},
+    archivePrefix = {arXiv},
+    eprint = {2101.12072},
+}
+```
