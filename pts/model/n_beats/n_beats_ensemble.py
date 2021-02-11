@@ -169,6 +169,7 @@ class NBEATSEnsembleEstimator(PyTorchEstimator):
     **kwargs
         Arguments passed down to the individual estimators.
     """
+
     @validted()
     def __init__(
         self,
