@@ -56,6 +56,9 @@ class TimeGradEstimator(PyTorchEstimator):
         loss_type: str = "l2",
         beta_end=0.1,
         beta_schedule="linear",
+        residual_layers=8,
+        residual_channels=8,
+        dilation_cycle_length=2,
         scaling: bool = True,
         pick_incomplete: bool = False,
         lags_seq: Optional[List[int]] = None,
@@ -85,6 +88,9 @@ class TimeGradEstimator(PyTorchEstimator):
         self.loss_type = loss_type
         self.beta_end = beta_end
         self.beta_schedule = beta_schedule
+        self.residual_layers = residual_layers
+        self.residual_channels = residual_channels
+        self.dilation_cycle_length = dilation_cycle_length
 
         self.lags_seq = (
             lags_seq
@@ -116,10 +122,16 @@ class TimeGradEstimator(PyTorchEstimator):
     def create_transformation(self) -> Transformation:
         return Chain(
             [
-                AsNumpyArray(field=FieldName.TARGET, expected_ndim=2,),
+                AsNumpyArray(
+                    field=FieldName.TARGET,
+                    expected_ndim=2,
+                ),
                 # maps the target to (1, T)
                 # if the target data is uni dimensional
-                ExpandDimArray(field=FieldName.TARGET, axis=None,),
+                ExpandDimArray(
+                    field=FieldName.TARGET,
+                    axis=None,
+                ),
                 AddObservedValuesIndicator(
                     target_field=FieldName.TARGET,
                     output_field=FieldName.OBSERVED_VALUES,
@@ -161,7 +173,10 @@ class TimeGradEstimator(PyTorchEstimator):
             instance_sampler=instance_sampler,
             past_length=self.history_length,
             future_length=self.prediction_length,
-            time_series_fields=[FieldName.FEAT_TIME, FieldName.OBSERVED_VALUES,],
+            time_series_fields=[
+                FieldName.FEAT_TIME,
+                FieldName.OBSERVED_VALUES,
+            ],
         ) + (
             RenameFields(
                 {
@@ -188,6 +203,9 @@ class TimeGradEstimator(PyTorchEstimator):
             loss_type=self.loss_type,
             beta_end=self.beta_end,
             beta_schedule=self.beta_schedule,
+            residual_layers=self.residual_layers,
+            residual_channels=self.residual_channels,
+            dilation_cycle_length=self.dilation_cycle_length,
             lags_seq=self.lags_seq,
             scaling=self.scaling,
             conditioning_length=self.conditioning_length,
@@ -215,6 +233,9 @@ class TimeGradEstimator(PyTorchEstimator):
             loss_type=self.loss_type,
             beta_end=self.beta_end,
             beta_schedule=self.beta_schedule,
+            residual_layers=self.residual_layers,
+            residual_channels=self.residual_channels,
+            dilation_cycle_length=self.dilation_cycle_length,
             lags_seq=self.lags_seq,
             scaling=self.scaling,
             conditioning_length=self.conditioning_length,
