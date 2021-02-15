@@ -72,7 +72,7 @@ class TemporalFusionTransformerNetwork(nn.Module):
         else:
             self.feat_dynamic_proj = None
 
-        if self.c_feat_dynamic_cat:
+        if c_feat_dynamic_cat:
             self.feat_dynamic_embed = FeatureEmbedder(
                 cardinalities=c_feat_dynamic_cat,
                 embedding_dims=[variable_dim] * len(c_feat_dynamic_cat),
@@ -80,7 +80,7 @@ class TemporalFusionTransformerNetwork(nn.Module):
         else:
             self.feat_dynamic_embed = None
 
-        if self.d_feat_static_real:
+        if d_feat_static_real:
             self.feat_static_proj = FeatureProjector(
                 feature_dims=d_feat_static_real,
                 embedding_dims=[variable_dim] * len(d_feat_static_real),
@@ -144,8 +144,6 @@ class TemporalFusionTransformerNetwork(nn.Module):
         )
 
         self.temporal_encoder = TemporalFusionEncoder(
-            context_length=self.context_length,
-            prediction_length=self.prediction_length,
             d_input=variable_dim,
             d_hidden=embed_dim,
         )

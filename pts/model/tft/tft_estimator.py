@@ -170,7 +170,7 @@ class TemporalFusionTransformerEstimator(PyTorchEstimator):
                 [
                     SetField(
                         output_field=FieldName.FEAT_STATIC_CAT,
-                        value=[0.0],
+                        value=[0],
                     ),
                     AsNumpyArray(field=FieldName.FEAT_STATIC_CAT, expected_ndim=1),
                 ]
@@ -207,7 +207,7 @@ class TemporalFusionTransformerEstimator(PyTorchEstimator):
                 [
                     SetField(
                         output_field=FieldName.FEAT_DYNAMIC_CAT,
-                        value=[[0.0]],
+                        value=[[0]],
                     ),
                     AsNumpyArray(
                         field=FieldName.FEAT_DYNAMIC_CAT,
@@ -242,7 +242,7 @@ class TemporalFusionTransformerEstimator(PyTorchEstimator):
                 [
                     SetField(
                         output_field=FieldName.PAST_FEAT_DYNAMIC + "_cat",
-                        value=[[0.0]],
+                        value=[[0]],
                     ),
                     AsNumpyArray(
                         field=FieldName.PAST_FEAT_DYNAMIC + "_cat",
@@ -299,7 +299,7 @@ class TemporalFusionTransformerEstimator(PyTorchEstimator):
         )
 
     def create_training_network(
-        self,
+        self, device: torch.device
     ) -> TemporalFusionTransformerTrainingNetwork:
         network = TemporalFusionTransformerTrainingNetwork(
             input_size=self.input_size,
@@ -329,4 +329,4 @@ class TemporalFusionTransformerEstimator(PyTorchEstimator):
                 list(self.static_cardinalities.values()),
             ),
         )
-        return network
+        return network.to(device)
