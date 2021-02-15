@@ -1,6 +1,6 @@
 # PyTorchTS
 
-PyTorchTS is a [PyTorch](https://github.com/pytorch/pytorch) Probabilistic Time Series forecasting framework which provides state of the art PyTorch time series models by utilizing [GluonTS](https://github.com/awslabs/gluon-ts) as its API (with minimal changes) and for loading, transforming and back-testing time series data sets. Currently the GluonTS code is copied into this repository with changes for PyTorch but eventually GluonTS should become an external requirement.
+PyTorchTS is a [PyTorch](https://github.com/pytorch/pytorch) Probabilistic Time Series forecasting framework which provides state of the art PyTorch time series models by utilizing [GluonTS](https://github.com/awslabs/gluon-ts) as its back-end API and for loading, transforming and back-testing time series data sets.
 
 ## Installation
 
@@ -111,29 +111,44 @@ pip install -e .
 pytest test
 ```
 
+## Citing
+
+To cite this repository:
+
+```tex
+@software{pytorchgithub,
+    author = {Kashif Rasul},
+    title = {{P}yTorch{TS}},
+    url = {https://github.com/zalandoresearch/pytorch-ts},
+    version = {0.3.x},
+    year = {2021},
+}
+```
+
 ## Scientific Article
 
 We have implemented the following model using this framework:
 
 * [Multi-variate Probabilistic Time Series Forecasting via Conditioned Normalizing Flows](https://arxiv.org/abs/2002.06103)
 ```tex
-@article{rasul2020tempflow,
-    Author = {Kashif Rasul, Abdul-Saboor Sheikh, Ingmar Schuster, Urs Bergmann, Roland Vollgraf}
-    Title = {Multi-variate Probabilistic Time Series Forecasting via Conditioned Normalizing Flows},
-    Year = {2020},
-    archivePrefix = {arXiv},
-    eprint = {2002.06103},
+@INPROCEEDINGS{rasul2020tempflow,
+  author = {Kashif Rasul and  Abdul-Saboor Sheikh and  Ingmar Schuster and Urs Bergmann and Roland Vollgraf},
+  title = {{M}ultivariate {P}robabilistic {T}ime {S}eries {F}orecasting via {C}onditioned {N}ormalizing {F}lows},
+  year = {2021},
+  url = {https://openreview.net/forum?id=WiGQBFuVRv},
+  booktitle = {International Conference on Learning Representations 2021},
 }
 ```
 
 * [Autoregressive Denoising Diffusion Models for Multivariate Probabilistic Time Series Forecasting
 ](https://arxiv.org/abs/2101.12072)
 ```tex
-@article{rasul2020timegrad,
-    Author = {Kashif Rasul, Calvin Seward, Ingmar Schuster, Roland Vollgraf}
-    Title = {Autoregressive Denoising Diffusion Models for Multivariate Probabilistic Time Series Forecasting},
+@article{rasul2021timegrad,
+    Author = {Kashif Rasul and Calvin Seward and  Ingmar Schuster and Roland Vollgraf}
+    Title = {{A}utoregressive {D}enoising {D}iffusion {M}odels for {M}ultivariate {P}robabilistic {T}ime {S}eries {F}orecasting},
     Year = {2021},
     archivePrefix = {arXiv},
     eprint = {2101.12072},
+    url = {https://arxiv.org/abs/2101.12072},
 }
 ```
