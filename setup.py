@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="pytorchts",
-    version="0.3.0",
+    version="0.3.1",
     description="PyTorch Probabilistic Time Series Modeling framework",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
@@ -16,7 +16,7 @@ setup(
     python_requires=">=3.6",
     install_requires=[
         "torch>=1.7.0",
-        "gluonts",
+        "gluonts @ git+https://github.com/awslabs/gluon-ts.git@master#egg=gluonts",
         "holidays",
         "numpy~=1.16",
         "pandas~=1.1",
@@ -26,7 +26,6 @@ setup(
         "tensorboard",
         "wandb",
     ],
-    dependency_links=["git+https://github.com/awslabs/gluon-ts.git@master#egg=gluonts"],
     test_suite="tests",
     tests_require=["flake8", "pytest"],
 )
