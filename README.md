@@ -111,6 +111,20 @@ pip install -e .
 pytest test
 ```
 
+## Citing
+
+To cite this repository:
+
+```tex
+@software{pytorchgithub,
+    author = {Kashif Rasul},
+    title = {{P}yTorch{TS}},
+    url = {https://github.com/zalandoresearch/pytorch-ts},
+    version = {0.3.x},
+    year = {2021},
+}
+```
+
 ## Scientific Article
 
 We have implemented the following model using this framework:
