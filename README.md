@@ -117,23 +117,24 @@ We have implemented the following model using this framework:
 
 * [Multi-variate Probabilistic Time Series Forecasting via Conditioned Normalizing Flows](https://arxiv.org/abs/2002.06103)
 ```tex
-@article{rasul2020tempflow,
-    Author = {Kashif Rasul, Abdul-Saboor Sheikh, Ingmar Schuster, Urs Bergmann, Roland Vollgraf}
-    Title = {Multi-variate Probabilistic Time Series Forecasting via Conditioned Normalizing Flows},
-    Year = {2020},
-    archivePrefix = {arXiv},
-    eprint = {2002.06103},
+@INPROCEEDINGS{rasul2020tempflow,
+  author = {Kashif Rasul and  Abdul-Saboor Sheikh and  Ingmar Schuster and Urs Bergmann and Roland Vollgraf},
+  title = {{M}ultivariate {P}robabilistic {T}ime {S}eries {F}orecasting via {C}onditioned {N}ormalizing {F}lows},
+  year = {2021},
+  url = {https://openreview.net/forum?id=WiGQBFuVRv},
+  booktitle = {International Conference on Learning Representations 2021},
 }
 ```
 
 * [Autoregressive Denoising Diffusion Models for Multivariate Probabilistic Time Series Forecasting
 ](https://arxiv.org/abs/2101.12072)
 ```tex
-@article{rasul2020timegrad,
-    Author = {Kashif Rasul, Calvin Seward, Ingmar Schuster, Roland Vollgraf}
-    Title = {Autoregressive Denoising Diffusion Models for Multivariate Probabilistic Time Series Forecasting},
+@article{rasul2021timegrad,
+    Author = {Kashif Rasul and Calvin Seward and  Ingmar Schuster and Roland Vollgraf}
+    Title = {{A}utoregressive {D}enoising {D}iffusion {M}odels for {M}ultivariate {P}robabilistic {T}ime {S}eries {F}orecasting},
     Year = {2021},
     archivePrefix = {arXiv},
     eprint = {2101.12072},
+    url = {https://arxiv.org/abs/2101.12072},
 }
 ```
