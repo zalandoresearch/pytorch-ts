@@ -23,6 +23,7 @@ class Trainer:
         learning_rate: float = 1e-3,
         weight_decay: float = 1e-6,
         maximum_learning_rate: float = 1e-2,
+        wandb_mode: str = "disabled",
         clip_gradient: Optional[float] = None,
         device: Optional[Union[torch.device, str]] = None,
         **kwargs,
@@ -35,7 +36,7 @@ class Trainer:
         self.maximum_learning_rate = maximum_learning_rate
         self.clip_gradient = clip_gradient
         self.device = device
-        wandb.init(**kwargs)
+        wandb.init(mode=wandb_mode, **kwargs)
 
     def __call__(
         self,
