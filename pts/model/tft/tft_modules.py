@@ -16,20 +16,25 @@ class FeatureProjector(nn.Module):
     ):
         super().__init__()
 
-        self.feature_dims = feature_dims
         self.__num_features = len(feature_dims)
+        if self.__num_features > 1:
+            self.feature_dims = (
+                feature_dims[0:1] + np.cumsum(feature_dims)[:-1].tolist()
+            )
+        else:
+            self.feature_dims = feature_dims
 
         self._projector = nn.ModuleList(
             [
                 nn.Linear(in_features=in_feature, out_features=out_features)
-                for in_feature, out_features in zip(feature_dims, embedding_dims)
+                for in_feature, out_features in zip(self.feature_dims, embedding_dims)
             ]
         )
 
     def forward(self, features: torch.Tensor) -> List[torch.Tensor]:
         if self.__num_features > 1:
-            real_feature_slices = torch.split(
-                features, (np.cumsum(self.feature_dims)[:-1]).tolist(), dim=-1
+            real_feature_slices = torch.tensor_split(
+                features, self.feature_dims[1:], dim=-1
             )
         else:
             real_feature_slices = [features]

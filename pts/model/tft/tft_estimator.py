@@ -172,7 +172,7 @@ class TemporalFusionTransformerEstimator(PyTorchEstimator):
                         output_field=FieldName.FEAT_STATIC_CAT,
                         value=[0],
                     ),
-                    AsNumpyArray(field=FieldName.FEAT_STATIC_CAT, expected_ndim=1),
+                    AsNumpyArray(field=FieldName.FEAT_STATIC_CAT, expected_ndim=1, dtype=np.long),
                 ]
             )
 
@@ -212,6 +212,7 @@ class TemporalFusionTransformerEstimator(PyTorchEstimator):
                     AsNumpyArray(
                         field=FieldName.FEAT_DYNAMIC_CAT,
                         expected_ndim=2,
+                        dtype=np.long,
                     ),
                     BroadcastTo(
                         field=FieldName.FEAT_DYNAMIC_CAT,
@@ -247,6 +248,7 @@ class TemporalFusionTransformerEstimator(PyTorchEstimator):
                     AsNumpyArray(
                         field=FieldName.PAST_FEAT_DYNAMIC + "_cat",
                         expected_ndim=2,
+                        dtype=np.long,
                     ),
                     BroadcastTo(field=FieldName.PAST_FEAT_DYNAMIC + "_cat"),
                 ]
