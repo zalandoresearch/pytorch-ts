@@ -251,7 +251,9 @@ class TemporalFusionTransformerNetwork(nn.Module):
         ctx_input, _ = self.ctx_selector(past_covariates, c_selection)
         tgt_input, _ = self.tgt_selector(future_covariates, c_selection)
 
-        encoding = self.temporal_encoder(ctx_input, tgt_input, [c_h, c_c])
+        encoding = self.temporal_encoder(
+            ctx_input, tgt_input, [c_h.unsqueeze(0), c_c.unsqueeze(0)]
+        )
         decoding = self.temporal_decoder(encoding, c_enrichment, past_observed_values)
 
         preds = self.output_proj(decoding)  # TODO

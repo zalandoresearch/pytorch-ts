@@ -113,7 +113,7 @@ class GatedResidualNetwork(nn.Module):
             skip = x
 
         if c is not None:
-            x = torch.cat((x, x), dim=-1)
+            x = torch.cat((x, c), dim=-1)
         x = self.mlp(x)
         x = self.lnorm(x + skip)
         return x
@@ -147,11 +147,14 @@ class VariableSelectionNetwork(nn.Module):
         self, variables: List[torch.Tensor], static: Optional[torch.Tensor] = None
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         flatten = torch.cat(variables, dim=-1)
+        if static is not None:
+            static = static.expand_as(variables[0])
         weight = self.weight_network(flatten, static)
         weight = torch.softmax(weight.unsqueeze(-2), dim=-1)
 
         var_encodings = [net(var) for var, net in zip(variables, self.variable_network)]
         var_encodings = torch.stack(var_encodings, dim=-1)
+
         var_encodings = torch.sum(var_encodings * weight, dim=-1)
 
         return var_encodings, weight
@@ -165,8 +168,12 @@ class TemporalFusionEncoder(nn.Module):
     ):
         super().__init__()
 
-        self.encoder_lstm = nn.LSTM(input_size=d_input, hidden_size=d_hidden)
-        self.decoder_lstm = nn.LSTM(input_size=d_input, hidden_size=d_hidden)
+        self.encoder_lstm = nn.LSTM(
+            input_size=d_input, hidden_size=d_hidden, batch_first=True
+        )
+        self.decoder_lstm = nn.LSTM(
+            input_size=d_input, hidden_size=d_hidden, batch_first=True
+        )
 
         self.gate = nn.Sequential(
             nn.Linear(in_features=d_hidden, out_features=d_hidden * 2),
@@ -236,6 +243,24 @@ class TemporalFusionDecoder(nn.Module):
         )
         self.ff_lnorm = nn.LayerNorm(d_hidden)
 
+        self.register_buffer(
+            "attn_mask",
+            self._generate_subsequent_mask(prediction_length, context_length),
+        )
+
+    def _generate_subsequent_mask(
+        self, prediction_length: int, context_length: int
+    ) -> torch.Tensor:
+        mask = (
+            torch.triu(torch.ones(context_length, prediction_length)) == 1
+        ).transpose(0, 1)
+        mask = (
+            mask.float()
+            .masked_fill(mask == 0, float("-inf"))
+            .masked_fill(mask == 1, float(0.0))
+        )
+        return mask
+
     def forward(
         self, x: torch.Tensor, static: torch.Tensor, mask: torch.Tensor
     ) -> torch.Tensor:
@@ -244,12 +269,18 @@ class TemporalFusionDecoder(nn.Module):
         skip = x[:, self.context_length :, ...]
         x = self.enrich(x, static)
 
-        mask_pad = torch.ones_like(mask)[:, 0:1, ...]
-        mask_pad = mask_pad.repeat((1, self.prediction_length))
-        mask = torch.cat((mask, mask_pad), dim=1)
+        key_padding_mask = mask[..., : self.context_length]
 
-        att = self.attention(x, x, x, attn_mask=mask)
-        att = self.att_net(att)
+        query_key_value = x.permute(1, 0, 2)
+
+        attn_output, _ = self.attention(
+            query=query_key_value[-self.prediction_length :, ...],
+            key=query_key_value[: self.context_length, ...],
+            value=query_key_value[: self.context_length, ...],
+            key_padding_mask=key_padding_mask,
+            attn_mask=self.attn_mask,
+        )
+        att = self.att_net(attn_output.permute(1, 0, 2))
 
         x = x[:, self.context_length :, ...]
         x = self.att_lnorm(x + att)
