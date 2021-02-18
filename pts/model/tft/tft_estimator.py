@@ -30,8 +30,6 @@ from gluonts.transform import (
     VstackFeatures,
     SetField,
 )
-from gluonts.model.tft._transform import BroadcastTo, TFTInstanceSplitter
-
 
 from pts import Trainer
 from pts.model.utils import get_module_forward_input_names
@@ -41,6 +39,7 @@ from .tft_network import (
     TemporalFusionTransformerPredictionNetwork,
     TemporalFusionTransformerTrainingNetwork,
 )
+from .tft_transform import BroadcastTo, TFTInstanceSplitter
 
 
 def _default_feat_args(dims_or_cardinalities: List[int]):
