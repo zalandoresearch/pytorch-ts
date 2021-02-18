@@ -6,9 +6,7 @@ import torch.nn as nn
 from torch.distributions import Distribution
 
 from gluonts.core.component import validated
-from gluonts.torch.modules.distribution_output import DistributionOutput
 from pts.model import weighted_average
-from pts.modules import MeanScaler, NOPScaler, FeatureEmbedder
 
 from .tft_modules import (
     FeatureProjector,
@@ -18,13 +16,13 @@ from .tft_modules import (
     TemporalFusionEncoder,
     TemporalFusionDecoder,
 )
+from .tft_output import QuantileOutput
 
 
 class TemporalFusionTransformerNetwork(nn.Module):
     @validated()
     def __init__(
         self,
-        input_size: int,
         context_length: int,
         prediction_length: int,
         variable_dim: int,
@@ -41,7 +39,6 @@ class TemporalFusionTransformerNetwork(nn.Module):
     ):
         super().__init__()
 
-        self.input_size = input_size
         self.context_length = context_length
         self.prediction_length = prediction_length
         self.normalize_eps = 1e-5
@@ -160,6 +157,9 @@ class TemporalFusionTransformerNetwork(nn.Module):
             [[i / 10, 1.0 - i / 10] for i in range(1, (num_outputs + 1) // 2)],
             [0.5],
         )
+        self.output = QuantileOutput(input_size=embed_dim, quantiles=quantiles)
+        self.output_proj = self.output.get_quantile_proj()
+        self.loss = self.output.get_loss()
 
     def _preprocess(
         self,
@@ -256,7 +256,7 @@ class TemporalFusionTransformerNetwork(nn.Module):
         )
         decoding = self.temporal_decoder(encoding, c_enrichment, past_observed_values)
 
-        preds = self.output_proj(decoding)  # TODO
+        preds = self.output_proj(decoding)
 
         return preds
 
@@ -301,7 +301,9 @@ class TemporalFusionTransformerTrainingNetwork(TemporalFusionTransformerNetwork)
 
         preds = self._postprocess(preds, offset, scale)
 
-        return preds
+        loss = self.loss(future_target, preds)
+        loss = weighted_average(loss, future_observed_values)
+        return loss.mean()
 
 
 class TemporalFusionTransformerPredictionNetwork(TemporalFusionTransformerNetwork):

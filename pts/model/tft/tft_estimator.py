@@ -53,7 +53,6 @@ class TemporalFusionTransformerEstimator(PyTorchEstimator):
     def __init__(
         self,
         freq: str,
-        input_size: int,
         prediction_length: int,
         context_length: Optional[int] = None,
         dropout_rate: float = 0.1,
@@ -72,7 +71,6 @@ class TemporalFusionTransformerEstimator(PyTorchEstimator):
         super().__init__(trainer=trainer)
 
         self.freq = freq
-        self.input_size = input_size
         self.prediction_length = prediction_length
         self.context_length = context_length or prediction_length
 
@@ -304,7 +302,6 @@ class TemporalFusionTransformerEstimator(PyTorchEstimator):
         self, device: torch.device
     ) -> TemporalFusionTransformerTrainingNetwork:
         network = TemporalFusionTransformerTrainingNetwork(
-            input_size=self.input_size,
             context_length=self.context_length,
             prediction_length=self.prediction_length,
             variable_dim=self.variable_dim,

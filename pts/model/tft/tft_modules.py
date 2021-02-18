@@ -245,15 +245,18 @@ class TemporalFusionDecoder(nn.Module):
 
         self.register_buffer(
             "attn_mask",
-            self._generate_subsequent_mask(prediction_length, context_length),
+            self._generate_subsequent_mask(
+                prediction_length, prediction_length + context_length
+            ),
         )
 
+    @staticmethod
     def _generate_subsequent_mask(
-        self, prediction_length: int, context_length: int
+        target_length: int, source_length: int
     ) -> torch.Tensor:
-        mask = (
-            torch.triu(torch.ones(context_length, prediction_length)) == 1
-        ).transpose(0, 1)
+        mask = (torch.triu(torch.ones(source_length, target_length)) == 1).transpose(
+            0, 1
+        )
         mask = (
             mask.float()
             .masked_fill(mask == 0, float("-inf"))
@@ -269,14 +272,16 @@ class TemporalFusionDecoder(nn.Module):
         skip = x[:, self.context_length :, ...]
         x = self.enrich(x, static)
 
-        key_padding_mask = mask[..., : self.context_length]
+        mask_pad = torch.ones_like(mask)[:, 0:1, ...]
+        mask_pad = mask_pad.repeat((1, self.prediction_length))
+        key_padding_mask = torch.cat((mask, mask_pad), dim=1)
 
         query_key_value = x.permute(1, 0, 2)
 
         attn_output, _ = self.attention(
             query=query_key_value[-self.prediction_length :, ...],
-            key=query_key_value[: self.context_length, ...],
-            value=query_key_value[: self.context_length, ...],
+            key=query_key_value,
+            value=query_key_value,
             key_padding_mask=key_padding_mask,
             attn_mask=self.attn_mask,
         )
