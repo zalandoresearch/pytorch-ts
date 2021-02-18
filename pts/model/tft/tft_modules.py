@@ -274,7 +274,7 @@ class TemporalFusionDecoder(nn.Module):
 
         mask_pad = torch.ones_like(mask)[:, 0:1, ...]
         mask_pad = mask_pad.repeat((1, self.prediction_length))
-        key_padding_mask = torch.cat((mask, mask_pad), dim=1)
+        key_padding_mask = torch.cat((mask, mask_pad), dim=1).bool()
 
         query_key_value = x.permute(1, 0, 2)
 
@@ -282,7 +282,7 @@ class TemporalFusionDecoder(nn.Module):
             query=query_key_value[-self.prediction_length :, ...],
             key=query_key_value,
             value=query_key_value,
-            key_padding_mask=key_padding_mask,
+            # key_padding_mask=key_padding_mask, # does not work on GPU :-(
             attn_mask=self.attn_mask,
         )
         att = self.att_net(attn_output.permute(1, 0, 2))
