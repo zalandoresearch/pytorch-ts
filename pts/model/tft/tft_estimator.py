@@ -16,6 +16,7 @@ from gluonts.torch.modules.distribution_output import DistributionOutput
 from gluonts.torch.support.util import copy_parameters
 from gluonts.torch.model.predictor import PyTorchPredictor
 from gluonts.model.predictor import Predictor
+from gluonts.model.forecast_generator import QuantileForecastGenerator
 from gluonts.transform import (
     Transformation,
     Chain,
@@ -170,7 +171,9 @@ class TemporalFusionTransformerEstimator(PyTorchEstimator):
                         output_field=FieldName.FEAT_STATIC_CAT,
                         value=[0],
                     ),
-                    AsNumpyArray(field=FieldName.FEAT_STATIC_CAT, expected_ndim=1, dtype=np.long),
+                    AsNumpyArray(
+                        field=FieldName.FEAT_STATIC_CAT, expected_ndim=1, dtype=np.long
+                    ),
                 ]
             )
 
@@ -329,3 +332,55 @@ class TemporalFusionTransformerEstimator(PyTorchEstimator):
             ),
         )
         return network.to(device)
+
+    def create_predictor(
+        self,
+        transformation: Transformation,
+        trained_network: TemporalFusionTransformerTrainingNetwork,
+        device: torch.device,
+    ) -> Predictor:
+
+        prediction_network = TemporalFusionTransformerPredictionNetwork(
+            context_length=self.context_length,
+            prediction_length=self.prediction_length,
+            variable_dim=self.variable_dim,
+            embed_dim=self.embed_dim,
+            num_heads=self.num_heads,
+            num_outputs=self.num_outputs,
+            dropout=self.dropout_rate,
+            d_past_feat_dynamic_real=_default_feat_args(
+                list(self.past_dynamic_feature_dims.values())
+            ),
+            c_past_feat_dynamic_cat=_default_feat_args(
+                list(self.past_dynamic_cardinalities.values())
+            ),
+            d_feat_dynamic_real=_default_feat_args(
+                [1] * len(self.time_features) + list(self.dynamic_feature_dims.values())
+            ),
+            c_feat_dynamic_cat=_default_feat_args(
+                list(self.dynamic_cardinalities.values())
+            ),
+            d_feat_static_real=_default_feat_args(
+                list(self.static_feature_dims.values()),
+            ),
+            c_feat_static_cat=_default_feat_args(
+                list(self.static_cardinalities.values()),
+            ),
+        ).to(device)
+
+        copy_parameters(trained_network, prediction_network)
+        input_names = get_module_forward_input_names(prediction_network)
+        prediction_splitter = self.create_instance_splitter("test")
+
+        return PyTorchPredictor(
+            input_transform=transformation + prediction_splitter,
+            input_names=input_names,
+            prediction_net=prediction_network,
+            batch_size=self.trainer.batch_size,
+            freq=self.freq,
+            prediction_length=self.prediction_length,
+            device=device,
+            forecast_generator=QuantileForecastGenerator(
+                quantiles=[str(q) for q in prediction_network.quantiles],
+            ),
+        )

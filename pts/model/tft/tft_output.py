@@ -25,18 +25,15 @@ class QuantileLoss(nn.Module):
 
     def forward(self, y_true: torch.Tensor, y_pred: torch.Tensor, sample_weight=None):
         if self.num_quantiles > 1:
-            y_pred_all = [
-                pred.squeeze(-1)
-                for pred in torch.chunk(y_pred, self.num_quantiles, dim=-1)
-            ]
+            y_pred_all = torch.chunk(y_pred, self.num_quantiles, dim=-1)
         else:
-            y_pred_all = [y_pred.squeeze(-1)]
+            y_pred_all = [y_pred]
 
         qt_loss = []
         for i, y_pred_q in enumerate(y_pred_all):
             q = self.quantiles[i]
             weighted_qt = (
-                self.compute_quantile_loss(y_true, y_pred_q, q)
+                self.compute_quantile_loss(y_true, y_pred_q.squeeze(-1), q)
                 * self.quantile_weights[i]
             )
             qt_loss.append(weighted_qt)

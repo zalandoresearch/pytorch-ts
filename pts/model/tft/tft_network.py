@@ -153,11 +153,11 @@ class TemporalFusionTransformerNetwork(nn.Module):
             dropout=dropout,
         )
 
-        quantiles = sum(
+        self.quantiles = sum(
             [[i / 10, 1.0 - i / 10] for i in range(1, (num_outputs + 1) // 2)],
             [0.5],
         )
-        self.output = QuantileOutput(input_size=embed_dim, quantiles=quantiles)
+        self.output = QuantileOutput(input_size=embed_dim, quantiles=self.quantiles)
         self.output_proj = self.output.get_quantile_proj()
         self.loss = self.output.get_loss()
 
@@ -317,6 +317,30 @@ class TemporalFusionTransformerPredictionNetwork(TemporalFusionTransformerNetwor
         feat_dynamic_cat: torch.Tensor,
         feat_static_real: torch.Tensor,
         feat_static_cat: torch.Tensor,
-    ):
+    ) -> torch.Tensor:
+        (
+            past_covariates,
+            future_covariates,
+            static_covariates,
+            offset,
+            scale,
+        ) = self._preprocess(
+            past_target,
+            past_observed_values,
+            past_feat_dynamic_real,
+            past_feat_dynamic_cat,
+            feat_dynamic_real,
+            feat_dynamic_cat,
+            feat_static_real,
+            feat_static_cat,
+        )
 
-        pass
+        preds = super().forward(
+            past_observed_values,
+            past_covariates,
+            future_covariates,
+            static_covariates,
+        )
+
+        preds = self._postprocess(preds, offset, scale)
+        return preds.permute(0, 2, 1)
