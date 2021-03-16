@@ -91,7 +91,9 @@ class DeepAREstimator(PyTorchEstimator):
         )
         self.scaling = scaling
         self.lags_seq = (
-            lags_seq if lags_seq is not None else get_lags_for_frequency(freq_str=freq)
+            lags_seq
+            if lags_seq is not None
+            else get_lags_for_frequency(freq_str=freq, lag_ub=self.context_length)
         )
         self.time_features = (
             time_features

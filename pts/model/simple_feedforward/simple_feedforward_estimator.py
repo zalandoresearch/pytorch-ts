@@ -9,11 +9,6 @@ from gluonts.torch.model.predictor import PyTorchPredictor
 from gluonts.torch.modules.distribution_output import DistributionOutput
 from gluonts.model.predictor import Predictor
 from gluonts.dataset.field_names import FieldName
-from gluonts.time_feature import (
-    TimeFeature,
-    get_lags_for_frequency,
-    time_features_from_frequency_str,
-)
 from gluonts.transform import (
     Transformation,
     Chain,
