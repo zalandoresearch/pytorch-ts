@@ -12,7 +12,6 @@ from torch.utils.data import DataLoader
 
 from gluonts.core.component import validated
 
-
 class Trainer:
     @validated()
     def __init__(
@@ -62,12 +61,31 @@ class Trainer:
             tic = time.time()
             avg_epoch_loss = 0.0
 
-            with tqdm(train_iter) as it:
-                for batch_no, data_entry in enumerate(it, start=1):
-                    optimizer.zero_grad()
-                    inputs = [v.to(self.device) for v in data_entry.values()]
+            if validation_iter is not None:
+                it_val = tqdm(validation_iter)
+                val_iter_obj = list(zip(it_val, range(1, validation_iter.batch_size+1)))
+                train_iter_obj = enumerate(tqdm(train_iter), start=1)
 
+            with tqdm(train_iter) as it:
+                
+                for batch_no, data_entry in enumerate(it, start=1):
+
+                    optimizer.zero_grad()
+
+                    # Strong assumption that validation_iter and train_iter are same iter size
+                    if validation_iter is not None:
+                        val_batch = val_iter_obj[batch_no][1]
+                        inputs_val = [v.to(self.device) for v in data_entry.values()]
+                        output_val = net(*inputs_val)
+
+                        if isinstance(output_val, (list, tuple)):
+                            loss_val = output_val[0]
+                        else:
+                            loss_val = output_val
+                    
+                    inputs = [v.to(self.device) for v in data_entry.values()]
                     output = net(*inputs)
+
                     if isinstance(output, (list, tuple)):
                         loss = output[0]
                     else:
@@ -92,6 +110,9 @@ class Trainer:
 
                     if self.num_batches_per_epoch == batch_no:
                         break
+                
+                    print("validation loss: ")
+                    print(loss_val.item())
 
             # mark epoch end time and log time cost of current epoch
             toc = time.time()
