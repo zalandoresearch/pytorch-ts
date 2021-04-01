@@ -74,7 +74,7 @@ class Trainer:
 
                     # Strong assumption that validation_iter and train_iter are same iter size
                     if validation_iter is not None:
-                        val_batch = val_iter_obj[batch_no][1]
+                        val_batch = val_iter_obj[batch_no-1][1]
                         inputs_val = [v.to(self.device) for v in data_entry.values()]
                         output_val = net(*inputs_val)
 
