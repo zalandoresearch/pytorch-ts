@@ -61,6 +61,9 @@ class Trainer:
             tic = time.time()
             avg_epoch_loss = 0.0
 
+            if validation_iter is not None:
+                avg_epoch_loss_val = 0.0
+
             train_iter_obj = list(zip(range(1, train_iter.batch_size+1), tqdm(train_iter)))
             if validation_iter is not None:
                 val_iter_obj = list(zip(range(1, validation_iter.batch_size+1), tqdm(validation_iter)))
@@ -81,6 +84,11 @@ class Trainer:
                             loss_val = output_val[0]
                         else:
                             loss_val = output_val
+                        
+                        avg_epoch_loss_val += loss_val.item()
+                        
+                        # print("validation loss: ")
+                        # print(loss_val.item())
                     
                     inputs = [v.to(self.device) for v in data_entry.values()]
                     output = net(*inputs)
@@ -91,13 +99,24 @@ class Trainer:
                         loss = output
 
                     avg_epoch_loss += loss.item()
-                    it.set_postfix(
-                        ordered_dict={
-                            "avg_epoch_loss": avg_epoch_loss / batch_no,
-                            "epoch": epoch_no,
-                        },
-                        refresh=False,
-                    )
+                    if validation_iter is not None:
+                        it.set_postfix(
+                            ordered_dict={
+                                "avg_epoch_loss": avg_epoch_loss / batch_no,
+                                "avg_epoch_loss_val": avg_epoch_loss_val / batch_no,
+                                "epoch": epoch_no,
+                            },
+                            refresh=False,
+                        )
+                        wandb.log({"loss": loss_val.item()})
+                    else:
+                        it.set_postfix(
+                            ordered_dict={
+                                "avg_epoch_loss": avg_epoch_loss / batch_no,
+                                "epoch": epoch_no,
+                            },
+                            refresh=False,
+                        )
                     wandb.log({"loss": loss.item()})
 
                     loss.backward()
@@ -110,8 +129,7 @@ class Trainer:
                     if self.num_batches_per_epoch == batch_no:
                         break
                 
-                    print("validation loss: ")
-                    print(loss_val.item())
+                    
 
             # mark epoch end time and log time cost of current epoch
             toc = time.time()
