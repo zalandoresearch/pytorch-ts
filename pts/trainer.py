@@ -61,22 +61,20 @@ class Trainer:
             tic = time.time()
             avg_epoch_loss = 0.0
 
+            train_iter_obj = list(zip(range(1, train_iter.batch_size+1), tqdm(train_iter)))
             if validation_iter is not None:
                 val_iter_obj = list(zip(range(1, validation_iter.batch_size+1), tqdm(validation_iter)))
-                train_iter_obj = list(zip(range(1, train_iter.batch_size+1), tqdm(train_iter)))
+                
 
             with tqdm(train_iter) as it:
-                # enum_train = enumerate(it, start=1)
-                # enum_val = enumerate(it_val, start=1)
                 for batch_no, data_entry in train_iter_obj:
 
                     optimizer.zero_grad()
 
                     # Strong assumption that validation_iter and train_iter are same iter size
                     if validation_iter is not None:
-                        # val_batch = val_iter_obj[batch_no-3][1]
-                        # bb = val_iter_obj[batch_no]
-                        inputs_val = [v.to(self.device) for v in data_entry.values()]
+                        val_data_entry = val_iter_obj[batch_no-1][1]
+                        inputs_val = [v.to(self.device) for v in val_data_entry.values()]
                         output_val = net(*inputs_val)
 
                         if isinstance(output_val, (list, tuple)):
