@@ -18,7 +18,7 @@ import pandas as pd
 from pandas.tseries.frequencies import to_offset
 
 from gluonts.core.component import validated
-from gluonts.time_feature import TimeFeature
+from gluonts.time_feature import TimeFeature, norm_freq_str
 
 
 class FourierDateFeatures(TimeFeature):
@@ -50,7 +50,7 @@ class FourierDateFeatures(TimeFeature):
 
 def fourier_time_features_from_frequency(freq_str: str) -> List[TimeFeature]:
     offset = to_offset(freq_str)
-    multiple, granularity = offset.n, offset.name
+    granularity = norm_freq_str(offset.name)
 
     features = {
         "M": ["weekofyear"],

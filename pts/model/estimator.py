@@ -117,6 +117,8 @@ class PyTorchEstimator(Estimator):
             batch_size=self.trainer.batch_size,
             num_workers=num_workers,
             prefetch_factor=prefetch_factor,
+            pin_memory=True,
+            worker_init_fn=self._worker_init_fn,
             **kwargs,
         )
 
@@ -136,6 +138,8 @@ class PyTorchEstimator(Estimator):
                 batch_size=self.trainer.batch_size,
                 num_workers=num_workers,
                 prefetch_factor=prefetch_factor,
+                pin_memory=True,
+                worker_init_fn=self._worker_init_fn,
                 **kwargs,
             )
 
@@ -152,6 +156,10 @@ class PyTorchEstimator(Estimator):
                 transformation, trained_net, self.trainer.device
             ),
         )
+
+    @staticmethod
+    def _worker_init_fn(worker_id):
+        np.random.seed(np.random.get_state()[1][0] + worker_id)
 
     def train(
         self,
