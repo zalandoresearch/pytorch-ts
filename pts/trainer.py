@@ -100,25 +100,21 @@ class Trainer:
 
                     avg_epoch_loss += loss.item()
                     if validation_iter is not None:
-                        it.set_postfix(
-                            ordered_dict={
+                        post_fix_dict = ordered_dict={
                                 "avg_epoch_loss": avg_epoch_loss / batch_no,
                                 "avg_epoch_loss_val": avg_epoch_loss_val / batch_no,
                                 "epoch": epoch_no,
-                            },
-                            refresh=False,
-                        )
-                        wandb.log({"loss": loss_val.item()})
+                        }
+                        wandb.log({"loss_val": loss_val.item()})
                     else:
-                        it.set_postfix(
-                            ordered_dict={
+                        post_fix_dict={
                                 "avg_epoch_loss": avg_epoch_loss / batch_no,
                                 "epoch": epoch_no,
-                            },
-                            refresh=False,
-                        )
+                        }
+                    
                     wandb.log({"loss": loss.item()})
-
+                    # it.set_postfix(post_fix_dict, refresh=False)
+                    
                     loss.backward()
                     if self.clip_gradient is not None:
                         nn.utils.clip_grad_norm_(net.parameters(), self.clip_gradient)
@@ -128,9 +124,7 @@ class Trainer:
 
                     if self.num_batches_per_epoch == batch_no:
                         break
-                
-                    
-
+            
             # mark epoch end time and log time cost of current epoch
             toc = time.time()
 
