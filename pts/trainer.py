@@ -76,19 +76,17 @@ class Trainer:
 
                     # Strong assumption that validation_iter and train_iter are same iter size
                     if validation_iter is not None:
-                        val_data_entry = val_iter_obj[batch_no-1][1]
-                        inputs_val = [v.to(self.device) for v in val_data_entry.values()]
-                        output_val = net(*inputs_val)
+                        with torch.no_grad():
+                            val_data_entry = val_iter_obj[batch_no-1][1]
+                            inputs_val = [v.to(self.device) for v in val_data_entry.values()]
+                            output_val = net(*inputs_val)
 
-                        if isinstance(output_val, (list, tuple)):
-                            loss_val = output_val[0]
-                        else:
-                            loss_val = output_val
-                        
-                        avg_epoch_loss_val += loss_val.item()
-                        
-                        # print("validation loss: ")
-                        # print(loss_val.item())
+                            if isinstance(output_val, (list, tuple)):
+                                loss_val = output_val[0]
+                            else:
+                                loss_val = output_val
+                            
+                            avg_epoch_loss_val += loss_val.item()
                     
                     inputs = [v.to(self.device) for v in data_entry.values()]
                     output = net(*inputs)
@@ -113,7 +111,8 @@ class Trainer:
                         }
                     
                     wandb.log({"loss": loss.item()})
-                    # it.set_postfix(post_fix_dict, refresh=False)
+
+                    it.set_postfix(post_fix_dict, refresh=False)
                     
                     loss.backward()
                     if self.clip_gradient is not None:
