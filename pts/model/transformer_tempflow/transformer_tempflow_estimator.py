@@ -15,6 +15,7 @@ from gluonts.transform import (
     ValidationSplitSampler,
     TestSplitSampler,
     ExpectedNumInstanceSampler,
+    RemoveFields,
     RenameFields,
     AsNumpyArray,
     ExpandDimArray,
@@ -57,8 +58,7 @@ class TransformerTempFlowEstimator(PyTorchEstimator):
         num_decoder_layers: int = 3,
         num_parallel_samples: int = 100,
         dropout_rate: float = 0.1,
-        cardinality: List[int] = [1],
-        embedding_dimension: int = 5,
+        use_feat_dynamic_real: bool = False,
         flow_type="RealNVP",
         n_blocks=3,
         hidden_size=100,
@@ -91,8 +91,8 @@ class TransformerTempFlowEstimator(PyTorchEstimator):
 
         self.num_parallel_samples = num_parallel_samples
         self.dropout_rate = dropout_rate
-        self.cardinality = cardinality
-        self.embedding_dimension = embedding_dimension
+        
+        self.use_feat_dynamic_real = use_feat_dynamic_real
 
         self.flow_type = flow_type
         self.n_blocks = n_blocks
@@ -129,8 +129,13 @@ class TransformerTempFlowEstimator(PyTorchEstimator):
         )
 
     def create_transformation(self) -> Transformation:
+        remove_field_names = [FieldName.FEAT_DYNAMIC_CAT]
+        if not self.use_feat_dynamic_real:
+            remove_field_names.append(FieldName.FEAT_DYNAMIC_REAL)
+        
         return Chain(
             [
+                RemoveFields(field_names=remove_field_names),
                 AsNumpyArray(
                     field=FieldName.TARGET,
                     expected_ndim=2,
@@ -154,7 +159,12 @@ class TransformerTempFlowEstimator(PyTorchEstimator):
                 ),
                 VstackFeatures(
                     output_field=FieldName.FEAT_TIME,
-                    input_fields=[FieldName.FEAT_TIME],
+                    input_fields=[FieldName.FEAT_TIME]
+                    + (
+                        [FieldName.FEAT_DYNAMIC_REAL]
+                        if self.use_feat_dynamic_real
+                        else []
+                    ),
                 ),
                 SetFieldIfNotPresent(field=FieldName.FEAT_STATIC_CAT, value=[0]),
                 TargetDimIndicator(
@@ -211,8 +221,6 @@ class TransformerTempFlowEstimator(PyTorchEstimator):
             context_length=self.context_length,
             prediction_length=self.prediction_length,
             dropout_rate=self.dropout_rate,
-            cardinality=self.cardinality,
-            embedding_dimension=self.embedding_dimension,
             lags_seq=self.lags_seq,
             scaling=self.scaling,
             flow_type=self.flow_type,
@@ -242,8 +250,6 @@ class TransformerTempFlowEstimator(PyTorchEstimator):
             context_length=self.context_length,
             prediction_length=self.prediction_length,
             dropout_rate=self.dropout_rate,
-            cardinality=self.cardinality,
-            embedding_dimension=self.embedding_dimension,
             lags_seq=self.lags_seq,
             scaling=self.scaling,
             flow_type=self.flow_type,
