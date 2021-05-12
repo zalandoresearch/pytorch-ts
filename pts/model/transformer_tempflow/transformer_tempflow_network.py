@@ -30,8 +30,6 @@ class TransformerTempFlowTrainingNetwork(nn.Module):
         hidden_size: int,
         n_hidden: int,
         dequantize: bool,
-        cardinality: List[int] = [1],
-        embedding_dimension: int = 1,
         scaling: bool = True,
         **kwargs,
     ) -> None:
