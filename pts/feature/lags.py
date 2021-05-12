@@ -17,7 +17,7 @@ def lags_for_fourier_time_features_from_frequency(
         lags = [[1, 2]]
     elif granularity == "H":
         lags = [[1, 24, 168]]
-    elif granularity == "min":
+    elif granularity in ("T", "min"):
         lags = [[1, 4, 12, 24, 48]]
     else:
         lags = [[1]]
