@@ -159,7 +159,7 @@ class TransformerTempFlowEstimator(PyTorchEstimator):
                 ),
                 VstackFeatures(
                     output_field=FieldName.FEAT_TIME,
-                    input_fields=[FieldName.FEAT_TIME],
+                    input_fields=[FieldName.FEAT_TIME]
                     + (
                         [FieldName.FEAT_DYNAMIC_REAL]
                         if self.use_feat_dynamic_real
