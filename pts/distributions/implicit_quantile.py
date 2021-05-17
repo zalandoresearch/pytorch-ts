@@ -3,6 +3,8 @@ from torch.distributions import Distribution, TransformedDistribution, AffineTra
 
 
 class ImplicitQuantile(Distribution):
+    arg_constraints = {}
+    
     def __init__(
         self,
         implicit_quantile_function,
