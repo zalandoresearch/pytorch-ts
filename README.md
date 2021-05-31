@@ -147,8 +147,7 @@ We have implemented the following model using this framework:
     Author = {Kashif Rasul and Calvin Seward and  Ingmar Schuster and Roland Vollgraf}
     Title = {{A}utoregressive {D}enoising {D}iffusion {M}odels for {M}ultivariate {P}robabilistic {T}ime {S}eries {F}orecasting},
     Year = {2021},
-    archivePrefix = {arXiv},
-    eprint = {2101.12072},
+    journal={International Conference on Machine Learning},
     url = {https://arxiv.org/abs/2101.12072},
 }
 ```
