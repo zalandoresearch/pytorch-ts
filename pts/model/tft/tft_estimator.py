@@ -146,23 +146,26 @@ class TemporalFusionTransformerEstimator(PyTorchEstimator):
                     time_features=self.time_features,
                     pred_length=self.prediction_length,
                 ),
-                AddAgeFeature(
-                    target_field=FieldName.TARGET,
-                    output_field=FieldName.FEAT_AGE,
-                    pred_length=self.prediction_length,
-                    log_scale=True,
-                ),
+                # AddAgeFeature(
+                #     target_field=FieldName.TARGET,
+                #     output_field=FieldName.FEAT_AGE,
+                #     pred_length=self.prediction_length,
+                #     log_scale=True,
+                # ),
             ]
         )
 
         if self.static_cardinalities:
-            transforms.append(
+            transforms.extend([
                 VstackFeatures(
                     output_field=FieldName.FEAT_STATIC_CAT,
                     input_fields=list(self.static_cardinalities.keys()),
                     h_stack=True,
+                ),
+                AsNumpyArray(
+                    field=FieldName.FEAT_STATIC_CAT, expected_ndim=1, dtype=np.long
                 )
-            )
+            ])
         else:
             transforms.extend(
                 [
@@ -196,12 +199,17 @@ class TemporalFusionTransformerEstimator(PyTorchEstimator):
             )
 
         if self.dynamic_cardinalities:
-            transforms.append(
+            transforms.extend([
                 VstackFeatures(
                     output_field=FieldName.FEAT_DYNAMIC_CAT,
                     input_fields=list(self.dynamic_cardinalities.keys()),
+                ),
+                AsNumpyArray(
+                    field=FieldName.FEAT_DYNAMIC_CAT,
+                    expected_ndim=2,
+                    dtype=np.long,
                 )
-            )
+            ])
         else:
             transforms.extend(
                 [
@@ -221,7 +229,8 @@ class TemporalFusionTransformerEstimator(PyTorchEstimator):
                 ]
             )
 
-        input_fields = [FieldName.FEAT_TIME, FieldName.FEAT_AGE]
+        # input_fields = [FieldName.FEAT_TIME, FieldName.FEAT_AGE]
+        input_fields = [FieldName.FEAT_TIME]
         if self.dynamic_feature_dims:
             input_fields += list(self.dynamic_feature_dims.keys())
         transforms.append(
@@ -232,12 +241,17 @@ class TemporalFusionTransformerEstimator(PyTorchEstimator):
         )
 
         if self.past_dynamic_cardinalities:
-            transforms.append(
+            transforms.extend([
                 VstackFeatures(
                     output_field=FieldName.PAST_FEAT_DYNAMIC + "_cat",
                     input_fields=list(self.past_dynamic_cardinalities.keys()),
+                ),
+                AsNumpyArray(
+                    field=FieldName.PAST_FEAT_DYNAMIC + "_cat",
+                    expected_ndim=2,
+                    dtype=np.long,
                 )
-            )
+            ])
         else:
             transforms.extend(
                 [
