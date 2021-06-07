@@ -224,8 +224,7 @@ class TemporalFusionTransformerEstimator(PyTorchEstimator):
                 ]
             )
 
-        # input_fields = [FieldName.FEAT_TIME, FieldName.FEAT_AGE]
-        input_fields = [FieldName.FEAT_TIME]
+        input_fields = [FieldName.FEAT_TIME, FieldName.FEAT_AGE]
         if self.dynamic_feature_dims:
             input_fields += list(self.dynamic_feature_dims.keys())
         transforms.append(
@@ -363,8 +362,9 @@ class TemporalFusionTransformerEstimator(PyTorchEstimator):
             c_past_feat_dynamic_cat=_default_feat_args(
                 list(self.past_dynamic_cardinalities.values())
             ),
+            # +1 is for Age Feature
             d_feat_dynamic_real=_default_feat_args(
-                [1] * len(self.time_features) + list(self.dynamic_feature_dims.values())
+                [1] * (len(self.time_features) + 1) + list(self.dynamic_feature_dims.values())
             ),
             c_feat_dynamic_cat=_default_feat_args(
                 list(self.dynamic_cardinalities.values())
