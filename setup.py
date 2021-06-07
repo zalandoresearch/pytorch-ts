@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="pytorchts",
-    version="0.4.1-fix",
+    version="0.4.0",
     description="PyTorch Probabilistic Time Series Modeling framework",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
