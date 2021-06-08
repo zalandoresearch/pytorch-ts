@@ -18,11 +18,12 @@ class FeatureProjector(nn.Module):
 
         self.__num_features = len(feature_dims)
         if self.__num_features > 1:
-            self.feature_dims = (
+            self.feature_slices = (
                 feature_dims[0:1] + np.cumsum(feature_dims)[:-1].tolist()
             )
         else:
-            self.feature_dims = feature_dims
+            self.feature_slices = feature_dims
+        self.feature_dims = feature_dims
 
         self._projector = nn.ModuleList(
             [
@@ -34,7 +35,7 @@ class FeatureProjector(nn.Module):
     def forward(self, features: torch.Tensor) -> List[torch.Tensor]:
         if self.__num_features > 1:
             real_feature_slices = torch.tensor_split(
-                features, self.feature_dims[1:], dim=-1
+                features, self.feature_slices[1:], dim=-1
             )
         else:
             real_feature_slices = [features]
