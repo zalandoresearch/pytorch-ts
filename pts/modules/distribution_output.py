@@ -515,6 +515,7 @@ class ImplicitQuantileOutput(IndependentDistributionOutput):
         available_domain_map_cls = {
             "Positive": nn.Softplus,
             "Real": nn.Identity,
+            "Unit": nn.Softmax,
         }
         assert (
             output_domain in available_domain_map_cls.keys()
