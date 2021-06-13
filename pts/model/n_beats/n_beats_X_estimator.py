@@ -21,14 +21,9 @@ from gluonts.transform import (
 
 from pts import Trainer
 from pts.model import PyTorchEstimator
-from pts.model.n_beats.n_beats_X_network import NbeatsXTrainingNetwork
+from pts.model.n_beats.n_beats_X_network import NbeatsXTrainingNetwork, NbeatsXPredictionNetwork, \
+    VALID_N_BEATS_STACK_TYPES
 from pts.model.utils import get_module_forward_input_names
-
-from .n_beats_network import (
-    NBEATSPredictionNetwork,
-    NBEATSTrainingNetwork,
-    VALID_N_BEATS_STACK_TYPES,
-)
 
 
 class NbeatsXEstimator(PyTorchEstimator):
@@ -158,7 +153,7 @@ class NbeatsXEstimator(PyTorchEstimator):
                 ),
                 VstackFeatures(
                     output_field=FieldName.FEAT_TIME,
-                    input_fields=[FieldName.FEAT_DYNAMIC_REAL]
+                    input_fields=[FieldName.FEAT_DYNAMIC_REAL],
                 ),
             ]
         )
@@ -186,7 +181,7 @@ class NbeatsXEstimator(PyTorchEstimator):
             ],
         )
 
-    def create_training_network(self, device: torch.device) -> NBEATSTrainingNetwork:
+    def create_training_network(self, device: torch.device) -> NbeatsXTrainingNetwork:
         return NbeatsXTrainingNetwork(
             prediction_length=self.prediction_length,
             context_length=self.context_length,
@@ -207,7 +202,7 @@ class NbeatsXEstimator(PyTorchEstimator):
         trained_network: nn.Module,
         device: torch.device,
     ) -> Predictor:
-        prediction_network = NBEATSPredictionNetwork(
+        prediction_network = NbeatsXPredictionNetwork(
             prediction_length=self.prediction_length,
             context_length=self.context_length,
             num_stacks=self.num_stacks,
