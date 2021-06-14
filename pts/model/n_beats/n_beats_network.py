@@ -43,7 +43,7 @@ class NBEATSBlock(nn.Module):
         self.forecast_length = forecast_length
         self.share_thetas = share_thetas
         self.num_exogenous_time_features = num_exogenous_time_features
-        self.input_dim = backcast_length * (1 + num_exogenous_time_features)
+        self.input_dim = backcast_length +  num_exogenous_time_features * (backcast_length + forecast_length)
 
         fc_stack = [nn.Linear(self.input_dim, units), nn.ReLU()]
         for _ in range(num_block_layers - 1):

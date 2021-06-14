@@ -7,7 +7,7 @@ import torch.nn.functional as F
 
 from gluonts.time_feature import get_seasonality
 
-from pts.model.n_beats.n_beats_network import NBEATSGenericBlock
+from pts.model.n_beats.n_beats_network import NBEATSBlock
 
 VALID_N_BEATS_STACK_TYPES = "G", "S", "T"
 VALID_LOSS_FUNCTIONS = "sMAPE", "MASE", "MAPE"
@@ -84,15 +84,16 @@ class NbeatsXNetwork(nn.Module):
                 self.net_blocks.append(net_block)
 
     @staticmethod
-    def add_exogenous_variables(past_target, past_time_feat):
-        return torch.cat([past_target, past_time_feat.flatten(start_dim=1)], dim=1)
+    def add_exogenous_variables(past_target, past_time_feat, future_time_feat):
+        return torch.cat([past_target, past_time_feat.flatten(start_dim=1), future_time_feat.flatten(start_dim=1)], dim=1)
 
     def forward(
             self,
             past_time_feat: torch.Tensor,
-            past_target: torch.Tensor
+            past_target: torch.Tensor,
+            future_time_feat: torch.Tensor,
     ):
-        input_data = self.add_exogenous_variables(past_target, past_time_feat)
+        input_data = self.add_exogenous_variables(past_target, past_time_feat, future_time_feat)
         if len(self.net_blocks) == 1:
             _, forecast = self.net_blocks[0](input_data)
             return forecast
@@ -100,10 +101,10 @@ class NbeatsXNetwork(nn.Module):
             backcast, forecast = self.net_blocks[0](input_data)
             backcast = past_target - backcast
             for i in range(1, len(self.net_blocks) - 1):
-                b, f = self.net_blocks[i](self.add_exogenous_variables(backcast, past_time_feat))
+                b, f = self.net_blocks[i](self.add_exogenous_variables(backcast, past_time_feat, future_time_feat))
                 backcast = backcast - b
                 forecast = forecast + f
-            _, last_forecast = self.net_blocks[-1](self.add_exogenous_variables(backcast, past_time_feat))
+            _, last_forecast = self.net_blocks[-1](self.add_exogenous_variables(backcast, past_time_feat, future_time_feat))
             return forecast + last_forecast
 
     def smape_loss(
@@ -173,11 +174,13 @@ class NbeatsXTrainingNetwork(NbeatsXNetwork):
             self,
             past_time_feat: torch.Tensor,
             past_target: torch.Tensor,
-            future_target: torch.Tensor
+            future_target: torch.Tensor,
+            future_time_feat: torch.Tensor,
     ) -> torch.Tensor:
         forecast = super().forward(
             past_time_feat=past_time_feat,
             past_target=past_target,
+            future_time_feat=future_time_feat,
         )
 
         if self.loss_function == "sMAPE":
@@ -204,11 +207,13 @@ class NbeatsXPredictionNetwork(NbeatsXNetwork):
             self,
             past_time_feat: torch.Tensor,
             past_target: torch.Tensor,
+            future_time_feat: torch.Tensor,
             future_target: torch.Tensor = None
     ) -> torch.Tensor:
         forecasts = super().forward(
             past_time_feat=past_time_feat,
             past_target=past_target,
+            future_time_feat=future_time_feat,
         )
 
         return forecasts.unsqueeze(1)
