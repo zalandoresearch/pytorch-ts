@@ -28,7 +28,7 @@ class NBEATSBlock(nn.Module):
         backcast_length=10,
         forecast_length=5,
         share_thetas=False,
-        num_exogenous_time_features=0,
+        num_feat_dynamic_real=0,
     ):
         super(NBEATSBlock, self).__init__()
         self.units = units
@@ -36,8 +36,8 @@ class NBEATSBlock(nn.Module):
         self.backcast_length = backcast_length
         self.forecast_length = forecast_length
         self.share_thetas = share_thetas
-        self.num_exogenous_time_features = num_exogenous_time_features
-        self.input_dim = backcast_length +  num_exogenous_time_features * (backcast_length + forecast_length)
+        self.num_feat_dynamic_real = num_feat_dynamic_real
+        self.input_dim = backcast_length + num_feat_dynamic_real * (backcast_length + forecast_length)
 
         fc_stack = [nn.Linear(self.input_dim, units), nn.ReLU()]
         for _ in range(num_block_layers - 1):

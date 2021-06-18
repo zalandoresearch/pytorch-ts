@@ -31,23 +31,30 @@ class ExogenousNoise(rcp.Lifted):
         self.scale = SCALE
 
     def __call__(self, x, length, *args, **kwargs):
-        return np.random.normal(loc=self.mean, scale=self.scale, size=length) + 0.
+        return np.random.normal(loc=self.mean, scale=self.scale, size=length)
 
 
 class NoisyTarget(rcp.Lifted):
     def __call__(self, x, length, *args, **kwargs):
-        return x
+        return sum(x)
+
+
+@pytest.fixture(params=[2])
+def num_feat_dynamic_real(request):
+    return request.param
 
 
 @pytest.fixture
-def dataset():
+def dataset(num_feat_dynamic_real):
     list_for_dataset = []
     for _ in range(NUMBER_OF_TIME_SERIES):
-        exogenous = ExogenousNoise()(x=None, length=TIME_SERIE_LENGTH)
+        exogenous = []
+        for i in range(num_feat_dynamic_real):
+            exogenous.append(ExogenousNoise()(x=None, length=TIME_SERIE_LENGTH))
         target = NoisyTarget()(x=exogenous, length=TIME_SERIE_LENGTH)
 
         list_for_dataset.append({
-            "feat_dynamic_real": [exogenous],
+            "feat_dynamic_real": exogenous,
             "target": target,
             "start": "2019-01-07 00:00"}
         )
@@ -56,7 +63,7 @@ def dataset():
 
 
 @pytest.fixture
-def estimator():
+def estimator(num_feat_dynamic_real):
     return NbeatsXEstimator(
         freq=META_DATA.freq,
         prediction_length=META_DATA.prediction_length,
@@ -73,7 +80,8 @@ def estimator():
         stack_types=["G"],
         widths=[512],
         sharing=[False],
-        expansion_coefficient_lengths=[32]
+        expansion_coefficient_lengths=[32],
+        num_feat_dynamic_real=num_feat_dynamic_real,
     )
 
 
@@ -92,7 +100,7 @@ def train_and_evaluate(estimator, dataset):
     return agg_metrics, item_metrics
 
 
-def test_nbeats_convergence(estimator, dataset):
+def test_nbeats_convergence(estimator, dataset, num_feat_dynamic_real):
     agg_metrics, item_metrics = train_and_evaluate(estimator, dataset)
     print(agg_metrics["MSE"])
-    assert agg_metrics["MSE"] < SCALE  # After one epoch, should be at least below 100% error...
+    assert agg_metrics["MSE"] < num_feat_dynamic_real * SCALE  # Sum of normal distributions

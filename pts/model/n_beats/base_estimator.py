@@ -43,6 +43,7 @@ class BaseNBEATSEstimator(PyTorchEstimator):
         sharing: Optional[List[bool]] = None,
         stack_types: Optional[List[str]] = None,
         loss_function: Optional[str] = "MAPE",
+        num_feat_dynamic_real: Optional[int] = 0,
         **kwargs,
     ) -> None:
         super().__init__(trainer=trainer, **kwargs)
@@ -103,6 +104,8 @@ class BaseNBEATSEstimator(PyTorchEstimator):
             num_instances=1.0, min_future=prediction_length
         )
         self.validation_sampler = ValidationSplitSampler(min_future=prediction_length)
+
+        self.num_feat_dynamic_real = num_feat_dynamic_real
 
     def _validate_nbeats_argument(
         self,
@@ -168,6 +171,7 @@ class BaseNBEATSEstimator(PyTorchEstimator):
             stack_types=self.stack_types,
             loss_function=self.loss_function,
             freq=self.freq,
+            num_feat_dynamic_real=self.num_feat_dynamic_real,
         ).to(device)
 
     def create_predictor(
@@ -186,6 +190,7 @@ class BaseNBEATSEstimator(PyTorchEstimator):
             expansion_coefficient_lengths=self.expansion_coefficient_lengths,
             sharing=self.sharing,
             stack_types=self.stack_types,
+            num_feat_dynamic_real=self.num_feat_dynamic_real,
         ).to(device)
 
         copy_parameters(trained_network, prediction_network)

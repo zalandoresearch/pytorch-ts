@@ -21,6 +21,7 @@ class NbeatsXGenericBlock(NBEATSBlock):
         num_block_layers=4,
         backcast_length=10,
         forecast_length=5,
+        num_feat_dynamic_real=0,
     ):
         super(NbeatsXGenericBlock, self).__init__(
             units=units,
@@ -28,8 +29,9 @@ class NbeatsXGenericBlock(NBEATSBlock):
             num_block_layers=num_block_layers,
             backcast_length=backcast_length,
             forecast_length=forecast_length,
-            num_exogenous_time_features=1,  # TODO: clean this hack
+            num_feat_dynamic_real=num_feat_dynamic_real,
         )
+        self.num_feat_dynamic_real = num_feat_dynamic_real
 
         self.backcast_fc = nn.Linear(thetas_dim, backcast_length)
         self.forecast_fc = nn.Linear(thetas_dim, forecast_length)
@@ -55,6 +57,7 @@ class NbeatsXNetwork(BaseNbeatsNetwork):
         expansion_coefficient_lengths: List[int],
         sharing: List[bool],
         stack_types: List[str],
+        num_feat_dynamic_real: int,
         **kwargs,
     ) -> None:
         super(NbeatsXNetwork, self).__init__(
@@ -70,6 +73,8 @@ class NbeatsXNetwork(BaseNbeatsNetwork):
             **kwargs
         )
 
+        self.num_feat_dynamic_real = num_feat_dynamic_real
+
         self.net_blocks = nn.ModuleList()
         for stack_id in range(num_stacks):
             for block_id in range(num_blocks[stack_id]):
@@ -80,6 +85,7 @@ class NbeatsXNetwork(BaseNbeatsNetwork):
                         num_block_layers=self.num_block_layers[stack_id],
                         backcast_length=context_length,
                         forecast_length=prediction_length,
+                        num_feat_dynamic_real=num_feat_dynamic_real,
                     )
                 else:
                     raise NotImplementedError
