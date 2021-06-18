@@ -7,7 +7,7 @@ import torch.nn.functional as F
 
 from gluonts.time_feature import get_seasonality
 
-from pts.model.n_beats.n_beats_network import NBEATSBlock
+from pts.model.n_beats.base_network import NBEATSBlock
 
 VALID_N_BEATS_STACK_TYPES = "G", "S", "T"
 VALID_LOSS_FUNCTIONS = "sMAPE", "MASE", "MAPE"
