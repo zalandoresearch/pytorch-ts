@@ -8,9 +8,9 @@ from gluonts.evaluation import make_evaluation_predictions, Evaluator
 from pts.model.n_beats import NBEATSEstimator
 from pts import Trainer
 
-NUM_EPOCHS = 1
+NUM_EPOCHS = 10
 NUM_BATCHES_PER_EPOCH = 16
-NUM_SAMPLES = 1 # It's a pointwise estimate, don't need more...
+NUM_SAMPLES = 10
 BATCH_SIZE = 32
 
 TIME_SERIE_LENGTH = 4 * 12
@@ -20,6 +20,15 @@ NUMBER_OF_TIME_SERIES = NUM_BATCHES_PER_EPOCH * BATCH_SIZE
 META_DATA = MetaData(freq="W", prediction_length=PREDICTION_LENGTH)
 
 
+def generate_dataset(target_recipe):
+    return ListDataset([{
+        "target": target_recipe()(x=None, length=TIME_SERIE_LENGTH),
+        "start": "2019-01-07 00:00"}
+        for _ in range(NUMBER_OF_TIME_SERIES)],
+        freq=META_DATA.freq
+    )
+
+
 class SimpleTarget(rcp.Lifted):
     def __call__(self, x, length, *args, **kwargs):
         trend = np.arange(length)
@@ -27,18 +36,11 @@ class SimpleTarget(rcp.Lifted):
         return 0.2 * trend + 3 * season
 
 
+class ConstantTarget(rcp.Lifted):
+    def __call__(self, x, length, *args, **kwargs):
+        return 30. * np.ones(length)
 
-@pytest.fixture
-def dataset():
-    return ListDataset([{
-        "input": 1.,
-        "target": SimpleTarget()(x=None, length=TIME_SERIE_LENGTH),
-        "start": "2019-01-07 00:00"}
-        for _ in range(NUMBER_OF_TIME_SERIES)],
-        freq=META_DATA.freq
-    )
 
-# TODO: do the same for configurable NBEATS
 @pytest.fixture
 def estimator():
     return NBEATSEstimator(
@@ -75,8 +77,9 @@ def train_and_evaluate(estimator, dataset):
 
     return agg_metrics, item_metrics
 
-
-def test_nbeats_convergence(estimator, dataset):
+@pytest.mark.parametrize("target_recipe", [ConstantTarget, SimpleTarget])
+def test_nbeats_convergence(estimator, target_recipe):
+    dataset = generate_dataset(target_recipe=target_recipe)
     agg_metrics, item_metrics = train_and_evaluate(estimator, dataset)
     print(agg_metrics["NRMSE"])
-    assert agg_metrics["NRMSE"] < 1.  # After one epoch, should be at least below 100% error...
+    assert agg_metrics["NRMSE"] < 1.

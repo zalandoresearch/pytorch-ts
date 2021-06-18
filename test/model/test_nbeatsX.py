@@ -5,13 +5,12 @@ from gluonts.dataset.artificial import recipe as rcp
 from gluonts.dataset.common import ListDataset, MetaData
 from gluonts.evaluation import make_evaluation_predictions, Evaluator
 
-from pts.model.n_beats import NBEATSEstimator
 from pts import Trainer
 from pts.model.n_beats.n_beats_X_estimator import NbeatsXEstimator
 
-NUM_EPOCHS = 1
+NUM_EPOCHS = 10
 NUM_BATCHES_PER_EPOCH = 16
-NUM_SAMPLES = 1 # It's a pointwise estimate, don't need more...
+NUM_SAMPLES = 10
 BATCH_SIZE = 32
 
 TIME_SERIE_LENGTH = 4 * 12
@@ -21,36 +20,41 @@ NUMBER_OF_TIME_SERIES = NUM_BATCHES_PER_EPOCH * BATCH_SIZE
 META_DATA = MetaData(freq="W", prediction_length=PREDICTION_LENGTH)
 
 
-class SimpleDiscount(rcp.Lifted):
+MEAN = 10.
+SCALE = 2.
+
+
+class ExogenousNoise(rcp.Lifted):
+    def __init__(self):
+        super().__init__()
+        self.mean = MEAN
+        self.scale = SCALE
+
     def __call__(self, x, length, *args, **kwargs):
-        return np.random.uniform(0, 0.7, size=length)
+        return np.random.normal(loc=self.mean, scale=self.scale, size=length) + 0.
 
 
-class SimpleTarget(rcp.Lifted):
-
+class NoisyTarget(rcp.Lifted):
     def __call__(self, x, length, *args, **kwargs):
-        trend = np.arange(length)
-        season = np.asarray([np.cos(2 * np.pi * i * 1/4) for i in range(length)])
-        return 0.2 * trend + .3 * season + 0.3 * x
+        return x
 
 
 @pytest.fixture
 def dataset():
     list_for_dataset = []
     for _ in range(NUMBER_OF_TIME_SERIES):
-        discounts = SimpleDiscount()(x=None, length=TIME_SERIE_LENGTH)
-        sales = SimpleTarget()(x=discounts, length=TIME_SERIE_LENGTH)
+        exogenous = ExogenousNoise()(x=None, length=TIME_SERIE_LENGTH)
+        target = NoisyTarget()(x=exogenous, length=TIME_SERIE_LENGTH)
 
         list_for_dataset.append({
-            "feat_dynamic_real": [discounts],
-            "target": sales,
+            "feat_dynamic_real": [exogenous],
+            "target": target,
             "start": "2019-01-07 00:00"}
         )
 
     return ListDataset(list_for_dataset, freq=META_DATA.freq)
 
 
-# TODO: do the same for configurable NBEATS
 @pytest.fixture
 def estimator():
     return NbeatsXEstimator(
@@ -90,5 +94,5 @@ def train_and_evaluate(estimator, dataset):
 
 def test_nbeats_convergence(estimator, dataset):
     agg_metrics, item_metrics = train_and_evaluate(estimator, dataset)
-    print(agg_metrics["NRMSE"])
-    assert agg_metrics["NRMSE"] < 1.  # After one epoch, should be at least below 100% error...
+    print(agg_metrics["MSE"])
+    assert agg_metrics["MSE"] < SCALE  # After one epoch, should be at least below 100% error...
