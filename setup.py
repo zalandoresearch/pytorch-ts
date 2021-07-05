@@ -24,7 +24,7 @@ setup(
         "tqdm",
         "matplotlib",
         "tensorboard",
-        "wandb",
+        "wandb==0.10.32",
     ],
     test_suite="tests",
     tests_require=["flake8", "pytest"],
