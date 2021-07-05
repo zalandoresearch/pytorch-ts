@@ -23,7 +23,7 @@ class Trainer:
         learning_rate: float = 1e-3,
         weight_decay: float = 1e-6,
         maximum_learning_rate: float = 1e-2,
-        wandb_mode: str = "disabled",
+        wandb_mode: str = None,
         clip_gradient: Optional[float] = None,
         device: Optional[Union[torch.device, str]] = None,
         **kwargs,
