@@ -44,7 +44,7 @@ class Trainer:
         train_iter: DataLoader,
         validation_iter: Optional[DataLoader] = None,
     ) -> None:
-        wandb.watch(net, log="all", log_freq=self.num_batches_per_epoch)
+        # wandb.watch(net, log="all", log_freq=self.num_batches_per_epoch)
 
         optimizer = Adam(
             net.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay
