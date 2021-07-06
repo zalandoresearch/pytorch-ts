@@ -16,7 +16,7 @@ setup(
     python_requires=">=3.6",
     install_requires=[
         "torch>=1.8.0",
-        "gluonts>=0.7.0",
+        "gluonts>=0.8.0",
         "holidays",
         "numpy~=1.16",
         "pandas~=1.1",
@@ -24,7 +24,6 @@ setup(
         "tqdm",
         "matplotlib",
         "tensorboard",
-        "wandb",
     ],
     test_suite="tests",
     tests_require=["flake8", "pytest"],

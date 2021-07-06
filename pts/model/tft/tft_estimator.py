@@ -12,7 +12,7 @@ from gluonts.time_feature import (
     time_features_from_frequency_str,
 )
 from gluonts.torch.model.predictor import PyTorchPredictor
-from gluonts.torch.support.util import copy_parameters
+from gluonts.torch.util import copy_parameters
 from gluonts.transform import (
     Transformation,
     Chain,

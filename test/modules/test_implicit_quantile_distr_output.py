@@ -56,7 +56,7 @@ def learn_distribution(
             distr = distr_output.distribution(distr_args)
             loss = -distr.log_prob(sample_label).mean()
             loss.backward()
-            clip_grad_norm_(arg_proj.parameters(), 10.0)
+            #clip_grad_norm_(arg_proj.parameters(), 10.0)
             optimizer.step()
 
             num_batches += 1
@@ -77,7 +77,7 @@ def learn_distribution(
             torch.ones((1, 1, 1)), torch.ones((1, 1)) * 0.1
         )
 
-    return samples.mean(), samples.std(), percentile_10, percentile_90
+    return samples.mean(), samples.std(), percentile_10.squeeze(), percentile_90.squeeze()
 
 
 def test_independent_implicit_quantile() -> None:
@@ -181,7 +181,7 @@ def test_training_with_implicit_quantile_output():
             num_batches_per_epoch=3,
             batch_size=256,
         ),
-        input_size=48,
+        input_size=15,
     )
     deepar_predictor = deepar_estimator.train(dataset.train, num_workers=1)
     forecast_it, ts_it = make_evaluation_predictions(
@@ -224,7 +224,7 @@ def test_instanciation_of_args_proj():
             num_batches_per_epoch=1,
             batch_size=256,
         ),
-        input_size=48,
+        input_size=15,
     )
     assert distr_output.method_calls == 1
     deepar_predictor = deepar_estimator.train(dataset.train, num_workers=1)
@@ -258,7 +258,7 @@ def test_instanciation_of_args_proj():
             num_batches_per_epoch=1,
             batch_size=256,
         ),
-        input_size=48,
+        input_size=15,
     )
     assert distr_output.method_calls == 3
     new_estimator.train(dataset.train, num_workers=1)

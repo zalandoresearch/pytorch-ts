@@ -2,7 +2,6 @@ import time
 from typing import List, Optional, Union
 
 from tqdm.auto import tqdm
-import wandb
 
 import torch
 import torch.nn as nn
@@ -23,7 +22,6 @@ class Trainer:
         learning_rate: float = 1e-3,
         weight_decay: float = 1e-6,
         maximum_learning_rate: float = 1e-2,
-        wandb_mode: str = "disabled",
         clip_gradient: Optional[float] = None,
         device: Optional[Union[torch.device, str]] = None,
         **kwargs,
@@ -36,7 +34,6 @@ class Trainer:
         self.maximum_learning_rate = maximum_learning_rate
         self.clip_gradient = clip_gradient
         self.device = device
-        wandb.init(mode=wandb_mode, **kwargs)
 
     def __call__(
         self,
@@ -44,8 +41,6 @@ class Trainer:
         train_iter: DataLoader,
         validation_iter: Optional[DataLoader] = None,
     ) -> None:
-        wandb.watch(net, log="all", log_freq=self.num_batches_per_epoch)
-
         optimizer = Adam(
             net.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay
         )
@@ -86,8 +81,6 @@ class Trainer:
                         refresh=False,
                     )
 
-                    wandb.log({"loss": loss.item()})
-
                     loss.backward()
                     if self.clip_gradient is not None:
                         nn.utils.clip_grad_norm_(net.parameters(), self.clip_gradient)
@@ -127,7 +120,6 @@ class Trainer:
                         if self.num_batches_per_epoch == batch_no:
                             break
 
-                    wandb.log({"avg_val_loss": avg_epoch_loss_val})
                 it.close()
 
             # mark epoch end time and log time cost of current epoch
