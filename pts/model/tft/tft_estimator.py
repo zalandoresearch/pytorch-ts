@@ -3,6 +3,7 @@ from typing import List, Optional, Dict
 
 import numpy as np
 import torch
+
 from gluonts.core.component import validated
 from gluonts.dataset.field_names import FieldName
 from gluonts.model.forecast_generator import QuantileForecastGenerator
@@ -30,6 +31,7 @@ from gluonts.transform import (
 from pts import Trainer
 from pts.model import PyTorchEstimator
 from pts.model.utils import get_module_forward_input_names
+
 from .tft_network import (
     TemporalFusionTransformerPredictionNetwork,
     TemporalFusionTransformerTrainingNetwork,
