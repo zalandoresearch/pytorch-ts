@@ -158,3 +158,15 @@ We have implemented the following model using this framework:
   url = 	 {http://proceedings.mlr.press/v139/rasul21a.html},
 }
 ```
+
+* [Probabilistic Time Series Forecasting with Implicit Quantile Networks](https://arxiv.org/abs/2107.03743)
+```tex
+@misc{gouttes2021probabilistic,
+      title={{P}robabilistic {T}ime {S}eries {F}orecasting with {I}mplicit {Q}uantile {N}etworks}, 
+      author={Adèle Gouttes and Kashif Rasul and Mateusz Koren and Johannes Stephan and Tofigh Naghibi},
+      year={2021},
+      eprint={2107.03743},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG}
+}
+```
