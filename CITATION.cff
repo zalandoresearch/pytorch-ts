@@ -1,0 +1,9 @@
+cff-version: 1.2.0
+message: If you use this software, please cite it using the following metadata
+title: PyTorchTS
+authors: 
+- family-names: Rasul
+  given-names: Kashif
+license: MIT
+repository-code: https://github.com/zalandoresearch/pytorch-ts
+version: 0.5.1
