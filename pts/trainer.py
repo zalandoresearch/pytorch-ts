@@ -41,6 +41,8 @@ class Trainer:
         train_iter: DataLoader,
         validation_iter: Optional[DataLoader] = None,
     ) -> None:
+
+        self.history_loss = []
         optimizer = Adam(
             net.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay
         )
@@ -80,7 +82,6 @@ class Trainer:
                         },
                         refresh=False,
                     )
-
                     loss.backward()
                     if self.clip_gradient is not None:
                         nn.utils.clip_grad_norm_(net.parameters(), self.clip_gradient)
@@ -91,6 +92,9 @@ class Trainer:
                     if self.num_batches_per_epoch == batch_no:
                         break
                 it.close()
+
+            # Append the average loss for the epoch to the list of loss values
+            self.history_loss.append(avg_epoch_loss)
 
             # validation loop
             if validation_iter is not None:
@@ -124,3 +128,4 @@ class Trainer:
 
             # mark epoch end time and log time cost of current epoch
             toc = time.time()
+
