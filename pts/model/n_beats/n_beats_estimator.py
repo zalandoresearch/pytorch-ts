@@ -30,7 +30,7 @@ from .n_beats_network import (
 )
 
 
-class NBEATSEstimator:
+class NBEATSEstimator(PyTorchEstimator):
     @validated()
     def __init__(
         self,
