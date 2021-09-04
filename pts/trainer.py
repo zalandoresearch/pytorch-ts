@@ -42,7 +42,8 @@ class Trainer:
         validation_iter: Optional[DataLoader] = None,
     ) -> None:
 
-        self.history_loss = []
+        self.training_loss = []
+        self.validation_loss = []
         optimizer = Adam(
             net.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay
         )
@@ -94,7 +95,7 @@ class Trainer:
                 it.close()
 
             # Append the average loss for the epoch to the list of loss values
-            self.history_loss.append(avg_epoch_loss)
+            self.training_loss.append(avg_epoch_loss)
 
             # validation loop
             if validation_iter is not None:
@@ -125,6 +126,7 @@ class Trainer:
                             break
 
                 it.close()
+                self.validation_loss.append(avg_epoch_loss_val)
 
             # mark epoch end time and log time cost of current epoch
             toc = time.time()
