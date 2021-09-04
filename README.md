@@ -5,7 +5,7 @@ PyTorchTS is a [PyTorch](https://github.com/pytorch/pytorch) Probabilistic Time 
 ## Installation
 
 ```
-$ pip3 install pytorchts
+$ pip3 install -e git+https://github.com/khuyentran1401/pytorch-ts.git#egg=pytorchts
 ```
 
 ## Quick start
