@@ -1,12 +1,21 @@
 from typing import List, Optional
 
+import numpy as np
+
 from gluonts.core.component import validated
 from gluonts.dataset.field_names import FieldName
+from gluonts.time_feature import (
+    TimeFeature,
+    time_features_from_frequency_str,
+)
 from gluonts.transform import (
     AddObservedValuesIndicator,
     Transformation,
     Chain,
     RemoveFields,
+    AsNumpyArray,
+    AddTimeFeatures,
+    AddAgeFeature,
     VstackFeatures,
 )
 
@@ -45,6 +54,8 @@ class NbeatsXEstimator(BaseNBEATSEstimator):
         stack_types: Optional[List[str]] = None,
         loss_function: Optional[str] = "MAPE",
         num_feat_dynamic_real: Optional[int] = 0,
+        use_feat_dynamic_real: bool = False,
+        time_features: Optional[List[TimeFeature]] = None,
         **kwargs,
     ) -> None:
         super().__init__(
@@ -63,27 +74,58 @@ class NbeatsXEstimator(BaseNBEATSEstimator):
             num_feat_dynamic_real=num_feat_dynamic_real,
             **kwargs,
         )
+        self.use_feat_dynamic_real = use_feat_dynamic_real
+        self.time_features = (
+            time_features
+            if time_features is not None
+            else time_features_from_frequency_str(self.freq)
+        )
 
     def create_transformation(self) -> Transformation:
-        # TODO: add more variable types
-        # TODO: Add observed value indicator for other fields? Check how it's usually done
+        remove_field_names = [
+            FieldName.FEAT_STATIC_REAL,
+            FieldName.FEAT_DYNAMIC_CAT,
+            FieldName.FEAT_STATIC_CAT,
+        ]
+        if not self.use_feat_dynamic_real:
+            remove_field_names.append(FieldName.FEAT_DYNAMIC_REAL)
+
         return Chain(
-            [
-                RemoveFields(
-                    field_names=[
-                        FieldName.FEAT_STATIC_REAL,
-                        # FieldName.FEAT_DYNAMIC_REAL,
-                        FieldName.FEAT_DYNAMIC_CAT,
-                    ]
+            [RemoveFields(field_names=remove_field_names)]
+            + [
+                AsNumpyArray(
+                    field=FieldName.TARGET,
+                    # in the following line, we add 1 for the time dimension
+                    expected_ndim=1,
+                    dtype=self.dtype,
                 ),
                 AddObservedValuesIndicator(
                     target_field=FieldName.TARGET,
                     output_field=FieldName.OBSERVED_VALUES,
                     dtype=self.dtype,
                 ),
+                AddTimeFeatures(
+                    start_field=FieldName.START,
+                    target_field=FieldName.TARGET,
+                    output_field=FieldName.FEAT_TIME,
+                    time_features=self.time_features,
+                    pred_length=self.prediction_length,
+                ),
+                AddAgeFeature(
+                    target_field=FieldName.TARGET,
+                    output_field=FieldName.FEAT_AGE,
+                    pred_length=self.prediction_length,
+                    log_scale=True,
+                    dtype=self.dtype,
+                ),
                 VstackFeatures(
                     output_field=FieldName.FEAT_TIME,
-                    input_fields=[FieldName.FEAT_DYNAMIC_REAL],
+                    input_fields=[FieldName.FEAT_TIME, FieldName.FEAT_AGE]
+                    + (
+                        [FieldName.FEAT_DYNAMIC_REAL]
+                        if self.use_feat_dynamic_real
+                        else []
+                    ),
                 ),
             ]
         )
