@@ -20,7 +20,7 @@ class NBEATSEstimator(BaseNBEATSEstimator):
     training_network_cls = NBEATSTrainingNetwork
     prediction_network_cls = NBEATSPredictionNetwork
     valid_n_beats_stack_types = VALID_N_BEATS_STACK_TYPES
-    time_serie_fields = [FieldName.OBSERVED_VALUES]
+    time_series_fields = [FieldName.OBSERVED_VALUES]
 
     def create_transformation(self) -> Transformation:
         return Chain(

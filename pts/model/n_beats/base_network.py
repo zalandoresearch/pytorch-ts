@@ -37,7 +37,9 @@ class NBEATSBlock(nn.Module):
         self.forecast_length = forecast_length
         self.share_thetas = share_thetas
         self.num_feat_dynamic_real = num_feat_dynamic_real
-        self.input_dim = backcast_length + num_feat_dynamic_real * (backcast_length + forecast_length)
+        self.input_dim = backcast_length + num_feat_dynamic_real * (
+            backcast_length + forecast_length
+        )
 
         fc_stack = [nn.Linear(self.input_dim, units), nn.ReLU()]
         for _ in range(num_block_layers - 1):
@@ -56,7 +58,6 @@ class NBEATSBlock(nn.Module):
 
 
 class BaseNbeatsNetwork(nn.Module):
-
     def __init__(
         self,
         prediction_length: int,

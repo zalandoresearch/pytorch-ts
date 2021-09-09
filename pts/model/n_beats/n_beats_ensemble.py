@@ -262,12 +262,29 @@ class NBEATSEnsembleEstimator(PyTorchEstimator):
         return estimators
 
     def train(
-        self, training_data: Dataset, validation_data: Optional[Dataset] = None
+        self,
+        training_data: Dataset,
+        validation_data: Optional[Dataset] = None,
+        num_workers: int = 0,
+        prefetch_factor: int = 2,
+        shuffle_buffer_length: Optional[int] = None,
+        cache_data: bool = False,
+        **kwargs,
     ) -> NBEATSEnsemblePredictor:
         predictors = []
 
         for index, estimator in enumerate(self.estimators):
             logging.info(f"Training estimator {index + 1}/{len(self.estimators)}.")
-            predictors.append(estimator.train(training_data))
+            predictors.append(
+                estimator.train(
+                    training_data,
+                    validation_data=validation_data,
+                    num_workers=num_workers,
+                    prefetch_factor=prefetch_factor,
+                    shuffle_buffer_length=shuffle_buffer_length,
+                    cache_data=cache_data,
+                    **kwargs,
+                )
+            )
 
         return NBEATSEnsemblePredictor(self.prediction_length, self.freq, predictors)

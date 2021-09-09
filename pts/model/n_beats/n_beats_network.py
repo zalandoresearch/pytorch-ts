@@ -162,7 +162,7 @@ class NBEATSNetwork(BaseNbeatsNetwork):
             expansion_coefficient_lengths=expansion_coefficient_lengths,
             sharing=sharing,
             stack_types=stack_types,
-            **kwargs
+            **kwargs,
         )
 
         self.net_blocks = nn.ModuleList()

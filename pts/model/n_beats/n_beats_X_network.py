@@ -70,7 +70,7 @@ class NbeatsXNetwork(BaseNbeatsNetwork):
             expansion_coefficient_lengths=expansion_coefficient_lengths,
             sharing=sharing,
             stack_types=stack_types,
-            **kwargs
+            **kwargs,
         )
 
         self.num_feat_dynamic_real = num_feat_dynamic_real
@@ -93,15 +93,24 @@ class NbeatsXNetwork(BaseNbeatsNetwork):
 
     @staticmethod
     def add_exogenous_variables(past_target, past_time_feat, future_time_feat):
-        return torch.cat([past_target, past_time_feat.flatten(start_dim=1), future_time_feat.flatten(start_dim=1)], dim=1)
+        return torch.cat(
+            [
+                past_target,
+                past_time_feat.flatten(start_dim=1),
+                future_time_feat.flatten(start_dim=1),
+            ],
+            dim=1,
+        )
 
     def forward(
-            self,
-            past_time_feat: torch.Tensor,
-            past_target: torch.Tensor,
-            future_time_feat: torch.Tensor,
+        self,
+        past_time_feat: torch.Tensor,
+        past_target: torch.Tensor,
+        future_time_feat: torch.Tensor,
     ):
-        input_data = self.add_exogenous_variables(past_target, past_time_feat, future_time_feat)
+        input_data = self.add_exogenous_variables(
+            past_target, past_time_feat, future_time_feat
+        )
         if len(self.net_blocks) == 1:
             _, forecast = self.net_blocks[0](input_data)
             return forecast
@@ -109,12 +118,17 @@ class NbeatsXNetwork(BaseNbeatsNetwork):
             backcast, forecast = self.net_blocks[0](input_data)
             backcast = past_target - backcast
             for i in range(1, len(self.net_blocks) - 1):
-                b, f = self.net_blocks[i](self.add_exogenous_variables(backcast, past_time_feat, future_time_feat))
+                b, f = self.net_blocks[i](
+                    self.add_exogenous_variables(
+                        backcast, past_time_feat, future_time_feat
+                    )
+                )
                 backcast = backcast - b
                 forecast = forecast + f
-            _, last_forecast = self.net_blocks[-1](self.add_exogenous_variables(backcast, past_time_feat, future_time_feat))
+            _, last_forecast = self.net_blocks[-1](
+                self.add_exogenous_variables(backcast, past_time_feat, future_time_feat)
+            )
             return forecast + last_forecast
-
 
 
 class NbeatsXTrainingNetwork(NbeatsXNetwork):
@@ -132,11 +146,11 @@ class NbeatsXTrainingNetwork(NbeatsXNetwork):
             )
 
     def forward(
-            self,
-            past_time_feat: torch.Tensor,
-            past_target: torch.Tensor,
-            future_target: torch.Tensor,
-            future_time_feat: torch.Tensor,
+        self,
+        past_time_feat: torch.Tensor,
+        past_target: torch.Tensor,
+        future_target: torch.Tensor,
+        future_time_feat: torch.Tensor,
     ) -> torch.Tensor:
         forecast = super().forward(
             past_time_feat=past_time_feat,
@@ -165,11 +179,11 @@ class NbeatsXPredictionNetwork(NbeatsXNetwork):
         super(NbeatsXPredictionNetwork, self).__init__(*args, **kwargs)
 
     def forward(
-            self,
-            past_time_feat: torch.Tensor,
-            past_target: torch.Tensor,
-            future_time_feat: torch.Tensor,
-            future_target: torch.Tensor = None
+        self,
+        past_time_feat: torch.Tensor,
+        past_target: torch.Tensor,
+        future_time_feat: torch.Tensor,
+        future_target: torch.Tensor = None,
     ) -> torch.Tensor:
         forecasts = super().forward(
             past_time_feat=past_time_feat,
