@@ -160,8 +160,8 @@ class DeepARNetwork(nn.Module):
         # scale is computed on the context length last units of the past target
         # scale shape is (batch_size, 1, *target_shape)
         _, scale = self.scaler(
-            past_target[:, self.context_length :, ...],
-            past_observed_values[:, self.context_length :, ...],
+            past_target[:, -self.context_length :, ...],
+            past_observed_values[:, -self.context_length :, ...],
         )
 
         # (batch_size, num_features)

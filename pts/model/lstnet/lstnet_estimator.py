@@ -6,7 +6,7 @@ import torch.nn as nn
 
 from gluonts.core.component import validated
 from gluonts.dataset.field_names import FieldName
-from gluonts.torch.support.util import copy_parameters
+from gluonts.torch.util import copy_parameters
 from gluonts.torch.model.predictor import PyTorchPredictor
 from gluonts.model.predictor import Predictor
 from gluonts.transform import (
@@ -32,7 +32,7 @@ class LSTNetEstimator(PyTorchEstimator):
     def __init__(
         self,
         freq: str,
-        prediction_length: int,
+        prediction_length: Optional[int],
         context_length: int,
         num_series: int,
         ar_window: int = 24,

@@ -120,7 +120,7 @@ To cite this repository:
     author = {Kashif Rasul},
     title = {{P}yTorch{TS}},
     url = {https://github.com/zalandoresearch/pytorch-ts},
-    version = {0.3.x},
+    version = {0.5.x},
     year = {2021},
 }
 ```
@@ -141,13 +141,32 @@ We have implemented the following model using this framework:
 ```
 
 * [Autoregressive Denoising Diffusion Models for Multivariate Probabilistic Time Series Forecasting
-](https://arxiv.org/abs/2101.12072)
+](http://proceedings.mlr.press/v139/rasul21a.html)
 ```tex
-@article{rasul2021timegrad,
-    Author = {Kashif Rasul and Calvin Seward and  Ingmar Schuster and Roland Vollgraf}
-    Title = {{A}utoregressive {D}enoising {D}iffusion {M}odels for {M}ultivariate {P}robabilistic {T}ime {S}eries {F}orecasting},
-    Year = {2021},
-    journal={International Conference on Machine Learning},
-    url = {https://arxiv.org/abs/2101.12072},
+@InProceedings{pmlr-v139-rasul21a,
+  title = 	 {{A}utoregressive {D}enoising {D}iffusion {M}odels for {M}ultivariate {P}robabilistic {T}ime {S}eries {F}orecasting},
+  author =       {Rasul, Kashif and Seward, Calvin and Schuster, Ingmar and Vollgraf, Roland},
+  booktitle = 	 {Proceedings of the 38th International Conference on Machine Learning},
+  pages = 	 {8857--8868},
+  year = 	 {2021},
+  editor = 	 {Meila, Marina and Zhang, Tong},
+  volume = 	 {139},
+  series = 	 {Proceedings of Machine Learning Research},
+  month = 	 {18--24 Jul},
+  publisher =    {PMLR},
+  pdf = 	 {http://proceedings.mlr.press/v139/rasul21a/rasul21a.pdf},
+  url = 	 {http://proceedings.mlr.press/v139/rasul21a.html},
+}
+```
+
+* [Probabilistic Time Series Forecasting with Implicit Quantile Networks](https://arxiv.org/abs/2107.03743)
+```tex
+@misc{gouttes2021probabilistic,
+      title={{P}robabilistic {T}ime {S}eries {F}orecasting with {I}mplicit {Q}uantile {N}etworks}, 
+      author={Adèle Gouttes and Kashif Rasul and Mateusz Koren and Johannes Stephan and Tofigh Naghibi},
+      year={2021},
+      eprint={2107.03743},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG}
 }
 ```

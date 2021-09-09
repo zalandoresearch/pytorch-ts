@@ -3,6 +3,7 @@ from typing import List, Optional, Dict
 
 import numpy as np
 import torch
+
 from gluonts.core.component import validated
 from gluonts.dataset.field_names import FieldName
 from gluonts.model.forecast_generator import QuantileForecastGenerator
@@ -12,7 +13,7 @@ from gluonts.time_feature import (
     time_features_from_frequency_str,
 )
 from gluonts.torch.model.predictor import PyTorchPredictor
-from gluonts.torch.support.util import copy_parameters
+from gluonts.torch.util import copy_parameters
 from gluonts.transform import (
     Transformation,
     Chain,
@@ -30,6 +31,7 @@ from gluonts.transform import (
 from pts import Trainer
 from pts.model import PyTorchEstimator
 from pts.model.utils import get_module_forward_input_names
+
 from .tft_network import (
     TemporalFusionTransformerPredictionNetwork,
     TemporalFusionTransformerTrainingNetwork,

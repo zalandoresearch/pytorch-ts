@@ -8,7 +8,7 @@ from gluonts.core.component import validated
 from gluonts.dataset.field_names import FieldName
 from gluonts.time_feature import TimeFeature
 from gluonts.torch.modules.distribution_output import DistributionOutput
-from gluonts.torch.support.util import copy_parameters
+from gluonts.torch.util import copy_parameters
 from gluonts.torch.model.predictor import PyTorchPredictor
 from gluonts.model.predictor import Predictor
 from gluonts.transform import (

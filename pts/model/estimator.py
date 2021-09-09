@@ -8,11 +8,13 @@ import torch.nn as nn
 from torch.utils import data
 from torch.utils.data import DataLoader
 
+from gluonts.env import env
 from gluonts.core.component import validated
 from gluonts.dataset.common import Dataset
 from gluonts.model.estimator import Estimator
 from gluonts.torch.model.predictor import PyTorchPredictor
 from gluonts.transform import SelectFields, Transformation
+from gluonts.support.util import maybe_len
 
 from pts import Trainer
 from pts.model import get_module_forward_input_names
@@ -101,7 +103,9 @@ class PyTorchEstimator(Estimator):
         trained_net = self.create_training_network(self.trainer.device)
 
         input_names = get_module_forward_input_names(trained_net)
-        training_instance_splitter = self.create_instance_splitter("training")
+
+        with env._let(max_idle_transforms=maybe_len(training_data) or 0):
+            training_instance_splitter = self.create_instance_splitter("training")
         training_iter_dataset = TransformedIterableDataset(
             dataset=training_data,
             transform=transformation
@@ -124,7 +128,8 @@ class PyTorchEstimator(Estimator):
 
         validation_data_loader = None
         if validation_data is not None:
-            validation_instance_splitter = self.create_instance_splitter("validation")
+            with env._let(max_idle_transforms=maybe_len(validation_data) or 0):
+                validation_instance_splitter = self.create_instance_splitter("validation")
             validation_iter_dataset = TransformedIterableDataset(
                 dataset=validation_data,
                 transform=transformation

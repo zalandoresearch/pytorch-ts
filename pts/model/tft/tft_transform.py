@@ -25,6 +25,7 @@ from gluonts.transform import (
     shift_timestamp,
     target_transformation_length,
 )
+from gluonts.transform.sampler import InstanceSampler
 
 
 class BroadcastTo(MapTransformation):
@@ -54,7 +55,7 @@ class TFTInstanceSplitter(InstanceSplitter):
     @validated()
     def __init__(
         self,
-        instance_sampler,
+        instance_sampler: InstanceSampler,
         past_length: int,
         future_length: int,
         target_field: str = FieldName.TARGET,
@@ -64,29 +65,30 @@ class TFTInstanceSplitter(InstanceSplitter):
         observed_value_field: str = FieldName.OBSERVED_VALUES,
         lead_time: int = 0,
         output_NTC: bool = True,
-        time_series_fields: Optional[List[str]] = None,
-        past_time_series_fields: Optional[List[str]] = None,
+        time_series_fields: List[str] = [],
+        past_time_series_fields: List[str] = [],
         dummy_value: float = 0.0,
     ) -> None:
+
+        super().__init__(
+            target_field=target_field,
+            is_pad_field=is_pad_field,
+            start_field=start_field,
+            forecast_start_field=forecast_start_field,
+            instance_sampler=instance_sampler,
+            past_length=past_length,
+            future_length=future_length,
+            lead_time=lead_time,
+            output_NTC=output_NTC,
+            time_series_fields=time_series_fields,
+            dummy_value=dummy_value,
+        )
 
         assert past_length > 0, "The value of `past_length` should be > 0"
         assert future_length > 0, "The value of `future_length` should be > 0"
 
-        self.instance_sampler = instance_sampler
-        self.past_length = past_length
-        self.future_length = future_length
-        self.lead_time = lead_time
-        self.output_NTC = output_NTC
-        self.dummy_value = dummy_value
-
-        self.target_field = target_field
-        self.is_pad_field = is_pad_field
-        self.start_field = start_field
-        self.forecast_start_field = forecast_start_field
         self.observed_value_field = observed_value_field
-
-        self.ts_fields = time_series_fields or []
-        self.past_ts_fields = past_time_series_fields or []
+        self.past_ts_fields = past_time_series_fields
 
     def flatmap_transform(self, data: DataEntry, is_train: bool) -> Iterator[DataEntry]:
         pl = self.future_length
