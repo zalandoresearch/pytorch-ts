@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 import numpy as np
 import torch
@@ -36,7 +36,6 @@ class NBEATSBlock(nn.Module):
         self.backcast_length = backcast_length
         self.forecast_length = forecast_length
         self.share_thetas = share_thetas
-        self.num_feat_dynamic_real = num_feat_dynamic_real
         self.input_dim = backcast_length + num_feat_dynamic_real * (
             backcast_length + forecast_length
         )
@@ -87,25 +86,37 @@ class BaseNbeatsNetwork(nn.Module):
         raise NotImplementedError
 
     def smape_loss(
-        self, forecast: torch.Tensor, future_target: torch.Tensor
+        self, forecast: torch.Tensor, future_target: torch.Tensor,
+        future_observed_values: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
         denominator = (torch.abs(future_target) + torch.abs(forecast)).detach()
         flag = denominator == 0
 
+        if future_observed_values is not None:
+            absolute_error = torch.abs(future_target - forecast) * future_observed_values
+        else:
+            absolute_error = torch.abs(future_target - forecast)
+
         return (200 / self.prediction_length) * torch.mean(
-            (torch.abs(future_target - forecast) * torch.logical_not(flag))
+            (absolute_error * torch.logical_not(flag))
             / (denominator + flag),
             dim=1,
         )
 
     def mape_loss(
-        self, forecast: torch.Tensor, future_target: torch.Tensor
+        self, forecast: torch.Tensor, future_target: torch.Tensor, 
+        future_observed_values: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
         denominator = torch.abs(future_target)
         flag = denominator == 0
 
+        if future_observed_values is not None:
+            absolute_error = torch.abs(future_target - forecast) * future_observed_values
+        else:
+            absolute_error = torch.abs(future_target - forecast)
+
         return (100 / self.prediction_length) * torch.mean(
-            (torch.abs(future_target - forecast) * torch.logical_not(flag))
+            (absolute_error * torch.logical_not(flag))
             / (denominator + flag),
             dim=1,
         )
@@ -116,6 +127,7 @@ class BaseNbeatsNetwork(nn.Module):
         future_target: torch.Tensor,
         past_target: torch.Tensor,
         periodicity: int,
+        future_observed_values: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
         factor = 1 / (self.context_length + self.prediction_length - periodicity)
 
@@ -129,7 +141,12 @@ class BaseNbeatsNetwork(nn.Module):
         )
         flag = seasonal_error == 0
 
+        if future_observed_values is not None:
+            absolute_error = torch.abs(future_target - forecast) * future_observed_values
+        else:
+            absolute_error = torch.abs(future_target - forecast)
+
         return (
-            torch.mean(torch.abs(future_target - forecast), dim=1)
+            torch.mean(absolute_error, dim=1)
             * torch.logical_not(flag)
         ) / (seasonal_error + flag)

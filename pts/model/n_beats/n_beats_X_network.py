@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 import numpy as np
 import torch
@@ -107,6 +107,8 @@ class NbeatsXNetwork(BaseNbeatsNetwork):
         past_time_feat: torch.Tensor,
         past_target: torch.Tensor,
         future_time_feat: torch.Tensor,
+        past_observed_values: torch.Tensor,
+        future_observed_values: Optional[torch.Tensor] = None,
     ):
         input_data = self.add_exogenous_variables(
             past_target, past_time_feat, future_time_feat
@@ -116,14 +118,14 @@ class NbeatsXNetwork(BaseNbeatsNetwork):
             return forecast
         else:
             backcast, forecast = self.net_blocks[0](input_data)
-            backcast = past_target - backcast
+            backcast = (past_target - backcast) * past_observed_values
             for i in range(1, len(self.net_blocks) - 1):
                 b, f = self.net_blocks[i](
                     self.add_exogenous_variables(
                         backcast, past_time_feat, future_time_feat
                     )
                 )
-                backcast = backcast - b
+                backcast = (backcast - b) * past_observed_values
                 forecast = forecast + f
             _, last_forecast = self.net_blocks[-1](
                 self.add_exogenous_variables(backcast, past_time_feat, future_time_feat)
@@ -151,20 +153,28 @@ class NbeatsXTrainingNetwork(NbeatsXNetwork):
         past_target: torch.Tensor,
         future_target: torch.Tensor,
         future_time_feat: torch.Tensor,
+        past_observed_values: torch.Tensor,
+        future_observed_values: Optional[torch.Tensor],
     ) -> torch.Tensor:
         forecast = super().forward(
             past_time_feat=past_time_feat,
             past_target=past_target,
             future_time_feat=future_time_feat,
+            past_observed_values=past_observed_values,
+            future_observed_values=future_observed_values,
         )
 
         if self.loss_function == "sMAPE":
-            loss = self.smape_loss(forecast, future_target)
+            loss = self.smape_loss(forecast, future_target, future_observed_values)
         elif self.loss_function == "MAPE":
-            loss = self.mape_loss(forecast, future_target)
+            loss = self.mape_loss(forecast, future_target, future_observed_values)
         elif self.loss_function == "MASE":
             loss = self.mase_loss(
-                forecast, future_target, past_target, self.periodicity
+                forecast,
+                future_target,
+                past_target,
+                self.periodicity,
+                future_observed_values,
             )
         else:
             raise ValueError(
@@ -183,12 +193,16 @@ class NbeatsXPredictionNetwork(NbeatsXNetwork):
         past_time_feat: torch.Tensor,
         past_target: torch.Tensor,
         future_time_feat: torch.Tensor,
-        future_target: torch.Tensor = None,
+        past_observed_values: torch.Tensor,
+        future_observed_values: Optional[torch.Tensor] = None,
+        future_target: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
         forecasts = super().forward(
             past_time_feat=past_time_feat,
             past_target=past_target,
             future_time_feat=future_time_feat,
+            past_observed_values=past_observed_values,
+            future_observed_values=future_observed_values,
         )
 
         return forecasts.unsqueeze(1)
