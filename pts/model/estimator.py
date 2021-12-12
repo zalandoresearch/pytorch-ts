@@ -14,7 +14,7 @@ from gluonts.dataset.common import Dataset
 from gluonts.model.estimator import Estimator
 from gluonts.torch.model.predictor import PyTorchPredictor
 from gluonts.transform import SelectFields, Transformation
-from gluonts.support.util import maybe_len
+from gluonts.itertools import maybe_len
 
 from pts import Trainer
 from pts.model import get_module_forward_input_names
