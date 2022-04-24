@@ -120,7 +120,7 @@ To cite this repository:
     author = {Kashif Rasul},
     title = {{P}yTorch{TS}},
     url = {https://github.com/zalandoresearch/pytorch-ts},
-    version = {0.5.x},
+    version = {0.6.x},
     year = {2021},
 }
 ```
