@@ -49,6 +49,7 @@ TRAINING_INPUT_NAMES = PREDICTION_INPUT_NAMES + [
 
 
 class DNRIEstimator(PyTorchLightningEstimator):
+    @validated()
     def __init__(
         self,
         freq: str,
