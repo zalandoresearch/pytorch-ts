@@ -116,7 +116,9 @@ def get_lags_for_frequency(
     return lags[:num_lags]
 
 
-def get_fourier_lags_for_frequency(freq_str: str, num_lags: Optional[int] = None) -> List[int]:
+def get_fourier_lags_for_frequency(
+    freq_str: str, num_lags: Optional[int] = None
+) -> List[int]:
     offset = to_offset(freq_str)
     granularity = offset.name
 
@@ -125,11 +127,11 @@ def get_fourier_lags_for_frequency(freq_str: str, num_lags: Optional[int] = None
     elif granularity == "D":
         lags = [[1, 7, 14]]
     elif granularity == "B":
-        lags = [[1, 2]]
+        lags = [[1, 5, 10]]
     elif granularity == "H":
         lags = [[1, 24, 168]]
-    elif granularity == "min":
-        lags = [[1, 4, 12, 24, 48]]
+    elif granularity == "min" or granularity == "T":
+        lags = [[1, 5, 10, 30, 60]]
     else:
         lags = [[1]]
 

@@ -19,18 +19,9 @@ import numpy as np
 import pandas as pd
 from pandas.tseries.frequencies import to_offset
 
+from gluonts.time_feature import TimeFeature
 from pts.core.component import validated
 from .utils import get_granularity
-
-
-class TimeFeature(ABC):
-    @validated()
-    def __init__(self, normalized: bool = True):
-        self.normalized = normalized
-
-    @abstractmethod
-    def __call__(self, index: pd.DatetimeIndex) -> np.ndarray:
-        pass
 
 
 class MinuteOfHour(TimeFeature):
@@ -188,13 +179,13 @@ def fourier_time_features_from_frequency_str(freq_str: str) -> List[TimeFeature]
 
     features = {
         "M": ["weekofyear"],
-        "W-SUN": ["daysinmonth", "weekofyear"],
-        "W-MON": ["daysinmonth", "weekofyear"],
-        "D": ["dayofweek"],
-        "B": ["dayofweek", "dayofyear"],
-        "H": ["hour", "dayofweek"],
-        "min": ["minute", "hour", "dayofweek"],
-        "T": ["minute", "hour", "dayofweek"],
+        "W-SUN": ["daysinmonth", "weekofyear", "dayofyear"],
+        "W-MON": ["daysinmonth", "weekofyear", "dayofyear"],
+        "D": ["dayofweek", "daysinmonth", "dayofyear"],
+        "B": ["dayofweek", "daysinmonth", "dayofyear"],
+        "H": ["hour", "dayofweek", "daysinmonth", "dayofyear"],
+        "min": ["minute", "hour", "dayofweek", "daysinmonth", "dayofyear"],
+        "T": ["minute", "hour", "dayofweek", "daysinmonth", "dayofyear"],
     }
 
     assert granularity in features, f"freq {granularity} not supported"
