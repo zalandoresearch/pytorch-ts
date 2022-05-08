@@ -55,26 +55,25 @@ class DNRILightningModule(pl.LightningModule):
             _,
             encoder_input,
         ) = self.model.unroll_encoder(
-            feat_static_cat,
-            feat_static_real,
-            past_time_feat,
-            past_target,
-            past_observed_values,
-            future_time_feat,
-            future_target,
+            feat_static_cat=feat_static_cat,
+            feat_static_real=feat_static_real,
+            past_time_feat=past_time_feat,
+            past_target=past_target,
+            past_observed_values=past_observed_values,
+            future_time_feat=future_time_feat,
+            future_target=future_target,
         )
-
         # decoder
         all_distr_args = []
         num_time_steps = encoder_input.size(1)
-        decoder_hidden = self.decoder.get_initial_hidden(
+        decoder_hidden = self.model.decoder.get_initial_hidden(
             encoder_input.size(), device=encoder_input.device
         )
         for step in range(num_time_steps):
             current_inputs = encoder_input[:, step]
             current_p_logits = posterior_logits[:, step]
 
-            distr_args, decoder_hidden, _ = self.decoder(
+            distr_args, decoder_hidden, _ = self.model.decoder(
                 inputs=current_inputs,
                 hidden=decoder_hidden,
                 edge_logits=current_p_logits,
@@ -91,7 +90,7 @@ class DNRILightningModule(pl.LightningModule):
             dim=1,
         )
 
-        loss_nll = -distr.log_prob(target).unsqueeze(-1)
+        loss_nll = -distr.log_prob(target)
         prob = F.softmax(posterior_logits, dim=-1)
         loss_kl = self.kl_categorical_learned(prob, prior_logits)
 
@@ -103,7 +102,7 @@ class DNRILightningModule(pl.LightningModule):
         if len(self.model.target_shape) == 0:
             loss_weights = observed_values
         else:
-            loss_weights = observed_values.min(dim=-1, keepdim=False)
+            loss_weights, _ = observed_values.min(dim=-1, keepdim=False)
 
         return weighted_average(loss_values, weights=loss_weights)
 
@@ -112,7 +111,7 @@ class DNRILightningModule(pl.LightningModule):
         log_prior = nn.LogSoftmax(dim=-1)(prior_logits)
         kl_div = preds * (torch.log(preds + 1e-16) - log_prior)
 
-        return kl_div.view(preds.size(0), preds.size(1), -1).sum(dim=-1, keepdims=True)
+        return kl_div.view(preds.size(0), preds.size(1), -1).sum(dim=-1, keepdims=False)
 
     def training_step(self, batch, batch_idx: int):  # type: ignore
         """
