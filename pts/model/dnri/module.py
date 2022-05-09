@@ -37,6 +37,7 @@ class DNRI_Encoder(nn.Module):
         self.num_edge_types = num_edge_types
         self.cell_type = cell_type
 
+        # fully connected graph O(N^2) space
         edges = np.ones(target_dim) - np.eye(target_dim)
         self.send_edges = np.where(edges)[0]
         self.recv_edges = np.where(edges)[1]
@@ -81,30 +82,33 @@ class DNRI_Encoder(nn.Module):
         return incoming / (self.target_dim - 1)  # average
 
     def forward(self, inputs, prior_state=None):
-        #  [B, T, target_dim, input_size]
-        x = inputs.transpose(2, 1).contiguous()
-        x = self.mlp_1(x)
-        x = self.node2edge(x)
-        x = self.mlp_2(x)
+        #  input: [B, T, target_dim, features_per_variate]
+
+        x = inputs.transpose(2, 1).contiguous()  # [B, T, D, F] -> [B, D, T, F]
+        x = self.mlp_1(x)  # [B, D, T, F]
+        x = self.node2edge(x)  # [B, D^2, T, F*2]
+        x = self.mlp_2(x)  # [B, D^2, T, F]
         x_skip = x
 
-        x = self.edge2node(x)
-        x = self.mlp_3(x)
-        x = self.node2edge(x)
-        x = torch.cat((x, x_skip), dim=-1)
-        x = self.mlp_4(x)
+        x = self.edge2node(x)  # [B, D^2, T, F] -> [B, D, T, F]
+        x = self.mlp_3(x)  # [B, D, T, F]
+        x = self.node2edge(x)  # [B, D^2, T, F*2]
+        x = torch.cat((x, x_skip), dim=-1)  # [B, D^2, T, F*3]
+        x = self.mlp_4(x)  # [B, D^2, T, F]
 
         old_shape = x.shape
         timesteps = old_shape[2]
-        x = x.contiguous().view(-1, timesteps, old_shape[3])
-        forward_x, prior_state = self.forward_rnn(x, prior_state)
+        x = x.contiguous().view(-1, timesteps, old_shape[3])  # [B * D^2, T, F]
+        forward_x, prior_state = self.forward_rnn(
+            x, prior_state
+        )  # [B*D^2, T, H], [B*D^2, H]
 
         prior_logits = (
             self.prior_fc_out(forward_x)
             .view(old_shape[0], old_shape[1], timesteps, self.num_edge_types)
             .transpose(1, 2)
             .contiguous()
-        )
+        )  # [B, T, D^2 num_edges]
 
         reverse_x, _ = self.reverse_rnn(x.flip(1))
         combined_x = torch.cat([forward_x, reverse_x.flip(1)], dim=-1)
@@ -114,7 +118,7 @@ class DNRI_Encoder(nn.Module):
             .view(old_shape[0], old_shape[1], timesteps, self.num_edge_types)
             .transpose(1, 2)
             .contiguous()
-        )
+        )  # [B, T, D^2, num_edges]
 
         return prior_logits, posterior_logits, prior_state
 
@@ -279,9 +283,11 @@ class DNRIModel(nn.Module):
 
         input_size = self._number_of_features + len(self.lags_seq)
 
+        # input to the encoder has to be [B, T, D, F]
+        # but gluonts transformations return [B, T, D*F] -> so need to reshape to [B, T, D, F]
         self.encoder = DNRI_Encoder(
-            target_dim=target_dim,
-            input_size=input_size,
+            target_dim=target_dim,  # multivariate dim i.e the  number of nodes: D
+            input_size=input_size,  # feature size per variate or feature size per node: F
             mlp_hidden_size=mlp_hidden_size,
             rnn_hidden_size=rnn_hidden_size,
             cell_type=cell_type,
@@ -729,6 +735,7 @@ class DNRIModel(nn.Module):
             )
 
             params, repeated_decoder_hidden, _ = self.decoder(
+                # TODO check and fix...
                 encoder_input.squeeze(1),
                 hidden=repeated_decoder_hidden,
                 edge_logits=prior_logits.squeeze(1),
