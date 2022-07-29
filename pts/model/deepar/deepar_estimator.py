@@ -28,7 +28,7 @@ from gluonts.transform import (
 )
 from gluonts.torch.util import copy_parameters
 from gluonts.torch.model.predictor import PyTorchPredictor
-from gluonts.torch.modules.distribution_output import DistributionOutput
+from gluonts.torch.distributions.distribution_output import DistributionOutput
 from gluonts.model.predictor import Predictor
 
 from pts.model.utils import get_module_forward_input_names
@@ -258,7 +258,7 @@ class DeepAREstimator(PyTorchEstimator):
             input_names=input_names,
             prediction_net=prediction_network,
             batch_size=self.trainer.batch_size,
-            freq=self.freq,
+            #freq=self.freq,
             prediction_length=self.prediction_length,
             device=device,
         )
