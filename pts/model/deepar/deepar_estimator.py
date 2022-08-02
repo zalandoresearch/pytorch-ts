@@ -61,6 +61,7 @@ class DeepAREstimator(PyTorchEstimator):
         distr_output: DistributionOutput = StudentTOutput(),
         scaling: bool = True,
         lags_seq: Optional[List[int]] = None,
+        agg_lags: Optional[List[int]] = None,
         time_features: Optional[List[TimeFeature]] = None,
         num_parallel_samples: int = 100,
         dtype: np.dtype = np.float32,
@@ -95,6 +96,7 @@ class DeepAREstimator(PyTorchEstimator):
             if lags_seq is not None
             else get_lags_for_frequency(freq_str=freq, lag_ub=self.context_length)
         )
+        self.agg_lags = agg_lags
         self.time_features = (
             time_features
             if time_features is not None
@@ -221,6 +223,7 @@ class DeepAREstimator(PyTorchEstimator):
             cardinality=self.cardinality,
             embedding_dimension=self.embedding_dimension,
             lags_seq=self.lags_seq,
+            agg_lags=self.agg_lags,
             scaling=self.scaling,
             dtype=self.dtype,
         ).to(device)
@@ -245,6 +248,7 @@ class DeepAREstimator(PyTorchEstimator):
             cardinality=self.cardinality,
             embedding_dimension=self.embedding_dimension,
             lags_seq=self.lags_seq,
+            agg_lags=self.agg_lags,
             scaling=self.scaling,
             dtype=self.dtype,
         ).to(device)
