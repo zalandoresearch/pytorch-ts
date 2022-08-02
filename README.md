@@ -60,7 +60,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 estimator = DeepAREstimator(freq="5min",
                             prediction_length=12,
-                            input_size=43,
+                            input_size=19,
                             trainer=Trainer(epochs=10,
                                             device=device))
 predictor = estimator.train(training_data=training_data, num_workers=4)
