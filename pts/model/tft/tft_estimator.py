@@ -160,7 +160,7 @@ class TemporalFusionTransformerEstimator(PyTorchEstimator):
                     h_stack=True,
                 ),
                 AsNumpyArray(
-                    field=FieldName.FEAT_STATIC_CAT, expected_ndim=1, dtype=np.long
+                    field=FieldName.FEAT_STATIC_CAT, expected_ndim=1, dtype=np.int64
                 )
             ])
         else:
@@ -171,7 +171,7 @@ class TemporalFusionTransformerEstimator(PyTorchEstimator):
                         value=[0],
                     ),
                     AsNumpyArray(
-                        field=FieldName.FEAT_STATIC_CAT, expected_ndim=1, dtype=np.long
+                        field=FieldName.FEAT_STATIC_CAT, expected_ndim=1, dtype=np.int64
                     ),
                 ]
             )
@@ -204,7 +204,7 @@ class TemporalFusionTransformerEstimator(PyTorchEstimator):
                 AsNumpyArray(
                     field=FieldName.FEAT_DYNAMIC_CAT,
                     expected_ndim=2,
-                    dtype=np.long,
+                    dtype=np.int64,
                 )
             ])
         else:
@@ -217,7 +217,7 @@ class TemporalFusionTransformerEstimator(PyTorchEstimator):
                     AsNumpyArray(
                         field=FieldName.FEAT_DYNAMIC_CAT,
                         expected_ndim=2,
-                        dtype=np.long,
+                        dtype=np.int64,
                     ),
                     BroadcastTo(
                         field=FieldName.FEAT_DYNAMIC_CAT,
@@ -245,7 +245,7 @@ class TemporalFusionTransformerEstimator(PyTorchEstimator):
                 AsNumpyArray(
                     field=FieldName.PAST_FEAT_DYNAMIC + "_cat",
                     expected_ndim=2,
-                    dtype=np.long,
+                    dtype=np.int64,
                 )
             ])
         else:
@@ -258,7 +258,7 @@ class TemporalFusionTransformerEstimator(PyTorchEstimator):
                     AsNumpyArray(
                         field=FieldName.PAST_FEAT_DYNAMIC + "_cat",
                         expected_ndim=2,
-                        dtype=np.long,
+                        dtype=np.int64,
                     ),
                     BroadcastTo(field=FieldName.PAST_FEAT_DYNAMIC + "_cat"),
                 ]

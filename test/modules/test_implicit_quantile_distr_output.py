@@ -11,7 +11,7 @@ from torch.utils.data import TensorDataset, DataLoader
 from gluonts.dataset.repository.datasets import get_dataset
 from gluonts.evaluation import Evaluator
 from gluonts.evaluation.backtest import make_evaluation_predictions
-from gluonts.torch.modules.distribution_output import DistributionOutput
+from gluonts.torch.distributions import DistributionOutput
 from pts import Trainer
 from pts.model.deepar import DeepAREstimator
 from pts.modules import ImplicitQuantileOutput

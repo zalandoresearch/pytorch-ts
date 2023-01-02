@@ -7,7 +7,7 @@ import torch.nn as nn
 from gluonts.core.component import validated
 from gluonts.dataset.field_names import FieldName
 from gluonts.time_feature import TimeFeature
-from gluonts.torch.modules.distribution_output import DistributionOutput
+from gluonts.torch.distributions import DistributionOutput
 from gluonts.torch.util import copy_parameters
 from gluonts.torch.model.predictor import PyTorchPredictor
 from gluonts.model.predictor import Predictor
@@ -133,7 +133,7 @@ class TransformerEstimator(PyTorchEstimator):
             )
             + [
                 AsNumpyArray(
-                    field=FieldName.FEAT_STATIC_CAT, expected_ndim=1, dtype=np.long
+                    field=FieldName.FEAT_STATIC_CAT, expected_ndim=1, dtype=np.int64
                 ),
                 AsNumpyArray(
                     field=FieldName.FEAT_STATIC_REAL,

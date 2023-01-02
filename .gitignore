@@ -108,3 +108,4 @@ wandb/
 .idea/
 runs/
 .vscode/
+lightning_logs/

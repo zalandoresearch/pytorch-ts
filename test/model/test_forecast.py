@@ -24,15 +24,15 @@ from gluonts.torch.model.forecast import DistributionForecast
 
 QUANTILES = np.arange(1, 100) / 100
 SAMPLES = np.arange(101).reshape(101, 1) / 100
-START_DATE = pd.Timestamp(2017, 1, 1, 12)
 FREQ = "1D"
+START_DATE = pd.Period("2017 01-01 12:00", FREQ)
+
 
 FORECASTS = {
-    "SampleForecast": SampleForecast(samples=SAMPLES, start_date=START_DATE, freq=FREQ),
+    "SampleForecast": SampleForecast(samples=SAMPLES, start_date=START_DATE),
     "DistributionForecast": DistributionForecast(
         distribution=Uniform(low=torch.zeros(1), high=torch.ones(1)),
         start_date=START_DATE,
-        freq=FREQ,
     ),
 }
 
@@ -64,7 +64,6 @@ def test_DistributionForecast():
             low=torch.tensor([0.0, 0.0]), high=torch.tensor([1.0, 2.0])
         ),
         start_date=START_DATE,
-        freq=FREQ,
     )
 
     def percentile(value):
@@ -90,8 +89,7 @@ def test_DistributionForecast():
         (
             SampleForecast(
                 samples=np.random.normal(size=(100, 7, 3)),
-                start_date=pd.Timestamp("2020-01-01 00:00:00"),
-                freq="1D",
+                start_date=pd.Period("2017 01-01 00:00", "1D"),
             ),
             pd.date_range(
                 start=pd.Timestamp("2020-01-01 00:00:00"), freq="1D", periods=7,
@@ -100,8 +98,7 @@ def test_DistributionForecast():
         (
             DistributionForecast(
                 Uniform(low=torch.zeros(size=(5, 2)), high=torch.ones(size=(5, 2)),),
-                start_date=pd.Timestamp("2020-01-01 00:00:00"),
-                freq="W",
+                start_date=pd.Period("2020-01-01 00:00:00", "W"),
             ),
             pd.date_range(
                 start=pd.Timestamp("2020-01-01 00:00:00"), freq="W", periods=5,

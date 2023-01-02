@@ -120,8 +120,8 @@ class PyTorchEstimator(Estimator):
             training_iter_dataset,
             batch_size=self.trainer.batch_size,
             num_workers=num_workers,
-            prefetch_factor=prefetch_factor,
-            pin_memory=True,
+            prefetch_factor=prefetch_factor if num_workers >0 else None,
+            pin_memory=num_workers > 0,
             worker_init_fn=self._worker_init_fn,
             **kwargs,
         )
@@ -142,8 +142,8 @@ class PyTorchEstimator(Estimator):
                 validation_iter_dataset,
                 batch_size=self.trainer.batch_size,
                 num_workers=num_workers,
-                prefetch_factor=prefetch_factor,
-                pin_memory=True,
+                prefetch_factor=prefetch_factor if num_workers > 0 else None,
+                pin_memory=num_workers > 0,
                 worker_init_fn=self._worker_init_fn,
                 **kwargs,
             )
