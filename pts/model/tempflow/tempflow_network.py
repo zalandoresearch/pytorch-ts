@@ -142,7 +142,6 @@ class TempFlowTrainingNetwork(nn.Module):
         torch.Tensor,
         torch.Tensor,
     ]:
-
         # (batch_size, sub_seq_len, target_dim, num_lags)
         lags_scaled = lags / scale.unsqueeze(-1)
 
@@ -362,8 +361,6 @@ class TempFlowTrainingNetwork(nn.Module):
             Distribution arguments (context + prediction_length,
             number_of_arguments)
         """
-
-        seq_len = self.context_length + self.prediction_length
 
         # unroll the decoder in "training mode", i.e. by providing future data
         # as well

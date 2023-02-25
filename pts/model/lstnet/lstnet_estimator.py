@@ -1,14 +1,12 @@
-from typing import List, Optional
+from typing import Optional
 
 import numpy as np
 import torch
-import torch.nn as nn
 
 from gluonts.core.component import validated
 from gluonts.dataset.field_names import FieldName
 from gluonts.torch.util import copy_parameters
 from gluonts.torch.model.predictor import PyTorchPredictor
-from gluonts.model.predictor import Predictor
 from gluonts.transform import (
     InstanceSplitter,
     ValidationSplitSampler,

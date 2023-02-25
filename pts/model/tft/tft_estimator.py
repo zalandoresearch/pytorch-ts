@@ -48,22 +48,22 @@ def _default_feat_args(dims_or_cardinalities: List[int]):
 class TemporalFusionTransformerEstimator(PyTorchEstimator):
     @validated()
     def __init__(
-            self,
-            freq: str,
-            prediction_length: int,
-            context_length: Optional[int] = None,
-            dropout_rate: float = 0.1,
-            embed_dim: int = 32,
-            num_heads: int = 4,
-            num_outputs: int = 3,
-            variable_dim: Optional[int] = None,
-            time_features: List[TimeFeature] = [],
-            static_cardinalities: Dict[str, int] = {},
-            dynamic_cardinalities: Dict[str, int] = {},
-            static_feature_dims: Dict[str, int] = {},
-            dynamic_feature_dims: Dict[str, int] = {},
-            past_dynamic_features: List[str] = [],
-            trainer: Trainer = Trainer(),
+        self,
+        freq: str,
+        prediction_length: int,
+        context_length: Optional[int] = None,
+        dropout_rate: float = 0.1,
+        embed_dim: int = 32,
+        num_heads: int = 4,
+        num_outputs: int = 3,
+        variable_dim: Optional[int] = None,
+        time_features: List[TimeFeature] = [],
+        static_cardinalities: Dict[str, int] = {},
+        dynamic_cardinalities: Dict[str, int] = {},
+        static_feature_dims: Dict[str, int] = {},
+        dynamic_feature_dims: Dict[str, int] = {},
+        past_dynamic_features: List[str] = [],
+        trainer: Trainer = Trainer(),
     ) -> None:
         super().__init__(trainer=trainer)
 
@@ -113,56 +113,58 @@ class TemporalFusionTransformerEstimator(PyTorchEstimator):
 
     def create_transformation(self) -> Transformation:
         transforms = (
-                [AsNumpyArray(field=FieldName.TARGET, expected_ndim=1)]
-                + (
-                    [
-                        AsNumpyArray(field=name, expected_ndim=1)
-                        for name in self.static_cardinalities.keys()
-                    ]
-                )
-                + [
+            [AsNumpyArray(field=FieldName.TARGET, expected_ndim=1)]
+            + (
+                [
                     AsNumpyArray(field=name, expected_ndim=1)
-                    for name in chain(
-                self.static_feature_dims.keys(),
-                self.dynamic_cardinalities.keys(),
+                    for name in self.static_cardinalities.keys()
+                ]
             )
-                ]
-                + [
-                    AsNumpyArray(field=name, expected_ndim=2)
-                    for name in self.dynamic_feature_dims.keys()
-                ]
-                + [
-                    AddObservedValuesIndicator(
-                        target_field=FieldName.TARGET,
-                        output_field=FieldName.OBSERVED_VALUES,
-                    ),
-                    AddTimeFeatures(
-                        start_field=FieldName.START,
-                        target_field=FieldName.TARGET,
-                        output_field=FieldName.FEAT_TIME,
-                        time_features=self.time_features,
-                        pred_length=self.prediction_length,
-                    ),
-                    AddAgeFeature(
-                        target_field=FieldName.TARGET,
-                        output_field=FieldName.FEAT_AGE,
-                        pred_length=self.prediction_length,
-                        log_scale=True,
-                    ),
-                ]
+            + [
+                AsNumpyArray(field=name, expected_ndim=1)
+                for name in chain(
+                    self.static_feature_dims.keys(),
+                    self.dynamic_cardinalities.keys(),
+                )
+            ]
+            + [
+                AsNumpyArray(field=name, expected_ndim=2)
+                for name in self.dynamic_feature_dims.keys()
+            ]
+            + [
+                AddObservedValuesIndicator(
+                    target_field=FieldName.TARGET,
+                    output_field=FieldName.OBSERVED_VALUES,
+                ),
+                AddTimeFeatures(
+                    start_field=FieldName.START,
+                    target_field=FieldName.TARGET,
+                    output_field=FieldName.FEAT_TIME,
+                    time_features=self.time_features,
+                    pred_length=self.prediction_length,
+                ),
+                AddAgeFeature(
+                    target_field=FieldName.TARGET,
+                    output_field=FieldName.FEAT_AGE,
+                    pred_length=self.prediction_length,
+                    log_scale=True,
+                ),
+            ]
         )
 
         if self.static_cardinalities:
-            transforms.extend([
-                VstackFeatures(
-                    output_field=FieldName.FEAT_STATIC_CAT,
-                    input_fields=list(self.static_cardinalities.keys()),
-                    h_stack=True,
-                ),
-                AsNumpyArray(
-                    field=FieldName.FEAT_STATIC_CAT, expected_ndim=1, dtype=np.long
-                )
-            ])
+            transforms.extend(
+                [
+                    VstackFeatures(
+                        output_field=FieldName.FEAT_STATIC_CAT,
+                        input_fields=list(self.static_cardinalities.keys()),
+                        h_stack=True,
+                    ),
+                    AsNumpyArray(
+                        field=FieldName.FEAT_STATIC_CAT, expected_ndim=1, dtype=np.long
+                    ),
+                ]
+            )
         else:
             transforms.extend(
                 [
@@ -196,17 +198,19 @@ class TemporalFusionTransformerEstimator(PyTorchEstimator):
             )
 
         if self.dynamic_cardinalities:
-            transforms.extend([
-                VstackFeatures(
-                    output_field=FieldName.FEAT_DYNAMIC_CAT,
-                    input_fields=list(self.dynamic_cardinalities.keys()),
-                ),
-                AsNumpyArray(
-                    field=FieldName.FEAT_DYNAMIC_CAT,
-                    expected_ndim=2,
-                    dtype=np.long,
-                )
-            ])
+            transforms.extend(
+                [
+                    VstackFeatures(
+                        output_field=FieldName.FEAT_DYNAMIC_CAT,
+                        input_fields=list(self.dynamic_cardinalities.keys()),
+                    ),
+                    AsNumpyArray(
+                        field=FieldName.FEAT_DYNAMIC_CAT,
+                        expected_ndim=2,
+                        dtype=np.long,
+                    ),
+                ]
+            )
         else:
             transforms.extend(
                 [
@@ -237,17 +241,19 @@ class TemporalFusionTransformerEstimator(PyTorchEstimator):
         )
 
         if self.past_dynamic_cardinalities:
-            transforms.extend([
-                VstackFeatures(
-                    output_field=FieldName.PAST_FEAT_DYNAMIC + "_cat",
-                    input_fields=list(self.past_dynamic_cardinalities.keys()),
-                ),
-                AsNumpyArray(
-                    field=FieldName.PAST_FEAT_DYNAMIC + "_cat",
-                    expected_ndim=2,
-                    dtype=np.long,
-                )
-            ])
+            transforms.extend(
+                [
+                    VstackFeatures(
+                        output_field=FieldName.PAST_FEAT_DYNAMIC + "_cat",
+                        input_fields=list(self.past_dynamic_cardinalities.keys()),
+                    ),
+                    AsNumpyArray(
+                        field=FieldName.PAST_FEAT_DYNAMIC + "_cat",
+                        expected_ndim=2,
+                        dtype=np.long,
+                    ),
+                ]
+            )
         else:
             transforms.extend(
                 [
@@ -311,7 +317,7 @@ class TemporalFusionTransformerEstimator(PyTorchEstimator):
         )
 
     def create_training_network(
-            self, device: torch.device
+        self, device: torch.device
     ) -> TemporalFusionTransformerTrainingNetwork:
         network = TemporalFusionTransformerTrainingNetwork(
             context_length=self.context_length,
@@ -329,7 +335,8 @@ class TemporalFusionTransformerEstimator(PyTorchEstimator):
             ),
             # +1 is for Age Feature
             d_feat_dynamic_real=_default_feat_args(
-                [1] * (len(self.time_features) + 1) + list(self.dynamic_feature_dims.values())
+                [1] * (len(self.time_features) + 1)
+                + list(self.dynamic_feature_dims.values())
             ),
             c_feat_dynamic_cat=_default_feat_args(
                 list(self.dynamic_cardinalities.values())
@@ -344,12 +351,11 @@ class TemporalFusionTransformerEstimator(PyTorchEstimator):
         return network.to(device)
 
     def create_predictor(
-            self,
-            transformation: Transformation,
-            trained_network: TemporalFusionTransformerTrainingNetwork,
-            device: torch.device,
+        self,
+        transformation: Transformation,
+        trained_network: TemporalFusionTransformerTrainingNetwork,
+        device: torch.device,
     ) -> Predictor:
-
         prediction_network = TemporalFusionTransformerPredictionNetwork(
             context_length=self.context_length,
             prediction_length=self.prediction_length,
@@ -366,7 +372,8 @@ class TemporalFusionTransformerEstimator(PyTorchEstimator):
             ),
             # +1 is for Age Feature
             d_feat_dynamic_real=_default_feat_args(
-                [1] * (len(self.time_features) + 1) + list(self.dynamic_feature_dims.values())
+                [1] * (len(self.time_features) + 1)
+                + list(self.dynamic_feature_dims.values())
             ),
             c_feat_dynamic_cat=_default_feat_args(
                 list(self.dynamic_cardinalities.values())

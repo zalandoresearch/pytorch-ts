@@ -2,12 +2,11 @@ from typing import List, Optional
 
 import numpy as np
 import torch
-import torch.nn as nn
 
 from gluonts.core.component import validated
 from gluonts.dataset.field_names import FieldName
 from gluonts.time_feature import TimeFeature
-from gluonts.torch.modules.distribution_output import DistributionOutput
+from gluonts.torch.distributions.distribution_output import DistributionOutput
 from gluonts.torch.util import copy_parameters
 from gluonts.torch.model.predictor import PyTorchPredictor
 from gluonts.model.predictor import Predictor
@@ -15,7 +14,6 @@ from gluonts.transform import (
     Transformation,
     Chain,
     InstanceSplitter,
-    InstanceSampler,
     ValidationSplitSampler,
     TestSplitSampler,
     ExpectedNumInstanceSampler,
@@ -200,7 +198,6 @@ class TransformerEstimator(PyTorchEstimator):
     def create_training_network(
         self, device: torch.device
     ) -> TransformerTrainingNetwork:
-
         training_network = TransformerTrainingNetwork(
             input_size=self.input_size,
             num_heads=self.num_heads,
@@ -228,7 +225,6 @@ class TransformerEstimator(PyTorchEstimator):
         trained_network: TransformerTrainingNetwork,
         device: torch.device,
     ) -> Predictor:
-
         prediction_network = TransformerPredictionNetwork(
             input_size=self.input_size,
             num_heads=self.num_heads,

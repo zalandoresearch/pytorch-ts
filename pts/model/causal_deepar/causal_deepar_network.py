@@ -6,7 +6,7 @@ import torch.nn as nn
 from torch.distributions import Distribution
 
 from gluonts.core.component import validated
-from gluonts.torch.modules.distribution_output import DistributionOutput
+from gluonts.torch.distributions.distribution_output import DistributionOutput
 from pts.model import weighted_average
 from pts.modules import MeanScaler, NOPScaler, FeatureEmbedder
 
@@ -138,7 +138,6 @@ class CausalDeepARNetwork(nn.Module):
             torch.Tensor
         ] = None,  # (batch_size, prediction_length, *target_shape)
     ) -> Tuple[torch.Tensor, Union[torch.Tensor, List], torch.Tensor, torch.Tensor]:
-
         if future_time_feat is None or future_target is None or future_control is None:
             time_feat = past_time_feat[
                 :, self.history_length - self.context_length :, ...
@@ -296,7 +295,6 @@ class CausalDeepARTrainingNetwork(CausalDeepARNetwork):
         past_control: torch.Tensor,
         future_control: torch.Tensor,
     ) -> torch.Tensor:
-
         control_distr, distr = self.distribution(
             feat_static_cat=feat_static_cat,
             feat_static_real=feat_static_real,

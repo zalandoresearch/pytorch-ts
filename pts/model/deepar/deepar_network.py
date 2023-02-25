@@ -130,7 +130,6 @@ class DeepARNetwork(nn.Module):
             torch.Tensor
         ] = None,  # (batch_size, prediction_length, *target_shape)
     ) -> Tuple[torch.Tensor, Union[torch.Tensor, List], torch.Tensor, torch.Tensor]:
-
         if future_time_feat is None or future_target is None:
             time_feat = past_time_feat[
                 :, self.history_length - self.context_length :, ...

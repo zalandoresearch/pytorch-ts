@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 
 from gluonts.core.component import validated
-from gluonts.torch.modules.distribution_output import DistributionOutput
+from gluonts.torch.distributions.distribution_output import DistributionOutput
 from pts.model import weighted_average
 from pts.modules import MeanScaler, NOPScaler, FeatureEmbedder
 
@@ -133,7 +133,6 @@ class DeepVARTrainingNetwork(nn.Module):
         torch.Tensor,
         torch.Tensor,
     ]:
-
         # (batch_size, sub_seq_len, target_dim, num_lags)
         lags_scaled = lags / scale.unsqueeze(-1)
 
@@ -369,8 +368,6 @@ class DeepVARTrainingNetwork(nn.Module):
             Distribution arguments (context + prediction_length,
             number_of_arguments)
         """
-
-        seq_len = self.context_length + self.prediction_length
 
         # unroll the decoder in "training mode", i.e. by providing future data
         # as well

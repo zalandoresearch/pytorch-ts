@@ -6,4 +6,4 @@ authors:
   given-names: Kashif
 license: MIT
 repository-code: https://github.com/zalandoresearch/pytorch-ts
-version: 0.6.0
+version: 0.7.0

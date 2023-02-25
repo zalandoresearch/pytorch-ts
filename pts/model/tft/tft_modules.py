@@ -275,7 +275,7 @@ class TemporalFusionDecoder(nn.Module):
 
         mask_pad = torch.ones_like(mask)[:, 0:1, ...]
         mask_pad = mask_pad.repeat((1, self.prediction_length))
-        key_padding_mask = torch.cat((mask, mask_pad), dim=1).bool()
+        torch.cat((mask, mask_pad), dim=1).bool()
 
         query_key_value = x.permute(1, 0, 2)
 

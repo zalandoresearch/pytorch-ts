@@ -4,7 +4,7 @@ from inspect import isfunction
 import numpy as np
 
 import torch
-from torch import nn, einsum
+from torch import nn
 import torch.nn.functional as F
 
 
@@ -21,10 +21,14 @@ def extract(a, t, x_shape):
 
 
 def noise_like(shape, device, repeat=False):
-    repeat_noise = lambda: torch.randn((1, *shape[1:]), device=device).repeat(
-        shape[0], *((1,) * (len(shape) - 1))
-    )
-    noise = lambda: torch.randn(shape, device=device)
+    def repeat_noise():
+        return torch.randn((1, *shape[1:]), device=device).repeat(
+            shape[0], *((1,) * (len(shape) - 1))
+        )
+
+    def noise():
+        return torch.randn(shape, device=device)
+
     return repeat_noise() if repeat else noise()
 
 
@@ -67,7 +71,7 @@ class GaussianDiffusion(nn.Module):
             if beta_schedule == "linear":
                 betas = np.linspace(1e-4, beta_end, diff_steps)
             elif beta_schedule == "quad":
-                betas = np.linspace(1e-4 ** 0.5, beta_end ** 0.5, diff_steps) ** 2
+                betas = np.linspace(1e-4**0.5, beta_end**0.5, diff_steps) ** 2
             elif beta_schedule == "const":
                 betas = beta_end * np.ones(diff_steps)
             elif beta_schedule == "jsd":  # 1/T, 1/(T-1), 1/(T-2), ..., 1

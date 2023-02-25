@@ -1,4 +1,3 @@
-from abc import ABC, abstractclassmethod
 import warnings
 from typing import Callable, Dict, Optional, Tuple
 
@@ -25,10 +24,6 @@ from torch.distributions import (
 from pts.distributions import (
     ZeroInflatedPoisson,
     ZeroInflatedNegativeBinomial,
-    PiecewiseLinear,
-    TransformedPiecewiseLinear,
-    ImplicitQuantile,
-    TransformedImplicitQuantile,
 )
 from gluonts.core.component import validated
 from gluonts.torch.distributions.distribution_output import (
@@ -36,7 +31,6 @@ from gluonts.torch.distributions.distribution_output import (
     LambdaLayer,
     PtArgProj,
 )
-from pts.modules.iqn_modules import ImplicitQuantileModule
 
 
 class IndependentDistributionOutput(DistributionOutput):
@@ -60,7 +54,6 @@ class IndependentDistributionOutput(DistributionOutput):
     def distribution(
         self, distr_args, scale: Optional[torch.Tensor] = None
     ) -> Distribution:
-
         distr = self.independent(self.distr_cls(*distr_args))
         if scale is None:
             return distr
@@ -275,47 +268,6 @@ class StudentTMixtureOutput(DistributionOutput):
         return ()
 
 
-class PiecewiseLinearOutput(DistributionOutput):
-    distr_cls: type = PiecewiseLinear
-
-    @validated()
-    def __init__(self, num_pieces: int) -> None:
-        super().__init__(self)
-        assert (
-            isinstance(num_pieces, int) and num_pieces > 1
-        ), "num_pieces should be an integer larger than 1"
-
-        self.num_pieces = num_pieces
-        self.args_dim = {"gamma": 1, "slopes": num_pieces, "knot_spacings": num_pieces}
-
-    @classmethod
-    def domain_map(cls, gamma, slopes, knot_spacings):
-        # slopes of the pieces are non-negative
-        slopes_proj = F.softplus(slopes) + 1e-4
-
-        # the spacing between the knots should be in [0, 1] and sum to 1
-        knot_spacings_proj = torch.softmax(knot_spacings, dim=-1)
-
-        return gamma.squeeze(axis=-1), slopes_proj, knot_spacings_proj
-
-    def distribution(
-        self,
-        distr_args,
-        scale: Optional[torch.Tensor] = None,
-    ) -> PiecewiseLinear:
-        if scale is None:
-            return self.distr_cls(*distr_args)
-        else:
-            distr = self.distr_cls(*distr_args)
-            return TransformedPiecewiseLinear(
-                distr, [AffineTransform(loc=0, scale=scale)]
-            )
-
-    @property
-    def event_shape(self) -> Tuple:
-        return ()
-
-
 class NormalMixtureOutput(DistributionOutput):
     @validated()
     def __init__(self, components: int = 1) -> None:
@@ -367,12 +319,12 @@ class LowRankMultivariateNormalOutput(DistributionOutput):
 
     def domain_map(self, loc, cov_factor, cov_diag):
         diag_bias = (
-            self.inv_softplus(self.sigma_init ** 2) if self.sigma_init > 0.0 else 0.0
+            self.inv_softplus(self.sigma_init**2) if self.sigma_init > 0.0 else 0.0
         )
 
         shape = cov_factor.shape[:-1] + (self.dim, self.rank)
         cov_factor = cov_factor.reshape(shape)
-        cov_diag = F.softplus(cov_diag + diag_bias) + self.sigma_minimum ** 2
+        cov_diag = F.softplus(cov_diag + diag_bias) + self.sigma_minimum**2
 
         return loc, cov_factor, cov_diag
 
@@ -471,104 +423,3 @@ class DiffusionOutput(DistributionOutput):
     @property
     def event_shape(self) -> Tuple:
         return (self.dim,)
-
-
-class QuantilePtArgProj(PtArgProj):
-    def __init__(
-        self,
-        in_features: int,
-        output_domain_cls: nn.Module,
-        args_dim: Dict[str, int],
-        domain_map: Callable[..., Tuple[torch.Tensor]],
-        **kwargs,
-    ):
-        super().__init__(in_features, args_dim, domain_map, **kwargs)
-        self.output_domain_cls = output_domain_cls
-        self.proj = ImplicitQuantileModule(in_features, output_domain_cls)
-
-    def forward(self, x: torch.Tensor):
-        batch_size = x.shape[0]
-        forecast_length = x.shape[1]
-        device = x.device
-        taus = torch.rand(size=(batch_size, forecast_length), device=device)
-        self.register_buffer("taus", taus)
-        self.register_buffer("nn_ouput", x.clone().detach())
-        predicted_quantiles = self.proj(x, taus)
-        return self.domain_map(predicted_quantiles)
-
-
-class ImplicitQuantileOutput(IndependentDistributionOutput):
-    distr_cls: type = ImplicitQuantile
-    in_features = 1
-    args_dim = {"quantile_function": 1}
-    output_domain_cls: type = nn.Module
-    quantile_arg_proj: type = nn.Module
-
-    @validated()
-    def __init__(self, output_domain: str) -> None:
-        super().__init__()
-        self.set_output_domain_map(output_domain)
-        self.set_args_proj()
-
-    @classmethod
-    def set_output_domain_map(cls, output_domain):
-        available_domain_map_cls = {
-            "Positive": nn.Softplus,
-            "Real": nn.Identity,
-            "Unit": nn.Softmax,
-        }
-        assert (
-            output_domain in available_domain_map_cls.keys()
-        ), "Only the following output domains are allowed: {}".format(
-            available_domain_map_cls.keys()
-        )
-        output_domain_cls = available_domain_map_cls[output_domain]
-        cls.output_domain_cls = output_domain_cls
-
-    @classmethod
-    def set_args_proj(cls):
-        cls.quantile_arg_proj = QuantilePtArgProj(
-            in_features=cls.in_features,
-            output_domain_cls=cls.output_domain_cls,
-            args_dim=cls.args_dim,
-            domain_map=LambdaLayer(cls.domain_map),
-        )
-
-    @classmethod
-    def domain_map(cls, *args):
-        return args
-
-    @classmethod
-    def args_proj(cls, in_features):
-        if in_features != cls.in_features:
-            cls.in_features = in_features
-            cls.set_args_proj()
-        return cls.quantile_arg_proj
-
-    def get_args_proj(self, in_features: int, prefix: Optional[str] = None):
-        return self.args_proj(in_features)
-
-    def distribution(
-        self,
-        distr_args,
-        scale: Optional[torch.Tensor] = None,
-    ) -> ImplicitQuantile:
-
-        args_proj = self.get_args_proj(self.in_features)
-        implicit_quantile_function = args_proj.proj.eval()
-        distr = self.distr_cls(
-            implicit_quantile_function=implicit_quantile_function,
-            taus=list(args_proj.buffers())[0],
-            nn_output=list(args_proj.buffers())[1],
-            predicted_quantiles=distr_args,
-        )
-        if scale is None:
-            return distr
-        else:
-            return TransformedImplicitQuantile(
-                distr, [AffineTransform(loc=0, scale=scale)]
-            )
-
-    @property
-    def event_shape(self) -> Tuple:
-        return ()

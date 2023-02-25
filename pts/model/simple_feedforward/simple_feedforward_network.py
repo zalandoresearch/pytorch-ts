@@ -5,7 +5,7 @@ import torch.nn as nn
 from torch.distributions import Distribution
 
 from gluonts.core.component import validated
-from gluonts.torch.modules.distribution_output import DistributionOutput
+from gluonts.torch.distributions.distribution_output import DistributionOutput
 from gluonts.torch.modules.lambda_layer import LambdaLayer
 from pts.modules import MeanScaler, NOPScaler
 

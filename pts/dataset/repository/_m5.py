@@ -6,28 +6,34 @@ from functools import lru_cache
 import numpy as np
 import pandas as pd
 
+from gluonts.dataset import DatasetWriter
+from gluonts.dataset.common import MetaData, TrainDatasets
 from gluonts.dataset.field_names import FieldName
-from gluonts.dataset.repository._util import metadata, save_to_file
+from gluonts.dataset.repository._util import metadata
 from gluonts.time_feature.holiday import squared_exponential_kernel
 from pts.feature import CustomDateFeatureSet
 
 
 def generate_pts_m5_dataset(
     dataset_path: Path,
-    pandas_freq: str,
+    m5_file_path: Path,
+    dataset_writer: DatasetWriter,
+    pandas_freq: str = "D",
     prediction_length: int = 28,
     alpha: float = 0.5,
 ):
-    cal_path = f"{dataset_path}/calendar.csv"
-    sales_path = f"{dataset_path}/sales_train_validation.csv"
-    sales_test_path = f"{dataset_path}/sales_train_evaluation.csv"
-    sell_prices_path = f"{dataset_path}/sell_prices.csv"
+    cal_path = f"{m5_file_path}/calendar.csv"
+    sales_path = f"{m5_file_path}/sales_train_validation.csv"
+    sales_test_path = f"{m5_file_path}/sales_train_evaluation.csv"
+    sell_prices_path = f"{m5_file_path}/sell_prices.csv"
 
     if not os.path.exists(cal_path) or not os.path.exists(sales_path):
         raise RuntimeError(
-            f"M5 data is available on Kaggle (https://www.kaggle.com/c/m5-forecasting-accuracy/data). "
-            f"You first need to agree to the terms of the competition before being able to download the data. "
-            f"After you have done that, please copy the files into {dataset_path}."
+            "M5 data is available on Kaggle"
+            " (https://www.kaggle.com/c/m5-forecasting-accuracy/data). You"
+            " first need to agree to the terms of the competition before"
+            " being able to download the data. After you have done that,"
+            f" please supply the files at {m5_file_path}."
         )
 
     # Read M5 data from dataset_path
@@ -106,35 +112,45 @@ def generate_pts_m5_dataset(
         sales_train_evaluation.index.get_level_values(1)
     ).codes
 
-    feat_static_cat = [
-        {
-            "name": "state_id",
-            "cardinality": len(sales_train_validation["state"].unique()),
-        },
-        {
-            "name": "store_id",
-            "cardinality": len(sales_train_validation["store"].unique()),
-        },
-        {"name": "cat_id", "cardinality": len(sales_train_validation["cat"].unique())},
-        {
-            "name": "dept_id",
-            "cardinality": len(sales_train_validation["dept"].unique()),
-        },
-        {
-            "name": "item_id",
-            "cardinality": len(sales_train_validation["item"].unique()),
-        },
+    # feat_static_cat = [
+    #     {
+    #         "name": "state_id",
+    #         "cardinality": sales_train_validation["state"].nunique(),
+    #     },
+    #     {
+    #         "name": "store_id",
+    #         "cardinality": sales_train_validation["store"].nunique(),
+    #     },
+    #     {
+    #         "name": "cat_id",
+    #         "cardinality": sales_train_validation["cat"].nunique(),
+    #     },
+    #     {
+    #         "name": "dept_id",
+    #         "cardinality": sales_train_validation["dept"].nunique(),
+    #     },
+    #     {
+    #         "name": "item_id",
+    #         "cardinality": sales_train_validation["item"].nunique(),
+    #     },
+    # ]
+    cardinalities = [
+        sales_train_validation["state"].nunique(),
+        sales_train_validation["store"].nunique(),
+        sales_train_validation["cat"].nunique(),
+        sales_train_validation["dept"].nunique(),
+        sales_train_validation["item"].nunique(),
     ]
 
-    feat_dynamic_real = [
-        {"name": "sell_price", "cardinality": 1},
-        {"name": "event_1", "cardinality": 1},
-        {"name": "event_2", "cardinality": 1},
-        {"name": "snap", "cardinality": 1},
-    ]
+    # feat_dynamic_real = [
+    #     {"name": "sell_price", "cardinality": 1},
+    #     {"name": "event_1", "cardinality": 1},
+    #     {"name": "event_2", "cardinality": 1},
+    #     {"name": "snap", "cardinality": 1},
+    # ]
 
     # Build training set
-    train_file = dataset_path / "train" / "data.json"
+    # train_file = dataset_path / "train" / "data.json"
     train_ds = []
     for index, item in sales_train_validation.iterrows():
         id, item_id, dept_id, cat_id, store_id, state_id = index
@@ -181,27 +197,34 @@ def generate_pts_m5_dataset(
 
         train_ds.append(time_series.copy())
 
-    # Build training set
-    train_file = dataset_path / "train" / "data.json"
-    save_to_file(train_file, train_ds)
+    # # Build training set
+    # train_file = dataset_path / "train" / "data.json"
+    # save_to_file(train_file, train_ds)
 
-    # Create metadata file
-    meta_file = dataset_path / "metadata.json"
-    with open(meta_file, "w") as f:
-        f.write(
-            json.dumps(
-                {
-                    "freq": pandas_freq,
-                    "prediction_length": prediction_length,
-                    "feat_static_cat": feat_static_cat,
-                    "feat_dynamic_real": feat_dynamic_real,
-                    "cardinality": len(train_ds),
-                }
-            )
+    # # Create metadata file
+    # meta_file = dataset_path / "metadata.json"
+    # with open(meta_file, "w") as f:
+    #     f.write(
+    #         json.dumps(
+    #             {
+    #                 "freq": pandas_freq,
+    #                 "prediction_length": prediction_length,
+    #                 "feat_static_cat": feat_static_cat,
+    #                 "feat_dynamic_real": feat_dynamic_real,
+    #                 "cardinality": len(train_ds),
+    #             }
+    #         )
+    #     )
+    meta = MetaData(
+        **metadata(
+            cardinality=cardinalities,
+            freq=pandas_freq,
+            prediction_length=prediction_length,
         )
+    )
 
     # Build testing set
-    test_file = dataset_path / "test" / "data.json"
+    # test_file = dataset_path / "test" / "data.json"
     test_ds = []
     for index, item in sales_train_evaluation.iterrows():
         id, item_id, dept_id, cat_id, store_id, state_id = index
@@ -248,4 +271,6 @@ def generate_pts_m5_dataset(
 
         test_ds.append(time_series.copy())
 
-    save_to_file(test_file, test_ds)
+    # save_to_file(test_file, test_ds)
+    dataset = TrainDatasets(metadata=meta, train=train_ds, test=test_ds)
+    dataset.save(path_str=str(dataset_path), writer=dataset_writer, overwrite=True)

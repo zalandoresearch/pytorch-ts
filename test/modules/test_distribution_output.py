@@ -17,7 +17,7 @@ from torch.nn.utils import clip_grad_norm_
 from torch.optim import SGD
 from torch.utils.data import TensorDataset, DataLoader
 
-from gluonts.torch.modules.distribution_output import DistributionOutput
+from gluonts.torch.distributions.distribution_output import DistributionOutput
 from pts.modules import (
     StudentTOutput,
     BetaOutput,
@@ -152,7 +152,6 @@ def test_neg_binomial(total_count_logit: Tuple[float, float]) -> None:
 
 @pytest.mark.parametrize("df, loc, scale,", [(6.0, 2.3, 0.7)])
 def test_studentT_likelihood(df: float, loc: float, scale: float):
-
     dfs = torch.zeros((NUM_SAMPLES,)) + df
     locs = torch.zeros((NUM_SAMPLES,)) + loc
     scales = torch.zeros((NUM_SAMPLES,)) + scale
@@ -191,7 +190,7 @@ def test_independent_normal() -> None:
 
     loc = np.arange(0, dim) / float(dim)
     diag = np.arange(dim) / dim + 0.5
-    Sigma = diag ** 2
+    Sigma = diag**2
 
     distr = Independent(Normal(loc=torch.Tensor(loc), scale=torch.Tensor(diag)), 1)
 
