@@ -52,13 +52,17 @@ class IndependentDistributionOutput(DistributionOutput):
         return Independent(distr, 1)
 
     def distribution(
-        self, distr_args, scale: Optional[torch.Tensor] = None
+        self,
+        distr_args,
+        loc: Optional[torch.Tensor] = None,
+        scale: Optional[torch.Tensor] = None,
     ) -> Distribution:
         distr = self.independent(self.distr_cls(*distr_args))
         if scale is None:
-            return distr
-        else:
-            return TransformedDistribution(distr, [AffineTransform(loc=0, scale=scale)])
+            scale = 1.0
+        if loc is None:
+            loc = 0.0
+        return TransformedDistribution(distr, [AffineTransform(loc=loc, scale=scale)])
 
 
 class NormalOutput(IndependentDistributionOutput):
@@ -118,12 +122,18 @@ class PoissonOutput(IndependentDistributionOutput):
         return (rate_pos.squeeze(-1),)
 
     def distribution(
-        self, distr_args, scale: Optional[torch.Tensor] = None
+        self,
+        distr_args,
+        loc: Optional[torch.Tensor] = None,
+        scale: Optional[torch.Tensor] = None,
     ) -> Distribution:
         (rate,) = distr_args
 
         if scale is not None:
             rate *= scale
+
+        if loc is not None:
+            rate += loc
 
         return self.independent(Poisson(rate))
 
@@ -145,12 +155,18 @@ class ZeroInflatedPoissonOutput(IndependentDistributionOutput):
         return gate_unit.squeeze(-1), rate_pos.squeeze(-1)
 
     def distribution(
-        self, distr_args, scale: Optional[torch.Tensor] = None
+        self,
+        distr_args,
+        loc: Optional[torch.Tensor] = None,
+        scale: Optional[torch.Tensor] = None,
     ) -> Distribution:
         gate, rate = distr_args
 
         if scale is not None:
             rate *= scale
+
+        if loc is not None:
+            rate += loc
 
         return self.independent(ZeroInflatedPoisson(gate=gate, rate=rate))
 
@@ -170,7 +186,10 @@ class NegativeBinomialOutput(IndependentDistributionOutput):
         return total_count.squeeze(-1), logits.squeeze(-1)
 
     def distribution(
-        self, distr_args, scale: Optional[torch.Tensor] = None
+        self,
+        distr_args,
+        loc: Optional[torch.Tensor] = None,
+        scale: Optional[torch.Tensor] = None,
     ) -> Distribution:
         total_count, logits = distr_args
 
@@ -198,7 +217,10 @@ class ZeroInflatedNegativeBinomialOutput(IndependentDistributionOutput):
         return gate.squeeze(-1), total_count.squeeze(-1), logits.squeeze(-1)
 
     def distribution(
-        self, distr_args, scale: Optional[torch.Tensor] = None
+        self,
+        distr_args,
+        loc: Optional[torch.Tensor] = None,
+        scale: Optional[torch.Tensor] = None,
     ) -> Distribution:
         gate, total_count, logits = distr_args
 
@@ -251,17 +273,21 @@ class StudentTMixtureOutput(DistributionOutput):
         )
 
     def distribution(
-        self, distr_args, scale: Optional[torch.Tensor] = None
+        self,
+        distr_args,
+        loc: Optional[torch.Tensor] = None,
+        scale: Optional[torch.Tensor] = None,
     ) -> Distribution:
-        mix_logits, df, loc, dist_scale = distr_args
+        mix_logits, df, dist_loc, dist_scale = distr_args
 
         distr = MixtureSameFamily(
-            Categorical(logits=mix_logits), StudentT(df, loc, dist_scale)
+            Categorical(logits=mix_logits), StudentT(df, dist_loc, dist_scale)
         )
         if scale is None:
-            return distr
-        else:
-            return TransformedDistribution(distr, [AffineTransform(loc=0, scale=scale)])
+            scale = 1.0
+        if loc is None:
+            loc = 0.0
+        return TransformedDistribution(distr, [AffineTransform(loc=loc, scale=scale)])
 
     @property
     def event_shape(self) -> Tuple:
@@ -284,17 +310,21 @@ class NormalMixtureOutput(DistributionOutput):
         return mix_logits.squeeze(-1), loc.squeeze(-1), scale.squeeze(-1)
 
     def distribution(
-        self, distr_args, scale: Optional[torch.Tensor] = None
+        self,
+        distr_args,
+        loc: Optional[torch.Tensor] = None,
+        scale: Optional[torch.Tensor] = None,
     ) -> Distribution:
-        mix_logits, loc, dist_scale = distr_args
+        mix_logits, dist_loc, dist_scale = distr_args
 
         distr = MixtureSameFamily(
-            Categorical(logits=mix_logits), Normal(loc, dist_scale)
+            Categorical(logits=mix_logits), Normal(dist_loc, dist_scale)
         )
         if scale is None:
-            return distr
-        else:
-            return TransformedDistribution(distr, [AffineTransform(loc=0, scale=scale)])
+            scale = 1.0
+        if loc is None:
+            loc = 0.0
+        return TransformedDistribution(distr, [AffineTransform(loc=loc, scale=scale)])
 
     @property
     def event_shape(self) -> Tuple:
@@ -362,15 +392,19 @@ class MultivariateNormalOutput(DistributionOutput):
         return loc, scale_tril
 
     def distribution(
-        self, distr_args, scale: Optional[torch.Tensor] = None
+        self,
+        distr_args,
+        loc: Optional[torch.Tensor] = None,
+        scale: Optional[torch.Tensor] = None,
     ) -> Distribution:
-        loc, scale_tri = distr_args
-        distr = MultivariateNormal(loc=loc, scale_tril=scale_tri)
+        dist_loc, scale_tri = distr_args
+        distr = MultivariateNormal(loc=dist_loc, scale_tril=scale_tri)
 
         if scale is None:
-            return distr
-        else:
-            return TransformedDistribution(distr, [AffineTransform(loc=0, scale=scale)])
+            scale = 1.0
+        if loc is None:
+            loc = 0.0
+        return TransformedDistribution(distr, [AffineTransform(loc=loc, scale=scale)])
 
     @property
     def event_shape(self) -> Tuple:
@@ -388,10 +422,12 @@ class FlowOutput(DistributionOutput):
     def domain_map(cls, cond):
         return (cond,)
 
-    def distribution(self, distr_args, scale=None):
+    def distribution(self, distr_args, loc=None, scale=None):
         (cond,) = distr_args
         if scale is not None:
             self.flow.scale = scale
+        if loc is not None:
+            self.flow.loc = loc
         self.flow.cond = cond
 
         return self.flow
@@ -412,10 +448,12 @@ class DiffusionOutput(DistributionOutput):
     def domain_map(cls, cond):
         return (cond,)
 
-    def distribution(self, distr_args, scale=None):
+    def distribution(self, distr_args, loc=None, scale=None):
         (cond,) = distr_args
         if scale is not None:
             self.diffusion.scale = scale
+        if loc is not None:
+            self.diffusion.loc = loc
         self.diffusion.cond = cond
 
         return self.diffusion
