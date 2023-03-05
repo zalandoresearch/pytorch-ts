@@ -2,27 +2,26 @@ from typing import Optional
 
 import numpy as np
 import torch
-
 from gluonts.core.component import validated
 from gluonts.dataset.field_names import FieldName
-from gluonts.torch.util import copy_parameters
 from gluonts.torch.model.predictor import PyTorchPredictor
+from gluonts.torch.util import copy_parameters
 from gluonts.transform import (
-    InstanceSplitter,
-    ValidationSplitSampler,
-    TestSplitSampler,
-    Transformation,
-    Chain,
-    ExpectedNumInstanceSampler,
     AddObservedValuesIndicator,
     AsNumpyArray,
+    Chain,
+    ExpectedNumInstanceSampler,
+    InstanceSplitter,
+    TestSplitSampler,
+    Transformation,
+    ValidationSplitSampler,
 )
 
-from pts.model import PyTorchEstimator
 from pts import Trainer
+from pts.model import PyTorchEstimator
 from pts.model.utils import get_module_forward_input_names
 
-from .lstnet_network import LSTNetTrain, LSTNetPredict
+from .lstnet_network import LSTNetPredict, LSTNetTrain
 
 
 class LSTNetEstimator(PyTorchEstimator):

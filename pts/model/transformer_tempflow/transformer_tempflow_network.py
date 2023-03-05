@@ -2,9 +2,9 @@ from typing import List, Optional, Tuple
 
 import torch
 import torch.nn as nn
-
 from gluonts.core.component import validated
-from pts.modules import RealNVP, MAF, FlowOutput, MeanScaler, NOPScaler
+
+from pts.modules import MAF, FlowOutput, MeanScaler, NOPScaler, RealNVP
 
 
 class TransformerTempFlowTrainingNetwork(nn.Module):

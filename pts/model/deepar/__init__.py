@@ -1,6 +1,6 @@
-from .module import DeepARModel
-from .lightning_module import DeepARLightningModule
 from .estimator import DeepAREstimator
+from .lightning_module import DeepARLightningModule
+from .module import DeepARModel
 
 __all__ = [
     "DeepARModel",

@@ -2,42 +2,41 @@ from typing import List, Optional
 
 import numpy as np
 import torch
-
 from gluonts.core.component import validated
 from gluonts.dataset.field_names import FieldName
+from gluonts.model.predictor import Predictor
 from gluonts.time_feature import TimeFeature
 from gluonts.torch.distributions.distribution_output import DistributionOutput
-from gluonts.torch.util import copy_parameters
 from gluonts.torch.model.predictor import PyTorchPredictor
-from gluonts.model.predictor import Predictor
+from gluonts.torch.util import copy_parameters
 from gluonts.transform import (
-    Transformation,
-    Chain,
-    InstanceSplitter,
-    ValidationSplitSampler,
-    TestSplitSampler,
-    ExpectedNumInstanceSampler,
-    RemoveFields,
     AddAgeFeature,
-    AsNumpyArray,
     AddObservedValuesIndicator,
     AddTimeFeatures,
-    VstackFeatures,
+    AsNumpyArray,
+    Chain,
+    ExpectedNumInstanceSampler,
+    InstanceSplitter,
+    RemoveFields,
     SetField,
+    TestSplitSampler,
+    Transformation,
+    ValidationSplitSampler,
+    VstackFeatures,
 )
 
 from pts import Trainer
-from pts.model.utils import get_module_forward_input_names
 from pts.feature import (
     fourier_time_features_from_frequency,
     lags_for_fourier_time_features_from_frequency,
 )
 from pts.model import PyTorchEstimator
+from pts.model.utils import get_module_forward_input_names
 from pts.modules import StudentTOutput
 
 from .transformer_network import (
-    TransformerTrainingNetwork,
     TransformerPredictionNetwork,
+    TransformerTrainingNetwork,
 )
 
 

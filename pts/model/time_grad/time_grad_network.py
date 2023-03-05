@@ -2,11 +2,10 @@ from typing import List, Optional, Tuple, Union
 
 import torch
 import torch.nn as nn
-
 from gluonts.core.component import validated
 
 from pts.model import weighted_average
-from pts.modules import GaussianDiffusion, DiffusionOutput, MeanScaler, NOPScaler
+from pts.modules import DiffusionOutput, GaussianDiffusion, MeanScaler, NOPScaler
 
 from .epsilon_theta import EpsilonTheta
 

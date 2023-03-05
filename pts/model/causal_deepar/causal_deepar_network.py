@@ -3,12 +3,12 @@ from typing import List, Optional, Tuple, Union
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.distributions import Distribution
-
 from gluonts.core.component import validated
 from gluonts.torch.distributions.distribution_output import DistributionOutput
+from torch.distributions import Distribution
+
 from pts.model import weighted_average
-from pts.modules import MeanScaler, NOPScaler, FeatureEmbedder
+from pts.modules import FeatureEmbedder, MeanScaler, NOPScaler
 
 
 def prod(xs):

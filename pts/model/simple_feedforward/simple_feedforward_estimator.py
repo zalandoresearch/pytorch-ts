@@ -2,30 +2,29 @@ from typing import List, Optional
 
 import torch
 import torch.nn as nn
-
 from gluonts.core.component import validated
-from gluonts.torch.util import copy_parameters
-from gluonts.torch.model.predictor import PyTorchPredictor
-from gluonts.torch.distributions.distribution_output import DistributionOutput
-from gluonts.model.predictor import Predictor
 from gluonts.dataset.field_names import FieldName
+from gluonts.model.predictor import Predictor
+from gluonts.torch.distributions.distribution_output import DistributionOutput
+from gluonts.torch.model.predictor import PyTorchPredictor
+from gluonts.torch.util import copy_parameters
 from gluonts.transform import (
-    Transformation,
     Chain,
-    InstanceSplitter,
     ExpectedNumInstanceSampler,
-    ValidationSplitSampler,
+    InstanceSplitter,
     TestSplitSampler,
+    Transformation,
+    ValidationSplitSampler,
 )
 
-from pts.model.utils import get_module_forward_input_names
 from pts import Trainer
 from pts.model import PyTorchEstimator
+from pts.model.utils import get_module_forward_input_names
 from pts.modules import StudentTOutput
 
 from .simple_feedforward_network import (
-    SimpleFeedForwardTrainingNetwork,
     SimpleFeedForwardPredictionNetwork,
+    SimpleFeedForwardTrainingNetwork,
 )
 
 

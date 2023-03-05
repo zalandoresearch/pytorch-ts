@@ -2,21 +2,20 @@ from typing import List, Optional
 
 import torch
 import torch.nn as nn
-
 from gluonts.core.component import validated
 from gluonts.dataset.field_names import FieldName
 from gluonts.model.predictor import Predictor
 from gluonts.torch.model.predictor import PyTorchPredictor
 from gluonts.torch.util import copy_parameters
 from gluonts.transform import (
-    InstanceSplitter,
-    ValidationSplitSampler,
-    TestSplitSampler,
     AddObservedValuesIndicator,
-    Transformation,
     Chain,
-    RemoveFields,
     ExpectedNumInstanceSampler,
+    InstanceSplitter,
+    RemoveFields,
+    TestSplitSampler,
+    Transformation,
+    ValidationSplitSampler,
 )
 
 from pts import Trainer
@@ -24,9 +23,9 @@ from pts.model import PyTorchEstimator
 from pts.model.utils import get_module_forward_input_names
 
 from .n_beats_network import (
+    VALID_N_BEATS_STACK_TYPES,
     NBEATSPredictionNetwork,
     NBEATSTrainingNetwork,
-    VALID_N_BEATS_STACK_TYPES,
 )
 
 

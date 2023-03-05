@@ -2,11 +2,10 @@ from typing import List, Optional, Tuple, Union
 
 import torch
 import torch.nn as nn
-
 from gluonts.core.component import validated
 
 from pts.model import weighted_average
-from pts.modules import RealNVP, MAF, FlowOutput, MeanScaler, NOPScaler
+from pts.modules import MAF, FlowOutput, MeanScaler, NOPScaler, RealNVP
 
 
 class TempFlowTrainingNetwork(nn.Module):

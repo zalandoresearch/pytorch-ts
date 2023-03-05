@@ -1,27 +1,26 @@
 from typing import List, Optional
 
 import torch
-
 from gluonts.dataset.field_names import FieldName
+from gluonts.model.predictor import Predictor
 from gluonts.time_feature import TimeFeature
 from gluonts.torch.model.predictor import PyTorchPredictor
 from gluonts.torch.util import copy_parameters
-from gluonts.model.predictor import Predictor
 from gluonts.transform import (
-    Transformation,
-    Chain,
-    InstanceSplitter,
-    ExpectedNumInstanceSampler,
-    ValidationSplitSampler,
-    TestSplitSampler,
-    RenameFields,
-    AsNumpyArray,
-    ExpandDimArray,
     AddObservedValuesIndicator,
     AddTimeFeatures,
-    VstackFeatures,
+    AsNumpyArray,
+    Chain,
+    ExpandDimArray,
+    ExpectedNumInstanceSampler,
+    InstanceSplitter,
+    RenameFields,
     SetFieldIfNotPresent,
     TargetDimIndicator,
+    TestSplitSampler,
+    Transformation,
+    ValidationSplitSampler,
+    VstackFeatures,
 )
 
 from pts import Trainer
@@ -32,7 +31,7 @@ from pts.feature import (
 from pts.model import PyTorchEstimator
 from pts.model.utils import get_module_forward_input_names
 
-from .time_grad_network import TimeGradTrainingNetwork, TimeGradPredictionNetwork
+from .time_grad_network import TimeGradPredictionNetwork, TimeGradTrainingNetwork
 
 
 class TimeGradEstimator(PyTorchEstimator):

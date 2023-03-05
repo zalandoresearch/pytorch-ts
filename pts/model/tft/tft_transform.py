@@ -14,7 +14,6 @@
 from typing import Iterator, List
 
 import numpy as np
-
 from gluonts.core.component import validated
 from gluonts.dataset.common import DataEntry
 from gluonts.dataset.field_names import FieldName

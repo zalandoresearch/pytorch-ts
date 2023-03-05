@@ -1,9 +1,9 @@
 from typing import Callable, List
+
 import numpy as np
 import pandas as pd
 from pandas.tseries.holiday import Holiday
-
-from gluonts.time_feature.holiday import indicator, distance_to_holiday
+from gluonts.time_feature.holiday import distance_to_holiday, indicator
 
 
 class CustomDateFeatureSet:

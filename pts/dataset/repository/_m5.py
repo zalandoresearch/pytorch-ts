@@ -1,16 +1,14 @@
-import json
 import os
-from pathlib import Path
 from functools import lru_cache
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
-
 from gluonts.dataset import DatasetWriter
 from gluonts.dataset.common import MetaData, TrainDatasets
-from gluonts.dataset.field_names import FieldName
 from gluonts.dataset.repository._util import metadata
 from gluonts.time_feature.holiday import squared_exponential_kernel
+
 from pts.feature import CustomDateFeatureSet
 
 
@@ -222,6 +220,7 @@ def generate_pts_m5_dataset(
             prediction_length=prediction_length,
         )
     )
+    meta.feat_dynamic_real = ["sell_price", "event_1", "event_2", "snap"]
 
     # Build testing set
     # test_file = dataset_path / "test" / "data.json"

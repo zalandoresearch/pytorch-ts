@@ -2,17 +2,17 @@ from typing import List
 
 import torch
 import torch.nn as nn
-
 from gluonts.core.component import validated
+
 from pts.model import weighted_average
 
 from .tft_modules import (
-    FeatureProjector,
     FeatureEmbedder,
-    VariableSelectionNetwork,
+    FeatureProjector,
     GatedResidualNetwork,
-    TemporalFusionEncoder,
     TemporalFusionDecoder,
+    TemporalFusionEncoder,
+    VariableSelectionNetwork,
 )
 from .tft_output import QuantileOutput
 

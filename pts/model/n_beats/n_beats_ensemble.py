@@ -1,18 +1,18 @@
 import copy
 import logging
 from itertools import product
-from typing import List, Optional, Iterator
+from typing import Iterator, List, Optional
 
 import numpy as np
-
 from gluonts.core.component import validated
-from gluonts.dataset.field_names import FieldName
 from gluonts.dataset.common import Dataset
-from gluonts.model.predictor import Predictor
+from gluonts.dataset.field_names import FieldName
 from gluonts.model.forecast import Forecast, SampleForecast
+from gluonts.model.predictor import Predictor
 
-from pts.model import PyTorchEstimator
 from pts import Trainer
+from pts.model import PyTorchEstimator
+
 from .n_beats_estimator import NBEATSEstimator
 from .n_beats_network import VALID_LOSS_FUNCTIONS
 

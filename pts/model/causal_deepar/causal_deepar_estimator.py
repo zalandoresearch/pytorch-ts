@@ -3,42 +3,41 @@ from typing import List, Optional
 import numpy as np
 import torch
 import torch.nn as nn
-
 from gluonts.core.component import validated
 from gluonts.dataset.field_names import FieldName
+from gluonts.model.predictor import Predictor
 from gluonts.time_feature import (
     TimeFeature,
     get_lags_for_frequency,
     time_features_from_frequency_str,
 )
+from gluonts.torch.distributions.distribution_output import DistributionOutput
+from gluonts.torch.model.predictor import PyTorchPredictor
+from gluonts.torch.util import copy_parameters
 from gluonts.transform import (
-    Transformation,
-    Chain,
-    RemoveFields,
-    SetField,
-    AsNumpyArray,
+    AddAgeFeature,
     AddObservedValuesIndicator,
     AddTimeFeatures,
-    AddAgeFeature,
-    VstackFeatures,
-    InstanceSplitter,
-    ValidationSplitSampler,
-    TestSplitSampler,
+    AsNumpyArray,
+    Chain,
     ExpectedNumInstanceSampler,
+    InstanceSplitter,
+    RemoveFields,
+    SetField,
+    TestSplitSampler,
+    Transformation,
+    ValidationSplitSampler,
+    VstackFeatures,
 )
-from gluonts.torch.util import copy_parameters
-from gluonts.torch.model.predictor import PyTorchPredictor
-from gluonts.torch.distributions.distribution_output import DistributionOutput
-from gluonts.model.predictor import Predictor
 
-from pts.model.utils import get_module_forward_input_names
 from pts import Trainer
 from pts.model import PyTorchEstimator
+from pts.model.utils import get_module_forward_input_names
 from pts.modules import StudentTOutput
 
 from .causal_deepar_network import (
-    CausalDeepARTrainingNetwork,
     CausalDeepARPredictionNetwork,
+    CausalDeepARTrainingNetwork,
 )
 
 

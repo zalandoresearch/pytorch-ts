@@ -1,36 +1,28 @@
 import warnings
-from typing import Callable, Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 import numpy as np
+
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 from torch.distributions import (
-    Distribution,
     Beta,
-    NegativeBinomial,
-    StudentT,
-    Normal,
     Categorical,
-    MixtureSameFamily,
+    Distribution,
     Independent,
     LowRankMultivariateNormal,
+    MixtureSameFamily,
     MultivariateNormal,
-    TransformedDistribution,
-    AffineTransform,
+    NegativeBinomial,
+    Normal,
     Poisson,
 )
 
-from pts.distributions import (
-    ZeroInflatedPoisson,
-    ZeroInflatedNegativeBinomial,
-)
 from gluonts.core.component import validated
-from gluonts.torch.distributions.distribution_output import (
-    DistributionOutput,
-    LambdaLayer,
-    PtArgProj,
-)
+from gluonts.torch.distributions import AffineTransformed, DistributionOutput
+from gluonts.torch.distributions.studentT import StudentT
+
+from pts.distributions import ZeroInflatedNegativeBinomial, ZeroInflatedPoisson
 
 
 class IndependentDistributionOutput(DistributionOutput):
@@ -62,7 +54,7 @@ class IndependentDistributionOutput(DistributionOutput):
             scale = 1.0
         if loc is None:
             loc = 0.0
-        return TransformedDistribution(distr, [AffineTransform(loc=loc, scale=scale)])
+        return AffineTransformed(distr, loc=loc, scale=scale)
 
 
 class NormalOutput(IndependentDistributionOutput):
@@ -196,6 +188,10 @@ class NegativeBinomialOutput(IndependentDistributionOutput):
         if scale is not None:
             logits += scale.log()
 
+        # shift negative binomial parameters by loc
+        if loc is not None:
+            total_count += loc
+
         return self.independent(
             NegativeBinomial(total_count=total_count, logits=logits)
         )
@@ -226,6 +222,10 @@ class ZeroInflatedNegativeBinomialOutput(IndependentDistributionOutput):
 
         if scale is not None:
             logits += scale.log()
+
+        # shift negative binomial parameters by loc
+        if loc is not None:
+            total_count += loc
 
         return self.independent(
             ZeroInflatedNegativeBinomial(
@@ -287,7 +287,7 @@ class StudentTMixtureOutput(DistributionOutput):
             scale = 1.0
         if loc is None:
             loc = 0.0
-        return TransformedDistribution(distr, [AffineTransform(loc=loc, scale=scale)])
+        return AffineTransformed(distr, loc=loc, scale=scale)
 
     @property
     def event_shape(self) -> Tuple:
@@ -324,7 +324,7 @@ class NormalMixtureOutput(DistributionOutput):
             scale = 1.0
         if loc is None:
             loc = 0.0
-        return TransformedDistribution(distr, [AffineTransform(loc=loc, scale=scale)])
+        return AffineTransformed(distr, loc=loc, scale=scale)
 
     @property
     def event_shape(self) -> Tuple:
@@ -404,7 +404,7 @@ class MultivariateNormalOutput(DistributionOutput):
             scale = 1.0
         if loc is None:
             loc = 0.0
-        return TransformedDistribution(distr, [AffineTransform(loc=loc, scale=scale)])
+        return AffineTransformed(distr, loc=loc, scale=scale)
 
     @property
     def event_shape(self) -> Tuple:

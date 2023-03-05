@@ -2,10 +2,10 @@ from typing import List, Optional, Tuple
 
 import torch
 import torch.nn as nn
-
 from gluonts.core.component import validated
 from gluonts.torch.distributions.distribution_output import DistributionOutput
-from pts.modules import MeanScaler, NOPScaler, FeatureEmbedder
+
+from pts.modules import FeatureEmbedder, MeanScaler, NOPScaler
 
 
 def prod(xs):

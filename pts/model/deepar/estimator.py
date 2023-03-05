@@ -11,41 +11,37 @@
 # express or implied. See the License for the specific language governing
 # permissions and limitations under the License.
 
-from typing import List, Optional, Iterable, Dict, Any
+from typing import Any, Dict, Iterable, List, Optional
 
 import torch
-
 from gluonts.core.component import validated
 from gluonts.dataset.common import Dataset
 from gluonts.dataset.field_names import FieldName
 from gluonts.dataset.loader import as_stacked_batches
-from gluonts.itertools import Cyclic
 from gluonts.dataset.stat import calculate_dataset_statistics
-from gluonts.time_feature import (
-    TimeFeature,
-    time_features_from_frequency_str,
-)
-from gluonts.torch.modules.loss import DistributionLoss, NegativeLogLikelihood
-from gluonts.transform import (
-    Transformation,
-    Chain,
-    RemoveFields,
-    SetField,
-    AsNumpyArray,
-    AddObservedValuesIndicator,
-    AddTimeFeatures,
-    AddAgeFeature,
-    VstackFeatures,
-    InstanceSplitter,
-    ValidationSplitSampler,
-    TestSplitSampler,
-    ExpectedNumInstanceSampler,
-    MissingValueImputation,
-    DummyValueImputation,
-)
+from gluonts.itertools import Cyclic
+from gluonts.time_feature import TimeFeature, time_features_from_frequency_str
+from gluonts.torch.distributions import DistributionOutput
 from gluonts.torch.model.estimator import PyTorchLightningEstimator
 from gluonts.torch.model.predictor import PyTorchPredictor
-from gluonts.torch.distributions import DistributionOutput
+from gluonts.torch.modules.loss import DistributionLoss, NegativeLogLikelihood
+from gluonts.transform import (
+    AddAgeFeature,
+    AddObservedValuesIndicator,
+    AddTimeFeatures,
+    AsNumpyArray,
+    Chain,
+    DummyValueImputation,
+    ExpectedNumInstanceSampler,
+    InstanceSplitter,
+    MissingValueImputation,
+    RemoveFields,
+    SetField,
+    TestSplitSampler,
+    Transformation,
+    ValidationSplitSampler,
+    VstackFeatures,
+)
 from gluonts.transform.sampler import InstanceSampler
 
 from pts.modules import StudentTOutput
@@ -119,7 +115,9 @@ class DeepAREstimator(PyTorchLightningEstimator):
         Loss to be optimized during training
         (default: ``NegativeLogLikelihood()``).
     scaling
-        Whether to automatically scale the target values (default: true).
+        Whether to automatically scale the target values (default: "mean"). Can be
+        set to "none" to disable scaling, to "std" to apply Std Scaling, or to
+        "mean" to apply Mean Scaling.
     default_scale
         Default scale that is applied if the context length window is
         completely unobserved. If not set, the scale in this case will be
@@ -153,6 +151,7 @@ class DeepAREstimator(PyTorchLightningEstimator):
         self,
         freq: str,
         prediction_length: int,
+        input_size: int = 1,
         context_length: Optional[int] = None,
         num_layers: int = 2,
         hidden_size: int = 40,
@@ -167,7 +166,7 @@ class DeepAREstimator(PyTorchLightningEstimator):
         embedding_dimension: Optional[List[int]] = None,
         distr_output: DistributionOutput = StudentTOutput(),
         loss: DistributionLoss = NegativeLogLikelihood(),
-        scaling: bool = True,
+        scaling: Optional[str] = "mean",
         default_scale: float = 0.0,
         lags_seq: Optional[List[int]] = None,
         time_features: Optional[List[TimeFeature]] = None,
@@ -188,10 +187,11 @@ class DeepAREstimator(PyTorchLightningEstimator):
         super().__init__(trainer_kwargs=default_trainer_kwargs)
 
         self.freq = freq
+        self.prediction_length = prediction_length
+        self.input_size = input_size
         self.context_length = (
             context_length if context_length is not None else prediction_length
         )
-        self.prediction_length = prediction_length
         self.patience = patience
         self.distr_output = distr_output
         self.loss = loss
@@ -378,6 +378,7 @@ class DeepAREstimator(PyTorchLightningEstimator):
                 "freq": self.freq,
                 "context_length": self.context_length,
                 "prediction_length": self.prediction_length,
+                "input_size": self.input_size,
                 "num_feat_dynamic_real": (
                     1 + self.num_feat_dynamic_real + len(self.time_features)
                 ),

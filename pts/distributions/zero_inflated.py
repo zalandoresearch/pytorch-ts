@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import torch
-from torch.distributions import constraints, NegativeBinomial, Poisson, Distribution
+from torch.distributions import Distribution, NegativeBinomial, Poisson, constraints
 from torch.distributions.utils import broadcast_all, lazy_property
 
 from .utils import broadcast_shape

@@ -15,23 +15,21 @@ from typing import List, Optional, Tuple
 
 import torch
 import torch.nn as nn
-
 from gluonts.core.component import validated
+from gluonts.itertools import prod
+from gluonts.model import Input, InputSpec
 from gluonts.time_feature import get_lags_for_frequency
-from gluonts.torch.distributions import (
-    DistributionOutput,
-    StudentTOutput,
-)
-from gluonts.torch.scaler import Scaler, MeanScaler, NOPScaler
+from gluonts.torch.distributions import DistributionOutput
 from gluonts.torch.modules.feature import FeatureEmbedder
 from gluonts.torch.modules.loss import DistributionLoss, NegativeLogLikelihood
+from gluonts.torch.scaler import MeanScaler, NOPScaler, Scaler, StdScaler
 from gluonts.torch.util import (
     lagged_sequence_values,
     repeat_along_dim,
     unsqueeze_expand,
 )
-from gluonts.itertools import prod
-from gluonts.model import Input, InputSpec
+
+from pts.modules import StudentTOutput
 
 
 class DeepARModel(nn.Module):
@@ -93,6 +91,7 @@ class DeepARModel(nn.Module):
         freq: str,
         context_length: int,
         prediction_length: int,
+        input_size: int = 1,
         num_feat_dynamic_real: int = 1,
         num_feat_static_real: int = 1,
         num_feat_static_cat: int = 1,
@@ -121,6 +120,7 @@ class DeepARModel(nn.Module):
 
         self.context_length = context_length
         self.prediction_length = prediction_length
+        self.input_size = input_size
         self.distr_output = distr_output
         self.param_proj = distr_output.get_args_proj(hidden_size)
         self.num_feat_dynamic_real = num_feat_dynamic_real
@@ -139,10 +139,12 @@ class DeepARModel(nn.Module):
             cardinalities=cardinality,
             embedding_dims=self.embedding_dimension,
         )
-        if scaling:
+        if scaling == "mean":
             self.scaler: Scaler = MeanScaler(
                 dim=-1, keepdim=True, default_scale=default_scale
             )
+        elif scaling == "std":
+            self.scaler = StdScaler(dim=-1, keepdim=True)
         else:
             self.scaler = NOPScaler(dim=-1, keepdim=True)
         self.rnn_input_size = len(self.lags_seq) + self._number_of_features
@@ -199,7 +201,7 @@ class DeepARModel(nn.Module):
             sum(self.embedding_dimension)
             + self.num_feat_dynamic_real
             + self.num_feat_static_real
-            + 1  # the log(scale)
+            + self.input_size * 2  # the log(scale) and log1p(abs(loc))
         )
 
     @property
@@ -219,15 +221,15 @@ class DeepARModel(nn.Module):
         context = past_target[..., -self.context_length :]
         observed_context = past_observed_values[..., -self.context_length :]
 
-        input, _, scale = self.scaler(context, observed_context)
+        input, loc, scale = self.scaler(context, observed_context)
         future_length = future_time_feat.shape[-2]
         if future_length > 1:
             assert future_target is not None
             input = torch.cat(
-                (input, future_target[..., : future_length - 1] / scale),
+                (input, (future_target[..., : future_length - 1] - loc) / scale),
                 dim=-1,
             )
-        prior_input = past_target[..., : -self.context_length] / scale
+        prior_input = (past_target[..., : -self.context_length] - loc) / scale
 
         lags = lagged_sequence_values(self.lags_seq, prior_input, input, dim=-1)
 
@@ -240,8 +242,17 @@ class DeepARModel(nn.Module):
         )
 
         embedded_cat = self.embedder(feat_static_cat)
+        log_abs_loc = (
+            loc.abs().log1p()
+            if self.config.input_size == 1
+            else loc.squeeze(1).abs().log1p()
+        )
+        log_scale = (
+            scale.log() if self.config.input_size == 1 else scale.squeeze(1).log()
+        )
+
         static_feat = torch.cat(
-            (embedded_cat, feat_static_real, scale.log()),
+            (embedded_cat, feat_static_real, log_abs_loc, log_scale),
             dim=-1,
         )
         expanded_static_feat = unsqueeze_expand(
@@ -250,7 +261,7 @@ class DeepARModel(nn.Module):
 
         features = torch.cat((expanded_static_feat, time_feat), dim=-1)
 
-        return torch.cat((lags, features), dim=-1), scale, static_feat
+        return torch.cat((lags, features), dim=-1), loc, scale, static_feat
 
     def unroll_lagged_rnn(
         self,
@@ -305,7 +316,7 @@ class DeepARModel(nn.Module):
             - Static input to the RNN
             - Output state from the RNN
         """
-        rnn_input, scale, static_feat = self.prepare_rnn_input(
+        rnn_input, loc, scale, static_feat = self.prepare_rnn_input(
             feat_static_cat,
             feat_static_real,
             past_time_feat,
@@ -318,11 +329,11 @@ class DeepARModel(nn.Module):
         output, new_state = self.rnn(rnn_input)
 
         params = self.param_proj(output)
-        return params, scale, output, static_feat, new_state
+        return params, loc, scale, output, static_feat, new_state
 
     @torch.jit.ignore
     def output_distribution(
-        self, params, scale=None, trailing_n=None
+        self, params, loc=None, scale=None, trailing_n=None
     ) -> torch.distributions.Distribution:
         """
         Instantiate the output distribution
@@ -331,8 +342,10 @@ class DeepARModel(nn.Module):
         ----------
         params
             Tuple of distribution parameters.
+        loc
+            (Optional) distribution shift tensor.
         scale
-            (Optional) scale tensor.
+            (Optional) distribution scale tensor.
         trailing_n
             If set, the output distribution is created only for the last
             ``trailing_n`` time points.
@@ -345,7 +358,7 @@ class DeepARModel(nn.Module):
         sliced_params = params
         if trailing_n is not None:
             sliced_params = [p[:, -trailing_n:] for p in params]
-        return self.distr_output.distribution(sliced_params, scale=scale)
+        return self.distr_output.distribution(sliced_params, loc=loc, scale=scale)
 
     def forward(
         self,
@@ -387,7 +400,7 @@ class DeepARModel(nn.Module):
         if num_parallel_samples is None:
             num_parallel_samples = self.num_parallel_samples
 
-        params, scale, _, static_feat, state = self.unroll_lagged_rnn(
+        params, loc, scale, _, static_feat, state = self.unroll_lagged_rnn(
             feat_static_cat,
             feat_static_real,
             past_time_feat,
@@ -397,13 +410,15 @@ class DeepARModel(nn.Module):
         )
 
         repeated_scale = scale.repeat_interleave(repeats=num_parallel_samples, dim=0)
+        repeated_loc = loc.repeat_interleave(repeats=num_parallel_samples, dim=0)
+
         repeated_static_feat = static_feat.repeat_interleave(
             repeats=num_parallel_samples, dim=0
         ).unsqueeze(dim=1)
         repeated_past_target = (
             past_target.repeat_interleave(repeats=num_parallel_samples, dim=0)
-            / repeated_scale
-        )
+            - repeated_loc
+        ) / repeated_scale
         repeated_time_feat = future_time_feat.repeat_interleave(
             repeats=num_parallel_samples, dim=0
         )
@@ -415,13 +430,13 @@ class DeepARModel(nn.Module):
             s.repeat_interleave(repeats=num_parallel_samples, dim=0) for s in params
         ]
         distr = self.output_distribution(
-            repeated_params, trailing_n=1, scale=repeated_scale
+            repeated_params, trailing_n=1, loc=repeated_loc, scale=repeated_scale
         )
         next_sample = distr.sample()
         future_samples = [next_sample]
 
         for k in range(1, self.prediction_length):
-            scaled_next_sample = next_sample / repeated_scale
+            scaled_next_sample = (next_sample - repeated_loc) / repeated_scale
             next_features = torch.cat(
                 (repeated_static_feat, repeated_time_feat[:, k : k + 1]),
                 dim=-1,
@@ -438,7 +453,9 @@ class DeepARModel(nn.Module):
             )
 
             params = self.param_proj(output)
-            distr = self.output_distribution(params, scale=repeated_scale)
+            distr = self.output_distribution(
+                params, loc=repeated_loc, scale=repeated_scale
+            )
             next_sample = distr.sample()
             future_samples.append(next_sample)
 
@@ -507,7 +524,7 @@ class DeepARModel(nn.Module):
             *future_observed_values.shape[extra_dims + 1 :],
         )
 
-        params, scale, _, _, _ = self.unroll_lagged_rnn(
+        params, loc, scale, _, _, _ = self.unroll_lagged_rnn(
             feat_static_cat,
             feat_static_real,
             past_time_feat,
@@ -519,11 +536,11 @@ class DeepARModel(nn.Module):
 
         if future_only:
             distr = self.output_distribution(
-                params, scale, trailing_n=self.prediction_length
+                params, loc=loc, scale=scale, trailing_n=self.prediction_length
             )
             loss_values = loss(distr, future_target_reshaped) * future_observed_reshaped
         else:
-            distr = self.output_distribution(params, scale)
+            distr = self.output_distribution(params, loc=loc, scale=scale)
             context_target = past_target[:, -self.context_length + 1 :]
             target = torch.cat(
                 (context_target, future_target_reshaped),

@@ -1,31 +1,27 @@
 from itertools import chain
-from typing import List, Optional, Dict
+from typing import Dict, List, Optional
 
 import numpy as np
 import torch
-
 from gluonts.core.component import validated
 from gluonts.dataset.field_names import FieldName
 from gluonts.model.forecast_generator import QuantileForecastGenerator
 from gluonts.model.predictor import Predictor
-from gluonts.time_feature import (
-    TimeFeature,
-    time_features_from_frequency_str,
-)
+from gluonts.time_feature import TimeFeature, time_features_from_frequency_str
 from gluonts.torch.model.predictor import PyTorchPredictor
 from gluonts.torch.util import copy_parameters
 from gluonts.transform import (
-    Transformation,
-    Chain,
-    ValidationSplitSampler,
-    TestSplitSampler,
-    ExpectedNumInstanceSampler,
     AddAgeFeature,
-    AsNumpyArray,
     AddObservedValuesIndicator,
     AddTimeFeatures,
-    VstackFeatures,
+    AsNumpyArray,
+    Chain,
+    ExpectedNumInstanceSampler,
     SetField,
+    TestSplitSampler,
+    Transformation,
+    ValidationSplitSampler,
+    VstackFeatures,
 )
 
 from pts import Trainer

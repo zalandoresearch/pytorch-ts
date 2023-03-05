@@ -1,6 +1,6 @@
 from functools import partial
 
-from gluonts.dataset.repository.datasets import get_download_path, dataset_recipes
+from gluonts.dataset.repository.datasets import dataset_recipes, get_download_path
 
 from ._m5 import generate_pts_m5_dataset
 
