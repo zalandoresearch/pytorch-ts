@@ -102,7 +102,7 @@ class DeepARModel(nn.Module):
         dropout_rate: float = 0.1,
         distr_output: DistributionOutput = StudentTOutput(),
         lags_seq: Optional[List[int]] = None,
-        scaling: bool = True,
+        scaling: Optional[str] = "mean",
         default_scale: float = 0.0,
         num_parallel_samples: int = 100,
     ) -> None:
