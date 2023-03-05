@@ -243,13 +243,9 @@ class DeepARModel(nn.Module):
 
         embedded_cat = self.embedder(feat_static_cat)
         log_abs_loc = (
-            loc.abs().log1p()
-            if self.config.input_size == 1
-            else loc.squeeze(1).abs().log1p()
+            loc.abs().log1p() if self.input_size == 1 else loc.squeeze(1).abs().log1p()
         )
-        log_scale = (
-            scale.log() if self.config.input_size == 1 else scale.squeeze(1).log()
-        )
+        log_scale = scale.log() if self.input_size == 1 else scale.squeeze(1).log()
 
         static_feat = torch.cat(
             (embedded_cat, feat_static_real, log_abs_loc, log_scale),
