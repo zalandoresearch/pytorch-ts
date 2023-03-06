@@ -226,9 +226,6 @@ class DeepARModel(nn.Module):
         observed_context = past_observed_values[..., -self.context_length :, :]
 
         input, loc, scale = self.scaler(context, observed_context)
-        import pdb
-
-        pdb.set_trace()
         future_length = future_time_feat.shape[-2]
         if future_length > 1:
             assert future_target is not None
