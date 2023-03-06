@@ -141,12 +141,12 @@ class DeepARModel(nn.Module):
         )
         if scaling == "mean":
             self.scaler: Scaler = MeanScaler(
-                dim=-1, keepdim=True, default_scale=default_scale
+                dim=1, keepdim=True, default_scale=default_scale
             )
         elif scaling == "std":
-            self.scaler = StdScaler(dim=-1, keepdim=True)
+            self.scaler = StdScaler(dim=1, keepdim=True)
         else:
-            self.scaler = NOPScaler(dim=-1, keepdim=True)
+            self.scaler = NOPScaler(dim=1, keepdim=True)
         self.rnn_input_size = len(self.lags_seq) + self._number_of_features
         self.rnn = nn.LSTM(
             input_size=self.rnn_input_size,
@@ -249,6 +249,8 @@ class DeepARModel(nn.Module):
         )
 
         embedded_cat = self.embedder(feat_static_cat)
+        loc = loc if self.input_size == 1 else loc.squeeze(1)
+        scale = scale if self.input_size == 1 else scale.squeeze(1)
         log_abs_loc = (
             loc.abs().log1p() if self.input_size == 1 else loc.squeeze(1).abs().log1p()
         )
