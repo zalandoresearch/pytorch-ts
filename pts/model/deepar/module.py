@@ -182,7 +182,9 @@ class DeepARModel(nn.Module):
                     dtype=torch.float,
                 ),
                 "past_observed_values": Input(
-                    shape=(batch_size, self._past_length),
+                    shape=(batch_size, self._past_length)
+                    if self.input_size == 1
+                    else (batch_size, self._past_length, self.input_size),
                     dtype=torch.float,
                 ),
                 "future_time_feat": Input(
@@ -220,18 +222,21 @@ class DeepARModel(nn.Module):
         future_time_feat: torch.Tensor,
         future_target: Optional[torch.Tensor] = None,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor,]:
-        context = past_target[..., -self.context_length :]
-        observed_context = past_observed_values[..., -self.context_length :]
+        context = past_target[..., -self.context_length :, :]
+        observed_context = past_observed_values[..., -self.context_length :, :]
 
         input, loc, scale = self.scaler(context, observed_context)
+        import pdb
+
+        pdb.set_trace()
         future_length = future_time_feat.shape[-2]
         if future_length > 1:
             assert future_target is not None
             input = torch.cat(
-                (input, (future_target[..., : future_length - 1] - loc) / scale),
+                (input, (future_target[..., : future_length - 1, :] - loc) / scale),
                 dim=-1,
             )
-        prior_input = (past_target[..., : -self.context_length] - loc) / scale
+        prior_input = (past_target[..., : -self.context_length, :] - loc) / scale
 
         lags = lagged_sequence_values(self.lags_seq, prior_input, input, dim=-1)
 
