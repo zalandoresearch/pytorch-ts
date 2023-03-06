@@ -108,7 +108,7 @@ class DeepARModel(nn.Module):
     ) -> None:
         super().__init__()
 
-        assert distr_output.event_shape == ()
+        assert distr_output.event_shape == () if input_size == 1 else (input_size,)
         assert num_feat_dynamic_real > 0
         assert num_feat_static_real > 0
         assert num_feat_static_cat > 0
