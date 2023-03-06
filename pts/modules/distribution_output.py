@@ -56,6 +56,14 @@ class IndependentDistributionOutput(DistributionOutput):
             loc = 0.0
         return AffineTransformed(distr, loc=loc, scale=scale)
 
+    @staticmethod
+    def squareplus(x: torch.Tensor) -> torch.Tensor:
+        r"""
+        Helper to map inputs to the positive orthant by applying the square-plus operation. Reference:
+        https://twitter.com/jon_barron/status/1387167648669048833
+        """
+        return (x + torch.sqrt(torch.square(x) + 4.0)) / 2.0
+
 
 class NormalOutput(IndependentDistributionOutput):
     args_dim: Dict[str, int] = {"loc": 1, "scale": 1}
@@ -68,7 +76,7 @@ class NormalOutput(IndependentDistributionOutput):
 
     @classmethod
     def domain_map(cls, loc, scale):
-        scale = F.softplus(scale)
+        scale = cls.squareplus(scale)
         return loc.squeeze(-1), scale.squeeze(-1)
 
 
@@ -93,8 +101,8 @@ class BetaOutput(IndependentDistributionOutput):
 
     @classmethod
     def domain_map(cls, concentration1, concentration0):
-        concentration1 = F.softplus(concentration1) + 1e-8
-        concentration0 = F.softplus(concentration0) + 1e-8
+        concentration1 = cls.squareplus(concentration1) + 1e-8
+        concentration0 = cls.squareplus(concentration0) + 1e-8
         return concentration1.squeeze(-1), concentration0.squeeze(-1)
 
 
@@ -109,7 +117,7 @@ class PoissonOutput(IndependentDistributionOutput):
 
     @classmethod
     def domain_map(cls, rate):
-        rate_pos = F.softplus(rate).clone()
+        rate_pos = cls.squareplus(rate).clone()
 
         return (rate_pos.squeeze(-1),)
 
@@ -142,7 +150,7 @@ class ZeroInflatedPoissonOutput(IndependentDistributionOutput):
     @classmethod
     def domain_map(cls, gate, rate):
         gate_unit = torch.sigmoid(gate).clone()
-        rate_pos = F.softplus(rate).clone()
+        rate_pos = cls.squareplus(rate).clone()
 
         return gate_unit.squeeze(-1), rate_pos.squeeze(-1)
 
@@ -174,7 +182,7 @@ class NegativeBinomialOutput(IndependentDistributionOutput):
 
     @classmethod
     def domain_map(cls, total_count, logits):
-        total_count = F.softplus(total_count)
+        total_count = cls.squareplus(total_count)
         return total_count.squeeze(-1), logits.squeeze(-1)
 
     def distribution(
@@ -209,7 +217,7 @@ class ZeroInflatedNegativeBinomialOutput(IndependentDistributionOutput):
     @classmethod
     def domain_map(cls, gate, total_count, logits):
         gate = torch.sigmoid(gate)
-        total_count = F.softplus(total_count)
+        total_count = cls.squareplus(total_count)
         return gate.squeeze(-1), total_count.squeeze(-1), logits.squeeze(-1)
 
     def distribution(
@@ -245,8 +253,8 @@ class StudentTOutput(IndependentDistributionOutput):
 
     @classmethod
     def domain_map(cls, df, loc, scale):
-        scale = F.softplus(scale)
-        df = 2.0 + F.softplus(df)
+        scale = cls.squareplus(scale)
+        df = 2.0 + cls.squareplus(df)
         return df.squeeze(-1), loc.squeeze(-1), scale.squeeze(-1)
 
 
@@ -261,10 +269,18 @@ class StudentTMixtureOutput(DistributionOutput):
             "scale": components,
         }
 
+    @staticmethod
+    def squareplus(x: torch.Tensor) -> torch.Tensor:
+        r"""
+        Helper to map inputs to the positive orthant by applying the square-plus operation. Reference:
+        https://twitter.com/jon_barron/status/1387167648669048833
+        """
+        return (x + torch.sqrt(torch.square(x) + 4.0)) / 2.0
+
     @classmethod
     def domain_map(cls, mix_logits, df, loc, scale):
-        scale = F.softplus(scale)
-        df = 2.0 + F.softplus(df)
+        scale = cls.squareplus(scale)
+        df = 2.0 + cls.squareplus(df)
         return (
             mix_logits.squeeze(-1),
             df.squeeze(-1),
@@ -304,9 +320,17 @@ class NormalMixtureOutput(DistributionOutput):
             "scale": components,
         }
 
+    @staticmethod
+    def squareplus(x: torch.Tensor) -> torch.Tensor:
+        r"""
+        Helper to map inputs to the positive orthant by applying the square-plus operation. Reference:
+        https://twitter.com/jon_barron/status/1387167648669048833
+        """
+        return (x + torch.sqrt(torch.square(x) + 4.0)) / 2.0
+
     @classmethod
     def domain_map(cls, mix_logits, loc, scale):
-        scale = F.softplus(scale)
+        scale = cls.squareplus(scale)
         return mix_logits.squeeze(-1), loc.squeeze(-1), scale.squeeze(-1)
 
     def distribution(
@@ -354,11 +378,20 @@ class LowRankMultivariateNormalOutput(DistributionOutput):
 
         shape = cov_factor.shape[:-1] + (self.dim, self.rank)
         cov_factor = cov_factor.reshape(shape)
-        cov_diag = F.softplus(cov_diag + diag_bias) + self.sigma_minimum**2
+        cov_diag = self.squareplus(cov_diag + diag_bias) + self.sigma_minimum**2
 
         return loc, cov_factor, cov_diag
 
-    def inv_softplus(self, y):
+    @staticmethod
+    def squareplus(x: torch.Tensor) -> torch.Tensor:
+        r"""
+        Helper to map inputs to the positive orthant by applying the square-plus operation. Reference:
+        https://twitter.com/jon_barron/status/1387167648669048833
+        """
+        return (x + torch.sqrt(torch.square(x) + 4.0)) / 2.0
+
+    @staticmethod
+    def inv_softplus(y):
         if y < 20.0:
             return np.log(np.exp(y) - 1.0)
         else:
@@ -375,6 +408,14 @@ class MultivariateNormalOutput(DistributionOutput):
         self.args_dim = {"loc": dim, "scale_tril": dim * dim}
         self.dim = dim
 
+    @staticmethod
+    def squareplus(x: torch.Tensor) -> torch.Tensor:
+        r"""
+        Helper to map inputs to the positive orthant by applying the square-plus operation. Reference:
+        https://twitter.com/jon_barron/status/1387167648669048833
+        """
+        return (x + torch.sqrt(torch.square(x) + 4.0)) / 2.0
+
     def domain_map(self, loc, scale):
         d = self.dim
         device = scale.device
@@ -382,7 +423,7 @@ class MultivariateNormalOutput(DistributionOutput):
         shape = scale.shape[:-1] + (d, d)
         scale = scale.reshape(shape)
 
-        scale_diag = F.softplus(scale * torch.eye(d, device=device)) * torch.eye(
+        scale_diag = self.squareplus(scale * torch.eye(d, device=device)) * torch.eye(
             d, device=device
         )
 
