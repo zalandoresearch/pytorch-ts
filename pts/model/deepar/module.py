@@ -176,7 +176,9 @@ class DeepARModel(nn.Module):
                     dtype=torch.float,
                 ),
                 "past_target": Input(
-                    shape=(batch_size, self._past_length),
+                    shape=(batch_size, self._past_length)
+                    if self.input_size == 1
+                    else (batch_size, self._past_length, self.input_size),
                     dtype=torch.float,
                 ),
                 "past_observed_values": Input(
