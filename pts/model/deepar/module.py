@@ -24,12 +24,12 @@ from gluonts.torch.modules.feature import FeatureEmbedder
 from gluonts.torch.modules.loss import DistributionLoss, NegativeLogLikelihood
 from gluonts.torch.scaler import MeanScaler, NOPScaler, Scaler, StdScaler
 from gluonts.torch.util import (
-    lagged_sequence_values,
     repeat_along_dim,
     unsqueeze_expand,
 )
 
 from pts.modules import StudentTOutput
+from pts.util import lagged_sequence_values
 
 
 class DeepARModel(nn.Module):
@@ -147,7 +147,9 @@ class DeepARModel(nn.Module):
             self.scaler = StdScaler(dim=1, keepdim=True)
         else:
             self.scaler = NOPScaler(dim=1, keepdim=True)
-        self.rnn_input_size = len(self.lags_seq) + self._number_of_features
+        self.rnn_input_size = (
+            self.input_size * len(self.lags_seq) + self._number_of_features
+        )
         self.rnn = nn.LSTM(
             input_size=self.rnn_input_size,
             hidden_size=hidden_size,
@@ -222,32 +224,29 @@ class DeepARModel(nn.Module):
         future_time_feat: torch.Tensor,
         future_target: Optional[torch.Tensor] = None,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor,]:
-        context = past_target[..., -self.context_length :, :]
-        observed_context = past_observed_values[..., -self.context_length :, :]
+        context = past_target[:, -self.context_length :, ...]
+        observed_context = past_observed_values[:, -self.context_length :, ...]
 
         input, loc, scale = self.scaler(context, observed_context)
         future_length = future_time_feat.shape[-2]
         if future_length > 1:
             assert future_target is not None
             input = torch.cat(
-                (input, (future_target[..., : future_length - 1, :] - loc) / scale),
-                dim=-1,
+                (input, (future_target[:, : future_length - 1, ...] - loc) / scale),
+                dim=1,
             )
-        prior_input = (past_target[..., : -self.context_length, :] - loc) / scale
+        prior_input = (past_target[:, : -self.context_length, ...] - loc) / scale
 
-        lags = lagged_sequence_values(self.lags_seq, prior_input, input, dim=-1)
-
+        lags = lagged_sequence_values(self.lags_seq, prior_input, input, dim=1)
         time_feat = torch.cat(
             (
-                past_time_feat[..., -self.context_length + 1 :, :],
+                past_time_feat[:, -self.context_length + 1 :, ...],
                 future_time_feat,
             ),
-            dim=-2,
+            dim=1,
         )
 
         embedded_cat = self.embedder(feat_static_cat)
-        loc = loc if self.input_size == 1 else loc.squeeze(1)
-        scale = scale if self.input_size == 1 else scale.squeeze(1)
         log_abs_loc = (
             loc.abs().log1p() if self.input_size == 1 else loc.squeeze(1).abs().log1p()
         )
@@ -258,7 +257,7 @@ class DeepARModel(nn.Module):
             dim=-1,
         )
         expanded_static_feat = unsqueeze_expand(
-            static_feat, dim=-2, size=time_feat.shape[-2]
+            static_feat, dim=1, size=time_feat.shape[-2]
         )
 
         features = torch.cat((expanded_static_feat, time_feat), dim=-1)
@@ -444,7 +443,7 @@ class DeepARModel(nn.Module):
                 dim=-1,
             )
             next_lags = lagged_sequence_values(
-                self.lags_seq, repeated_past_target, scaled_next_sample, dim=-1
+                self.lags_seq, repeated_past_target, scaled_next_sample, dim=1
             )
             rnn_input = torch.cat((next_lags, next_features), dim=-1)
 
@@ -461,11 +460,11 @@ class DeepARModel(nn.Module):
             next_sample = distr.sample()
             future_samples.append(next_sample)
 
-        future_samples_concat = torch.cat(future_samples, dim=1)
-
-        return future_samples_concat.reshape(
-            (-1, num_parallel_samples, self.prediction_length)
+        future_samples_concat = torch.cat(future_samples, dim=1).reshape(
+            (-1, num_parallel_samples, self.prediction_length, self.input_size)
         )
+
+        return future_samples_concat.squeeze(-1)
 
     def log_prob(
         self,
@@ -540,23 +539,25 @@ class DeepARModel(nn.Module):
             distr = self.output_distribution(
                 params, loc=loc, scale=scale, trailing_n=self.prediction_length
             )
-            loss_values = loss(distr, future_target_reshaped) * future_observed_reshaped
+            loss_values = loss(
+                distr, future_target_reshaped
+            ) * future_observed_reshaped.all(-1)
         else:
             distr = self.output_distribution(params, loc=loc, scale=scale)
-            context_target = past_target[:, -self.context_length + 1 :]
+            context_target = past_target[:, -self.context_length + 1 :, ...]
             target = torch.cat(
                 (context_target, future_target_reshaped),
                 dim=1,
             )
-            context_observed = past_observed_values[:, -self.context_length + 1 :]
+            context_observed = past_observed_values[:, -self.context_length + 1 :, ...]
             observed_values = torch.cat(
                 (context_observed, future_observed_reshaped), dim=1
             )
+            observed_values = (
+                observed_values.all(-1)
+                if observed_values.ndim == 3
+                else observed_values
+            )
             loss_values = loss(distr, target) * observed_values
 
-        loss_values = loss_values.reshape(*batch_shape, *loss_values.shape[1:])
-
-        return aggregate_by(
-            loss_values,
-            dim=tuple(range(extra_dims + 1, len(future_target.shape))),
-        )
+        return aggregate_by(loss_values, dim=(1,))

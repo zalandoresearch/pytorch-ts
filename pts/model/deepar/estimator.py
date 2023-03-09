@@ -84,6 +84,8 @@ class DeepAREstimator(PyTorchLightningEstimator):
     context_length
         Number of steps to unroll the RNN for before computing predictions
         (default: None, in which case context_length = prediction_length).
+    input_size:
+        Number of variates in the input time series (default: 1 for univariate).
     num_layers
         Number of RNN layers (default: 2).
     hidden_size
