@@ -23,10 +23,7 @@ from gluonts.torch.distributions import DistributionOutput
 from gluonts.torch.modules.feature import FeatureEmbedder
 from gluonts.torch.modules.loss import DistributionLoss, NegativeLogLikelihood
 from gluonts.torch.scaler import MeanScaler, NOPScaler, Scaler, StdScaler
-from gluonts.torch.util import (
-    repeat_along_dim,
-    unsqueeze_expand,
-)
+from gluonts.torch.util import repeat_along_dim, unsqueeze_expand
 
 from pts.modules import StudentTOutput
 from pts.util import lagged_sequence_values
@@ -144,9 +141,9 @@ class DeepARModel(nn.Module):
                 dim=1, keepdim=True, default_scale=default_scale
             )
         elif scaling == "std":
-            self.scaler = StdScaler(dim=1, keepdim=True)
+            self.scaler: Scaler = StdScaler(dim=1, keepdim=True)
         else:
-            self.scaler = NOPScaler(dim=1, keepdim=True)
+            self.scaler: Scaler = NOPScaler(dim=1, keepdim=True)
         self.rnn_input_size = (
             self.input_size * len(self.lags_seq) + self._number_of_features
         )
