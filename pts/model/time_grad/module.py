@@ -15,27 +15,26 @@ from typing import List, Optional, Tuple
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+
 from gluonts.core.component import validated
 from gluonts.itertools import prod
 from gluonts.model import Input, InputSpec
 from gluonts.time_feature import get_lags_for_frequency
-from gluonts.torch.distributions import DistributionOutput
 from gluonts.torch.modules.feature import FeatureEmbedder
-from gluonts.torch.modules.loss import DistributionLoss, NegativeLogLikelihood
 from gluonts.torch.scaler import MeanScaler, NOPScaler, Scaler, StdScaler
 from gluonts.torch.util import repeat_along_dim, unsqueeze_expand
+from diffusers import SchedulerMixin
+from diffusers.utils import randn_tensor
 
-from pts.modules import StudentTOutput
 from pts.util import lagged_sequence_values
 
+from .epsilon_theta import EpsilonTheta
 
-class DeepARModel(nn.Module):
+
+class TimeGradModel(nn.Module):
     """
-    Module implementing the DeepAR model, see [SFG17]_.
-
-    *Note:* the code of this model is unrelated to the implementation behind
-    `SageMaker's DeepAR Forecasting Algorithm
-    <https://docs.aws.amazon.com/sagemaker/latest/dg/deepar.html>`_.
+    Module implementing the TimeGrad model.
 
     Parameters
     ----------
@@ -63,8 +62,6 @@ class DeepARModel(nn.Module):
         Size of the hidden layers in the RNN.
     dropout_rate
         Dropout rate to be applied at training time.
-    distr_output
-        Type of distribution to be output by the model at each time step
     lags_seq
         Indices of the lagged observations that the RNN takes as input. For
         example, ``[1]`` indicates that the RNN only takes the observation at
@@ -88,6 +85,7 @@ class DeepARModel(nn.Module):
         freq: str,
         context_length: int,
         prediction_length: int,
+        scheduler: SchedulerMixin,
         input_size: int = 1,
         num_feat_dynamic_real: int = 1,
         num_feat_static_real: int = 1,
@@ -97,15 +95,14 @@ class DeepARModel(nn.Module):
         num_layers: int = 2,
         hidden_size: int = 40,
         dropout_rate: float = 0.1,
-        distr_output: DistributionOutput = StudentTOutput(),
         lags_seq: Optional[List[int]] = None,
         scaling: Optional[str] = "mean",
         default_scale: float = 0.0,
         num_parallel_samples: int = 100,
+        num_inference_steps: int = 100,
     ) -> None:
         super().__init__()
 
-        assert distr_output.event_shape == () if input_size == 1 else (input_size,)
         assert num_feat_dynamic_real > 0
         assert num_feat_static_real > 0
         assert num_feat_static_cat > 0
@@ -118,8 +115,7 @@ class DeepARModel(nn.Module):
         self.context_length = context_length
         self.prediction_length = prediction_length
         self.input_size = input_size
-        self.distr_output = distr_output
-        self.param_proj = distr_output.get_args_proj(hidden_size)
+
         self.num_feat_dynamic_real = num_feat_dynamic_real
         self.num_feat_static_cat = num_feat_static_cat
         self.num_feat_static_real = num_feat_static_real
@@ -154,6 +150,10 @@ class DeepARModel(nn.Module):
             dropout=dropout_rate,
             batch_first=True,
         )
+
+        self.unet = EpsilonTheta(target_dim=input_size, cond_dim=hidden_size)
+        self.scheduler = scheduler
+        self.num_inference_steps = num_inference_steps
 
     def describe_inputs(self, batch_size=1) -> InputSpec:
         return InputSpec(
@@ -326,37 +326,7 @@ class DeepARModel(nn.Module):
 
         output, new_state = self.rnn(rnn_input)
 
-        params = self.param_proj(output)
-        return params, loc, scale, output, static_feat, new_state
-
-    @torch.jit.ignore
-    def output_distribution(
-        self, params, loc=None, scale=None, trailing_n=None
-    ) -> torch.distributions.Distribution:
-        """
-        Instantiate the output distribution
-
-        Parameters
-        ----------
-        params
-            Tuple of distribution parameters.
-        loc
-            (Optional) distribution shift tensor.
-        scale
-            (Optional) distribution scale tensor.
-        trailing_n
-            If set, the output distribution is created only for the last
-            ``trailing_n`` time points.
-
-        Returns
-        -------
-        torch.distributions.Distribution
-            Output distribution from the model.
-        """
-        sliced_params = params
-        if trailing_n is not None:
-            sliced_params = [p[:, -trailing_n:] for p in params]
-        return self.distr_output.distribution(sliced_params, loc=loc, scale=scale)
+        return loc, scale, output, static_feat, new_state
 
     def forward(
         self,
@@ -398,7 +368,7 @@ class DeepARModel(nn.Module):
         if num_parallel_samples is None:
             num_parallel_samples = self.num_parallel_samples
 
-        params, loc, scale, _, static_feat, state = self.unroll_lagged_rnn(
+        loc, scale, rnn_output, static_feat, state = self.unroll_lagged_rnn(
             feat_static_cat,
             feat_static_real,
             past_time_feat,
@@ -424,13 +394,12 @@ class DeepARModel(nn.Module):
             s.repeat_interleave(repeats=num_parallel_samples, dim=1) for s in state
         ]
 
-        repeated_params = [
-            s.repeat_interleave(repeats=num_parallel_samples, dim=0) for s in params
-        ]
-        distr = self.output_distribution(
-            repeated_params, trailing_n=1, loc=repeated_loc, scale=repeated_scale
+        repeated_rnn_output = rnn_output[:, -1:].repeat_interleave(
+            repeats=num_parallel_samples, dim=0
         )
-        next_sample = distr.sample()
+        next_sample = self.sample(
+            repeated_rnn_output, loc=repeated_loc, scale=repeated_scale
+        )
         future_samples = [next_sample]
 
         for k in range(1, self.prediction_length):
@@ -449,12 +418,8 @@ class DeepARModel(nn.Module):
             repeated_past_target = torch.cat(
                 (repeated_past_target, scaled_next_sample), dim=1
             )
+            next_sample = self.sample(output, loc=repeated_loc, scale=repeated_scale)
 
-            params = self.param_proj(output)
-            distr = self.output_distribution(
-                params, loc=repeated_loc, scale=repeated_scale
-            )
-            next_sample = distr.sample()
             future_samples.append(next_sample)
 
         future_samples_concat = torch.cat(future_samples, dim=1).reshape(
@@ -463,29 +428,58 @@ class DeepARModel(nn.Module):
 
         return future_samples_concat.squeeze(-1)
 
-    def log_prob(
-        self,
-        feat_static_cat: torch.Tensor,
-        feat_static_real: torch.Tensor,
-        past_time_feat: torch.Tensor,
-        past_target: torch.Tensor,
-        past_observed_values: torch.Tensor,
-        future_time_feat: torch.Tensor,
-        future_target: torch.Tensor,
-    ) -> torch.Tensor:
-        return -self.loss(
-            feat_static_cat=feat_static_cat,
-            feat_static_real=feat_static_real,
-            past_time_feat=past_time_feat,
-            past_target=past_target,
-            past_observed_values=past_observed_values,
-            future_time_feat=future_time_feat,
-            future_target=future_target,
-            future_observed_values=torch.ones_like(future_target),
-            loss=NegativeLogLikelihood(),
-            future_only=True,
-            aggregate_by=torch.sum,
+    def get_loss_values(self, rnn_output, loc, scale, target, observed_values):
+        B, T = rnn_output.shape[:2]
+        # Sample a random timestep for each sample in the batch
+        timesteps = torch.randint(
+            0,
+            self.scheduler.config.num_train_timesteps,
+            (B * T,),
+            device=rnn_output.device,
+        ).long()
+        noise = torch.randn(target.shape, device=target.device)
+
+        scaled_target = (target - loc) / scale
+
+        noisy_output = self.scheduler.add_noise(
+            scaled_target.view(B * T, 1, -1), noise.view(B * T, 1, -1), timesteps
         )
+
+        model_output = self.unet(
+            noisy_output, timesteps, rnn_output.reshape(B * T, 1, -1)
+        )
+        if self.scheduler.config.prediction_type == "epsilon":
+            target_noise = noise
+        elif self.scheduler.config.prediction_type == "v_prediction":
+            target_noise = self.scheduler.get_velocity(
+                scaled_target.view(B * T, 1, -1),
+                noise.view(B * T, 1, -1),
+                timesteps,
+            )
+
+        return (
+            F.mse_loss(
+                model_output.view(B, T, -1),
+                target_noise.view(B, T, -1),
+                reduction="none",
+            ).mean(-1)
+            * observed_values
+        )
+
+    def sample(self, context, loc, scale):
+        # context [B, T, H]
+        # loc [B, 1, D]
+        # scale [B, 1, D]
+        B, T = context.shape[:2]
+        sample_shape = (B * T, 1, self.input_size)
+        sample = randn_tensor(sample_shape, device=context.device)
+
+        self.scheduler.set_timesteps(self.num_inference_steps)
+        for t in self.scheduler.timesteps:
+            model_output = self.unet(sample, t, context.view(B * T, 1, -1))
+            sample = self.scheduler.step(model_output, t, sample).prev_sample
+
+        return (sample.view(B, T, -1) * scale) + loc
 
     def loss(
         self,
@@ -497,7 +491,6 @@ class DeepARModel(nn.Module):
         future_time_feat: torch.Tensor,
         future_target: torch.Tensor,
         future_observed_values: torch.Tensor,
-        loss: DistributionLoss = NegativeLogLikelihood(),
         future_only: bool = False,
         aggregate_by=torch.mean,
     ) -> torch.Tensor:
@@ -522,7 +515,7 @@ class DeepARModel(nn.Module):
             *future_observed_values.shape[extra_dims + 1 :],
         )
 
-        params, loc, scale, _, _, _ = self.unroll_lagged_rnn(
+        loc, scale, rnn_output, _, _ = self.unroll_lagged_rnn(
             feat_static_cat,
             feat_static_real,
             past_time_feat,
@@ -533,22 +526,22 @@ class DeepARModel(nn.Module):
         )
 
         if future_only:
-            distr = self.output_distribution(
-                params, loc=loc, scale=scale, trailing_n=self.prediction_length
-            )
+            sliced_rnn_output = rnn_output[:, -self.prediction_length :]
             observed_values = (
                 future_observed_reshaped.all(-1)
                 if future_observed_reshaped.ndim == 3
                 else future_observed_reshaped
             )
-            loss_values = loss(distr, future_target_reshaped) * observed_values
-        else:
-            distr = self.output_distribution(params, loc=loc, scale=scale)
-            context_target = past_target[:, -self.context_length + 1 :, ...]
-            target = torch.cat(
-                (context_target, future_target_reshaped),
-                dim=1,
+            loss_values = self.get_loss_values(
+                rnn_output=sliced_rnn_output,
+                loc=loc,
+                scale=scale,
+                target=future_target_reshaped,
+                observed_values=observed_values,
             )
+        else:
+            context_target = past_target[:, -self.context_length + 1 :, ...]
+            target = torch.cat((context_target, future_target_reshaped), dim=1)
             context_observed = past_observed_values[:, -self.context_length + 1 :, ...]
             observed_values = torch.cat(
                 (context_observed, future_observed_reshaped), dim=1
@@ -558,6 +551,13 @@ class DeepARModel(nn.Module):
                 if observed_values.ndim == 3
                 else observed_values
             )
-            loss_values = loss(distr, target) * observed_values
+
+            loss_values = self.get_loss_values(
+                rnn_output=rnn_output,
+                loc=loc,
+                scale=scale,
+                target=target,
+                observed_values=observed_values,
+            )
 
         return aggregate_by(loss_values, dim=(1,))

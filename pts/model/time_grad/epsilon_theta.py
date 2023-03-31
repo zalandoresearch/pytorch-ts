@@ -67,9 +67,9 @@ class ResidualBlock(nn.Module):
 
 
 class CondUpsampler(nn.Module):
-    def __init__(self, cond_length, target_dim):
+    def __init__(self, cond_dim, target_dim):
         super().__init__()
-        self.linear1 = nn.Linear(cond_length, target_dim // 2)
+        self.linear1 = nn.Linear(cond_dim, target_dim // 2)
         self.linear2 = nn.Linear(target_dim // 2, target_dim)
 
     def forward(self, x):
@@ -84,7 +84,7 @@ class EpsilonTheta(nn.Module):
     def __init__(
         self,
         target_dim,
-        cond_length,
+        cond_dim,
         time_emb_dim=16,
         residual_layers=8,
         residual_channels=8,
@@ -98,9 +98,7 @@ class EpsilonTheta(nn.Module):
         self.diffusion_embedding = DiffusionEmbedding(
             time_emb_dim, proj_dim=residual_hidden
         )
-        self.cond_upsampler = CondUpsampler(
-            target_dim=target_dim, cond_length=cond_length
-        )
+        self.cond_upsampler = CondUpsampler(target_dim=target_dim, cond_dim=cond_dim)
         self.residual_layers = nn.ModuleList(
             [
                 ResidualBlock(
@@ -122,7 +120,7 @@ class EpsilonTheta(nn.Module):
         x = self.input_projection(inputs)
         x = F.leaky_relu(x, 0.4)
 
-        diffusion_step = self.diffusion_embedding(time)
+        diffusion_step = self.diffusion_embedding(time.long())
         cond_up = self.cond_upsampler(cond)
         skip = []
         for layer in self.residual_layers:
