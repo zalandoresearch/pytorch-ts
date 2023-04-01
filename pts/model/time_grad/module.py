@@ -458,7 +458,7 @@ class TimeGradModel(nn.Module):
             )
 
         return (
-            F.mse_loss(
+            F.smooth_l1_loss(
                 model_output.view(B, T, -1),
                 target_noise.view(B, T, -1),
                 reduction="none",
@@ -491,7 +491,7 @@ class TimeGradModel(nn.Module):
         future_time_feat: torch.Tensor,
         future_target: torch.Tensor,
         future_observed_values: torch.Tensor,
-        future_only: bool = False,
+        future_only: bool = True,
         aggregate_by=torch.mean,
     ) -> torch.Tensor:
         extra_dims = len(future_target.shape) - len(past_target.shape)

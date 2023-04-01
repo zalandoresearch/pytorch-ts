@@ -97,6 +97,7 @@ class DeepARLightningModule(pl.LightningModule):
             future_observed_values=batch["future_observed_values"],
             future_target=batch["future_target"],
             loss=self.loss,
+            future_only=True,
         ).mean()
 
         self.log("val_loss", val_loss, on_epoch=True, on_step=False, prog_bar=True)

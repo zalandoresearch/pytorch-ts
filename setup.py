@@ -21,6 +21,7 @@ setup(
         "gluonts>=0.12.0",
         "holidays",
         "matplotlib",
+        "diffusers",
     ],
     test_suite="tests",
     tests_require=["flake8", "pytest"],
