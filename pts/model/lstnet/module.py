@@ -4,13 +4,14 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from pts.modules import MeanScaler, NOPScaler
+from gluonts.torch.scaler import MeanScaler, NOPScaler, Scaler, StdScaler
+from gluonts.model import Input, InputSpec
 
 
-class LSTNetBase(nn.Module):
+class LSTNetModel(nn.Module):
     def __init__(
         self,
-        num_series: int,
+        input_size: int,
         channels: int,
         kernel_size: int,
         rnn_cell_type: str,
@@ -24,13 +25,11 @@ class LSTNetBase(nn.Module):
         prediction_length: Optional[int],
         dropout_rate: float,
         output_activation: Optional[str],
-        scaling: bool,
-        *args,
-        **kwargs,
+        scaling: Optional[str] = "mean",
     ) -> None:
-        super().__init__(*args, **kwargs)
+        super().__init__()
 
-        self.num_series = num_series
+        self.input_size = input_size
         self.channels = channels
         assert (
             channels % skip_size == 0
@@ -72,7 +71,7 @@ class LSTNetBase(nn.Module):
         )
 
         self.cnn = nn.Conv2d(
-            in_channels=1, out_channels=channels, kernel_size=(num_series, kernel_size)
+            in_channels=1, out_channels=channels, kernel_size=(input_size, kernel_size)
         )
 
         self.dropout = nn.Dropout(p=dropout_rate)
@@ -81,7 +80,7 @@ class LSTNetBase(nn.Module):
         self.rnn = rnn(
             input_size=channels,
             hidden_size=rnn_num_cells,
-            # dropout=dropout_rate,
+            dropout=dropout_rate,
         )
 
         skip_rnn = {"LSTM": nn.LSTM, "GRU": nn.GRU}[skip_rnn_cell_type]
@@ -89,31 +88,33 @@ class LSTNetBase(nn.Module):
         self.skip_rnn = skip_rnn(
             input_size=channels,
             hidden_size=skip_rnn_num_cells,
-            # dropout=dropout_rate,
+            dropout=dropout_rate,
         )
 
-        self.fc = nn.Linear(rnn_num_cells + skip_size * skip_rnn_num_cells, num_series)
+        self.fc = nn.Linear(rnn_num_cells + skip_size * skip_rnn_num_cells, input_size)
 
         if self.horizon:
             self.ar_fc = nn.Linear(ar_window, 1)
         else:
             self.ar_fc = nn.Linear(ar_window, prediction_length)
 
-        if scaling:
-            self.scaler = MeanScaler(keepdim=True, time_first=False)
+        if scaling == "mean":
+            self.scaler: Scaler = MeanScaler(keepdim=True, dim=1)
+        elif scaling == "std":
+            self.scaler: Scaler = StdScaler(keepdim=True, dim=1)
         else:
-            self.scaler = NOPScaler(keepdim=True, time_first=False)
+            self.scaler: Scaler = NOPScaler(keepdim=True, dim=1)
 
-    def forward(
+    def encode(
         self, past_target: torch.Tensor, past_observed_values: torch.Tensor
     ) -> torch.Tensor:
-        scaled_past_target, scale = self.scaler(
-            past_target[..., -self.context_length :],  # [B, C, T]
-            past_observed_values[..., -self.context_length :],  # [B, C, T]
+        scaled_past_target, loc, scale = self.scaler(
+            past_target,  # [B, C, T]
+            past_observed_values,  # [B, C, T]
         )
 
         # CNN
-        c = F.relu(self.cnn(scaled_past_target.unsqueeze(1)))
+        c = F.relu(self.cnn(scaled_past_target.transpose(2, 1).unsqueeze(1)))
         c = self.dropout(c)
         c = c.squeeze(2)  # [B, C, T]
 
@@ -134,54 +135,70 @@ class LSTNetBase(nn.Module):
         res = self.fc(torch.cat((r, skip_c), 1)).unsqueeze(-1)
 
         # Highway
-        ar_x = scaled_past_target[..., -self.ar_window :]
+        ar_x = scaled_past_target[:, -self.ar_window :, ...].transpose(2, 1)
         ar_x = ar_x.reshape(-1, self.ar_window)
 
         ar_x = self.ar_fc(ar_x)
         if self.horizon:
-            ar_x = ar_x.reshape(-1, self.num_series, 1)
+            ar_x = ar_x.reshape(-1, self.input_size, 1)
         else:
-            ar_x = ar_x.reshape(-1, self.num_series, self.prediction_length)
+            ar_x = ar_x.reshape(-1, self.input_size, self.prediction_length)
         out = res + ar_x
 
         if self.output_activation is None:
-            return out, scale
+            return out.transpose(2, 1), loc, scale
 
         return (
             (
-                torch.sigmoid(out)
+                torch.sigmoid(out).transpose(2, 1)
                 if self.output_activation == "sigmoid"
-                else torch.tanh(out)
+                else torch.tanh(out).transpose(2, 1)
             ),
+            loc,
             scale,
         )
 
-
-class LSTNetTrain(LSTNetBase):
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self.loss_fn = nn.L1Loss()
+    def describe_inputs(self, batch_size=1) -> InputSpec:
+        return InputSpec(
+            {
+                "past_target": Input(
+                    shape=(batch_size, self.context_length)
+                    if self.input_size == 1
+                    else (batch_size, self.context_length, self.input_size),
+                    dtype=torch.float,
+                ),
+                "past_observed_values": Input(
+                    shape=(batch_size, self.context_length)
+                    if self.input_size == 1
+                    else (batch_size, self.context_length, self.input_size),
+                    dtype=torch.float,
+                ),
+            },
+            zeros_fn=torch.zeros,
+        )
 
     def forward(
         self,
         past_target: torch.Tensor,
         past_observed_values: torch.Tensor,
-        future_target: torch.Tensor,
     ) -> torch.Tensor:
-        ret, scale = super().forward(past_target, past_observed_values)
-
-        if self.horizon:
-            future_target = future_target[..., -1:]
-
-        loss = self.loss_fn(ret * scale, future_target)
-        return loss
-
-
-class LSTNetPredict(LSTNetBase):
-    def forward(
-        self, past_target: torch.Tensor, past_observed_values: torch.Tensor
-    ) -> torch.Tensor:
-        ret, scale = super().forward(past_target, past_observed_values)
-        ret = (ret * scale).permute(0, 2, 1)
+        ret, loc, scale = self.encode(past_target, past_observed_values)
+        ret = (ret * scale) + loc
 
         return ret.unsqueeze(1)
+
+    def loss(
+        self,
+        past_target: torch.Tensor,
+        past_observed_values: torch.Tensor,
+        future_target: torch.Tensor,
+        future_observed_values: torch.Tensor,
+        loss,
+        aggregate_by=torch.mean,
+    ) -> torch.Tensor:
+        ret, loc, scale = self.encode(past_target, past_observed_values)
+        if self.horizon:
+            future_target = future_target[..., -1:]
+        loss_values = loss(ret, (future_target - loc) / scale)
+
+        return aggregate_by(loss_values, dim=(1,))
