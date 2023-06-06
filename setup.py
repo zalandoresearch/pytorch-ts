@@ -16,9 +16,9 @@ setup(
     python_requires=">=3.8",
     install_requires=[
         "torch>=1.8.0",
-        "pytorch-lightning~=1.5",
+        "pytorch-lightning",
         "protobuf~=3.20.3",
-        "gluonts>=0.12.0",
+        "gluonts>=0.13.0",
         "holidays",
         "matplotlib",
         "diffusers",
