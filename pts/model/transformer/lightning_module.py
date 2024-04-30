@@ -1,8 +1,9 @@
-import pytorch_lightning as pl
+import lightning.pytorch as pl
 import torch
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 from gluonts.itertools import select
+from gluonts.torch.model.lightning_util import has_validation_loop
 from gluonts.torch.modules.loss import DistributionLoss, NegativeLogLikelihood
 
 
@@ -73,11 +74,7 @@ class TransformerLightningModule(pl.LightningModule):
             lr=self.lr,
             weight_decay=self.weight_decay,
         )
-        monitor = (
-            "val_loss"
-            if self.trainer.fit_loop.epoch_loop.val_loop._data_source.is_defined()
-            else "train_loss"
-        )
+        monitor = "val_loss" if has_validation_loop(self.trainer) else "train_loss"
 
         return {
             "optimizer": optimizer,
