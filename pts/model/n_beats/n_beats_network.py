@@ -7,55 +7,10 @@ import torch.nn.functional as F
 
 from gluonts.time_feature import get_seasonality
 
+from pts.model.n_beats.base_network import linspace, NBEATSBlock, BaseNbeatsNetwork
+
 VALID_N_BEATS_STACK_TYPES = "G", "S", "T"
 VALID_LOSS_FUNCTIONS = "sMAPE", "MASE", "MAPE"
-
-
-def linspace(
-    backcast_length: int, forecast_length: int
-) -> Tuple[np.ndarray, np.ndarray]:
-    lin_space = np.linspace(
-        -backcast_length,
-        forecast_length,
-        backcast_length + forecast_length,
-        dtype=np.float32,
-    )
-    b_ls = lin_space[:backcast_length]
-    f_ls = lin_space[backcast_length:]
-    return b_ls, f_ls
-
-
-class NBEATSBlock(nn.Module):
-    def __init__(
-        self,
-        units,
-        thetas_dim,
-        num_block_layers=4,
-        backcast_length=10,
-        forecast_length=5,
-        share_thetas=False,
-    ):
-        super(NBEATSBlock, self).__init__()
-        self.units = units
-        self.thetas_dim = thetas_dim
-        self.backcast_length = backcast_length
-        self.forecast_length = forecast_length
-        self.share_thetas = share_thetas
-
-        fc_stack = [nn.Linear(backcast_length, units), nn.ReLU()]
-        for _ in range(num_block_layers - 1):
-            fc_stack.append(nn.Linear(units, units))
-            fc_stack.append(nn.ReLU())
-        self.fc = nn.Sequential(*fc_stack)
-
-        if share_thetas:
-            self.theta_f_fc = self.theta_b_fc = nn.Linear(units, thetas_dim, bias=False)
-        else:
-            self.theta_b_fc = nn.Linear(units, thetas_dim, bias=False)
-            self.theta_f_fc = nn.Linear(units, thetas_dim, bias=False)
-
-    def forward(self, x):
-        return self.fc(x)
 
 
 class NBEATSSeasonalBlock(NBEATSBlock):
@@ -183,7 +138,7 @@ class NBEATSGenericBlock(NBEATSBlock):
         return self.backcast_fc(theta_b), self.forecast_fc(theta_f)
 
 
-class NBEATSNetwork(nn.Module):
+class NBEATSNetwork(BaseNbeatsNetwork):
     def __init__(
         self,
         prediction_length: int,
@@ -197,17 +152,18 @@ class NBEATSNetwork(nn.Module):
         stack_types: List[str],
         **kwargs,
     ) -> None:
-        super(NBEATSNetwork, self).__init__()
-
-        self.num_stacks = num_stacks
-        self.widths = widths
-        self.num_blocks = num_blocks
-        self.num_block_layers = num_block_layers
-        self.sharing = sharing
-        self.expansion_coefficient_lengths = expansion_coefficient_lengths
-        self.stack_types = stack_types
-        self.prediction_length = prediction_length
-        self.context_length = context_length
+        super(NBEATSNetwork, self).__init__(
+            prediction_length=prediction_length,
+            context_length=context_length,
+            num_stacks=num_stacks,
+            widths=widths,
+            num_blocks=num_blocks,
+            num_block_layers=num_block_layers,
+            expansion_coefficient_lengths=expansion_coefficient_lengths,
+            sharing=sharing,
+            stack_types=stack_types,
+            **kwargs,
+        )
 
         self.net_blocks = nn.ModuleList()
         for stack_id in range(num_stacks):
@@ -250,54 +206,6 @@ class NBEATSNetwork(nn.Module):
                 forecast = forecast + f
             _, last_forecast = self.net_blocks[-1](backcast)
             return forecast + last_forecast
-
-    def smape_loss(
-        self, forecast: torch.Tensor, future_target: torch.Tensor
-    ) -> torch.Tensor:
-        denominator = (torch.abs(future_target) + torch.abs(forecast)).detach()
-        flag = denominator == 0
-
-        return (200 / self.prediction_length) * torch.mean(
-            (torch.abs(future_target - forecast) * torch.logical_not(flag))
-            / (denominator + flag),
-            dim=1,
-        )
-
-    def mape_loss(
-        self, forecast: torch.Tensor, future_target: torch.Tensor
-    ) -> torch.Tensor:
-        denominator = torch.abs(future_target)
-        flag = denominator == 0
-
-        return (100 / self.prediction_length) * torch.mean(
-            (torch.abs(future_target - forecast) * torch.logical_not(flag))
-            / (denominator + flag),
-            dim=1,
-        )
-
-    def mase_loss(
-        self,
-        forecast: torch.Tensor,
-        future_target: torch.Tensor,
-        past_target: torch.Tensor,
-        periodicity: int,
-    ) -> torch.Tensor:
-        factor = 1 / (self.context_length + self.prediction_length - periodicity)
-
-        whole_target = torch.cat((past_target, future_target), dim=1)
-        seasonal_error = factor * torch.mean(
-            torch.abs(
-                whole_target[:, periodicity:, ...]
-                - whole_target[:, :-periodicity:, ...]
-            ),
-            dim=1,
-        )
-        flag = seasonal_error == 0
-
-        return (
-            torch.mean(torch.abs(future_target - forecast), dim=1)
-            * torch.logical_not(flag)
-        ) / (seasonal_error + flag)
 
 
 class NBEATSTrainingNetwork(NBEATSNetwork):
