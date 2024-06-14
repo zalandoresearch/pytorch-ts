@@ -31,10 +31,12 @@ class PyTorchEstimator(Estimator):
     @validated()
     def __init__(
         self, trainer: Trainer, lead_time: int = 0, dtype: np.dtype = np.float32
+      ,**kwargs,
     ) -> None:
         super().__init__(lead_time=lead_time)
         self.trainer = trainer
         self.dtype = dtype
+        self.max_idle_transforms = kwargs["max_idle_transforms"] if "max_idle_transforms" in kwargs else None
 
     def create_transformation(self) -> Transformation:
         """
@@ -104,7 +106,7 @@ class PyTorchEstimator(Estimator):
 
         input_names = get_module_forward_input_names(trained_net)
 
-        with env._let(max_idle_transforms=maybe_len(training_data) or 0):
+        with env._let(max_idle_transforms=self.max_idle_transforms or maybe_len(training_data) or 0):
             training_instance_splitter = self.create_instance_splitter("training")
         training_iter_dataset = TransformedIterableDataset(
             dataset=training_data,
@@ -128,7 +130,7 @@ class PyTorchEstimator(Estimator):
 
         validation_data_loader = None
         if validation_data is not None:
-            with env._let(max_idle_transforms=maybe_len(validation_data) or 0):
+            with env._let(max_idle_transforms=self.max_idle_transforms or maybe_len(validation_data) or 0):
                 validation_instance_splitter = self.create_instance_splitter("validation")
             validation_iter_dataset = TransformedIterableDataset(
                 dataset=validation_data,
