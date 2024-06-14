@@ -24,6 +24,7 @@ setup(
         "tqdm",
         "matplotlib",
         "tensorboard",
+        "tqdm>=4.61.0"
     ],
     test_suite="tests",
     tests_require=["flake8", "pytest"],
